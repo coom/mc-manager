@@ -57,7 +57,8 @@
     "confirm": "Confirm",
     "cancel": "Cancel",
     "processing": "Processing...",
-    "loading": "LOADING..."
+    "loading": "LOADING...",
+    "error": "Something went wrong"
   },
   "notFound": {
     "heading": "Page Not Found",
@@ -213,5 +214,41 @@
     "settings": "Settings",
     "logout": "Sign out",
     "collapse": "Collapse"
+  },
+  "console": {
+    "title": "Console",
+    "live": "Live",
+    "disconnected": "Disconnected",
+    "filter": "Filter…",
+    "levelAll": "All levels",
+    "levelWarn": "Warnings and errors",
+    "levelError": "Errors only",
+    "commandPlaceholder": "Type a server command and press Enter",
+    "send": "Send"
+  },
+  "server": {
+    "status": {
+      "unavailable": "Unavailable",
+      "stopped": "Stopped",
+      "starting": "Starting",
+      "ready": "Online",
+      "unhealthy": "Unhealthy",
+      "stopping": "Stopping"
+    },
+    "uptime": "up",
+    "start": "Start",
+    "stop": "Stop",
+    "restart": "Restart",
+    "actionAccepted": "Command sent",
+    "confirm": {
+      "stop": {
+        "title": "Stop the server?",
+        "description": "Connected players will be disconnected. The world is saved before shutdown."
+      },
+      "restart": {
+        "title": "Restart the server?",
+        "description": "Connected players will be disconnected for about a minute."
+      }
+    }
   }
 }

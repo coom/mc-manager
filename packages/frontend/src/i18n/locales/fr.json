@@ -57,7 +57,8 @@
     "confirm": "Confirmer",
     "cancel": "Annuler",
     "processing": "Traitement en cours...",
-    "loading": "CHARGEMENT..."
+    "loading": "CHARGEMENT...",
+    "error": "Une erreur est survenue"
   },
   "notFound": {
     "heading": "Page introuvable",
@@ -213,5 +214,41 @@
     "settings": "Paramètres",
     "logout": "Déconnexion",
     "collapse": "Réduire"
+  },
+  "console": {
+    "title": "Console",
+    "live": "En direct",
+    "disconnected": "Déconnecté",
+    "filter": "Filtrer…",
+    "levelAll": "Tous les niveaux",
+    "levelWarn": "Avertissements et erreurs",
+    "levelError": "Erreurs seulement",
+    "commandPlaceholder": "Tapez une commande serveur puis Entrée",
+    "send": "Envoyer"
+  },
+  "server": {
+    "status": {
+      "unavailable": "Indisponible",
+      "stopped": "Arrêté",
+      "starting": "Démarrage",
+      "ready": "En ligne",
+      "unhealthy": "Dégradé",
+      "stopping": "Arrêt en cours"
+    },
+    "uptime": "depuis",
+    "start": "Démarrer",
+    "stop": "Arrêter",
+    "restart": "Redémarrer",
+    "actionAccepted": "Commande envoyée",
+    "confirm": {
+      "stop": {
+        "title": "Arrêter le serveur ?",
+        "description": "Les joueurs connectés seront déconnectés. Le monde est sauvegardé avant l'arrêt."
+      },
+      "restart": {
+        "title": "Redémarrer le serveur ?",
+        "description": "Les joueurs connectés seront déconnectés pendant environ une minute."
+      }
+    }
   }
 }

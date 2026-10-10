@@ -1,0 +1,4 @@
+{ "namespace": "console", "keys": {
+  "en": { "title": "Console", "live": "Live", "disconnected": "Disconnected", "filter": "Filter…", "levelAll": "All levels", "levelWarn": "Warnings and errors", "levelError": "Errors only", "commandPlaceholder": "Type a server command and press Enter", "send": "Send" },
+  "fr": { "title": "Console", "live": "En direct", "disconnected": "Déconnecté", "filter": "Filtrer…", "levelAll": "Tous les niveaux", "levelWarn": "Avertissements et erreurs", "levelError": "Erreurs seulement", "commandPlaceholder": "Tapez une commande serveur puis Entrée", "send": "Envoyer" }
+} }

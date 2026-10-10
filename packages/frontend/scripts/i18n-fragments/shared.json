@@ -1,0 +1,4 @@
+{ "namespace": "shared", "keys": {
+  "en": { "error": "Something went wrong" },
+  "fr": { "error": "Une erreur est survenue" }
+} }

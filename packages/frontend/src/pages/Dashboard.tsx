@@ -1,1 +1,4 @@
-export default function Dashboard() { return <h1 className="text-xl font-semibold">Dashboard</h1>; }
+import { StatusBanner } from '@/components/dashboard/StatusBanner';
+export default function Dashboard() {
+  return <div className="space-y-5"><StatusBanner /></div>;
+}

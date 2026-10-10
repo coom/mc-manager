@@ -1,0 +1,10 @@
+{ "namespace": "server", "keys": {
+  "en": { "status": { "unavailable": "Unavailable", "stopped": "Stopped", "starting": "Starting", "ready": "Online", "unhealthy": "Unhealthy", "stopping": "Stopping" },
+          "uptime": "up", "start": "Start", "stop": "Stop", "restart": "Restart", "actionAccepted": "Command sent",
+          "confirm": { "stop": { "title": "Stop the server?", "description": "Connected players will be disconnected. The world is saved before shutdown." },
+                       "restart": { "title": "Restart the server?", "description": "Connected players will be disconnected for about a minute." } } },
+  "fr": { "status": { "unavailable": "Indisponible", "stopped": "Arrêté", "starting": "Démarrage", "ready": "En ligne", "unhealthy": "Dégradé", "stopping": "Arrêt en cours" },
+          "uptime": "depuis", "start": "Démarrer", "stop": "Arrêter", "restart": "Redémarrer", "actionAccepted": "Commande envoyée",
+          "confirm": { "stop": { "title": "Arrêter le serveur ?", "description": "Les joueurs connectés seront déconnectés. Le monde est sauvegardé avant l'arrêt." },
+                       "restart": { "title": "Redémarrer le serveur ?", "description": "Les joueurs connectés seront déconnectés pendant environ une minute." } } }
+} }
