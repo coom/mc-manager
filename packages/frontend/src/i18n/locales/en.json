@@ -214,7 +214,8 @@
     "logout": "Sign out",
     "collapse": "Collapse",
     "players": "Players",
-    "journal": "Journal"
+    "journal": "Journal",
+    "config": "Configuration"
   },
   "console": {
     "title": "Console",
@@ -459,6 +460,61 @@
       "stillOnline": "still online",
       "notFound": "Player not found",
       "unknown": "unknown"
+    }
+  },
+  "config": {
+    "title": "Server configuration",
+    "tabs": {
+      "form": "Form",
+      "raw": "Raw file"
+    },
+    "missing": "server.properties does not exist yet: start the server once to create it.",
+    "lockedBy": "Set by the container variable {{var}}; change it in your compose file.",
+    "lockedRcon": "RCON settings are managed by MC Manager and cannot be edited here.",
+    "save": "Save",
+    "saved": "Configuration saved",
+    "noChange": "Nothing to save",
+    "restartRequired": "Restart required to apply the saved configuration.",
+    "restartNow": "Restart now",
+    "restartTitle": "Restart the server?",
+    "restartDescription": "Players will be disconnected while the server restarts.",
+    "restarting": "Restart requested",
+    "changedLines": "{{count}} changed line(s)",
+    "groups": {
+      "general": "General",
+      "world": "World",
+      "players": "Players",
+      "rules": "Rules",
+      "network": "Network"
+    },
+    "fields": {
+      "motd": "Message of the day",
+      "difficulty": "Difficulty",
+      "gamemode": "Game mode",
+      "force-gamemode": "Force game mode",
+      "hardcore": "Hardcore",
+      "max-players": "Max players",
+      "view-distance": "View distance",
+      "simulation-distance": "Simulation distance",
+      "spawn-protection": "Spawn protection",
+      "player-idle-timeout": "Idle timeout (min)",
+      "op-permission-level": "Op permission level",
+      "pvp": "PvP",
+      "white-list": "Whitelist",
+      "enforce-whitelist": "Enforce whitelist",
+      "online-mode": "Online mode",
+      "allow-flight": "Allow flight",
+      "allow-nether": "Allow Nether",
+      "enable-command-block": "Command blocks",
+      "spawn-monsters": "Spawn monsters",
+      "spawn-animals": "Spawn animals",
+      "spawn-npcs": "Spawn villagers",
+      "level-name": "World folder",
+      "level-seed": "Seed",
+      "level-type": "World type",
+      "resource-pack": "Resource pack URL",
+      "max-tick-time": "Max tick time (ms)",
+      "server-port": "Server port"
     }
   }
 }

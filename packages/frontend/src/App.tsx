@@ -16,6 +16,7 @@ const Backups = lazy(() => import('@/pages/Backups'));
 const Players = lazy(() => import('@/pages/Players'));
 const PlayerSheet = lazy(() => import('@/pages/PlayerSheet'));
 const Journal = lazy(() => import('@/pages/Journal'));
+const Config = lazy(() => import('@/pages/Config'));
 const Audit = lazy(() => import('@/pages/Audit'));
 const Settings = lazy(() => import('@/pages/Settings'));
 const NotFound = lazy(() => import('@/pages/NotFound'));
@@ -36,6 +37,7 @@ export function App() {
               <Route path="/players" element={<Players />} />
               <Route path="/players/:uuid" element={<PlayerSheet />} />
               <Route path="/journal" element={<Journal />} />
+              <Route path="/config" element={<Config />} />
               <Route path="/backups" element={<Backups />} />
               <Route path="/audit" element={<Audit />} />
               <Route path="/settings" element={<Settings />} />

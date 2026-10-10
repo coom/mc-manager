@@ -214,7 +214,8 @@
     "logout": "Déconnexion",
     "collapse": "Réduire",
     "players": "Joueurs",
-    "journal": "Journal"
+    "journal": "Journal",
+    "config": "Configuration"
   },
   "console": {
     "title": "Console",
@@ -459,6 +460,61 @@
       "stillOnline": "toujours en ligne",
       "notFound": "Joueur introuvable",
       "unknown": "inconnu"
+    }
+  },
+  "config": {
+    "title": "Configuration du serveur",
+    "tabs": {
+      "form": "Formulaire",
+      "raw": "Fichier brut"
+    },
+    "missing": "server.properties n'existe pas encore : démarrez le serveur une fois pour le créer.",
+    "lockedBy": "Définie par la variable {{var}} du conteneur ; modifiez-la dans votre fichier compose.",
+    "lockedRcon": "Les réglages RCON sont gérés par MC Manager et ne sont pas modifiables ici.",
+    "save": "Enregistrer",
+    "saved": "Configuration enregistrée",
+    "noChange": "Rien à enregistrer",
+    "restartRequired": "Redémarrage nécessaire pour appliquer la configuration enregistrée.",
+    "restartNow": "Redémarrer maintenant",
+    "restartTitle": "Redémarrer le serveur ?",
+    "restartDescription": "Les joueurs seront déconnectés pendant le redémarrage.",
+    "restarting": "Redémarrage demandé",
+    "changedLines": "{{count}} ligne(s) modifiée(s)",
+    "groups": {
+      "general": "Général",
+      "world": "Monde",
+      "players": "Joueurs",
+      "rules": "Règles",
+      "network": "Réseau"
+    },
+    "fields": {
+      "motd": "Message du jour",
+      "difficulty": "Difficulté",
+      "gamemode": "Mode de jeu",
+      "force-gamemode": "Forcer le mode de jeu",
+      "hardcore": "Hardcore",
+      "max-players": "Joueurs max",
+      "view-distance": "Distance de vue",
+      "simulation-distance": "Distance de simulation",
+      "spawn-protection": "Protection du spawn",
+      "player-idle-timeout": "Inactivité max (min)",
+      "op-permission-level": "Niveau des opérateurs",
+      "pvp": "PvP",
+      "white-list": "Whitelist",
+      "enforce-whitelist": "Imposer la whitelist",
+      "online-mode": "Mode en ligne",
+      "allow-flight": "Autoriser le vol",
+      "allow-nether": "Autoriser le Nether",
+      "enable-command-block": "Blocs de commande",
+      "spawn-monsters": "Monstres",
+      "spawn-animals": "Animaux",
+      "spawn-npcs": "Villageois",
+      "level-name": "Dossier du monde",
+      "level-seed": "Graine",
+      "level-type": "Type de monde",
+      "resource-pack": "URL du pack de ressources",
+      "max-tick-time": "Temps de tick max (ms)",
+      "server-port": "Port du serveur"
     }
   }
 }
