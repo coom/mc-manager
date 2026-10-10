@@ -24,6 +24,23 @@ describe('CommandInput', () => {
     expect(input.value).toBe('give Alice diamond ');
   });
 
+  it('swallows a space typed right after a completion and collapses space runs on send', () => {
+    const onSend = vi.fn().mockResolvedValue('ok');
+    render(<CommandInput onSend={onSend} />);
+    const input = screen.getByRole('textbox') as HTMLInputElement;
+    fireEvent.change(input, { target: { value: 'give Al' } });
+    fireEvent.keyDown(input, { key: 'Tab' });
+    expect(input.value).toBe('give Alice ');
+    fireEvent.change(input, { target: { value: 'give Alice  ' } });
+    expect(input.value).toBe('give Alice ');
+    // L'espace a validé le choix : Tab complète la position suivante au lieu de cycler sur les joueurs.
+    fireEvent.keyDown(input, { key: 'Tab' });
+    expect(input.value).toMatch(/^give Alice [a-z_]+ $/);
+    fireEvent.change(input, { target: { value: ' give  Alice   diamond  4 ' } });
+    fireEvent.keyDown(input, { key: 'Enter' });
+    expect(onSend).toHaveBeenCalledWith('give Alice diamond 4');
+  });
+
   it('lets Tab move focus when there is nothing to complete', () => {
     render(<CommandInput onSend={vi.fn()} />);
     const input = screen.getByRole('textbox') as HTMLInputElement;

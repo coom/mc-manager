@@ -24,7 +24,12 @@ export function CommandInput({ onSend }: { onSend: (cmd: string) => Promise<unkn
   // Fenêtre d'affichage : glisse pour garder le candidat choisi visible quand on cycle au-delà de MAX_SHOWN.
   const from = cycle ? Math.max(0, cycle.index - MAX_SHOWN + 1) : 0;
 
-  const edit = (next: string) => { setValue(next); setCycle(null); setHidden(false); };
+  const edit = (next: string) => {
+    // Tab a déjà inséré l'espace suivant : un espace tapé par réflexe valide le choix au lieu de doubler
+    // (Minecraft refuse deux espaces entre arguments : « Invalid name or UUID »).
+    if (cycle && next === value + ' ') { setCycle(null); return; }
+    setValue(next); setCycle(null); setHidden(false);
+  };
 
   /** Renvoie false quand il n'y a rien à compléter : Tab garde alors son rôle de navigation. */
   const onTab = (backward: boolean): boolean => {
@@ -47,7 +52,8 @@ export function CommandInput({ onSend }: { onSend: (cmd: string) => Promise<unkn
       if (shown) { e.preventDefault(); e.stopPropagation(); }
       setCycle(null); setHidden(true);
     } else if (e.key === 'Enter' && value.trim()) {
-      const cmd = value.trim();
+      // Les suites d'espaces sont réduites : le parseur Brigadier n'en tolère qu'un entre deux arguments.
+      const cmd = value.trim().replace(/\s+/g, ' ');
       setHistory((h) => [...h.filter((x) => x !== cmd), cmd].slice(-50));
       setCursor(null); edit('');
       await onSend(cmd);
