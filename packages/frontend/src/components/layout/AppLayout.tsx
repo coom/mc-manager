@@ -5,6 +5,7 @@ import { Sidebar } from './Sidebar';
 import { Header } from './Header';
 import { useAuthStore } from '@/stores/auth.store';
 import { authApi } from '@/api/auth.api';
+import { useWebSocket } from '@/hooks/use-websocket';
 import { Toaster } from 'sonner';
 
 export function AppLayout() {
@@ -24,6 +25,8 @@ export function AppLayout() {
     enabled: isAuthenticated,
     staleTime: 60_000,
   });
+
+  useWebSocket();
 
   useEffect(() => {
     // /auth/me answers { user: {...} }, matching how Settings reads this key.

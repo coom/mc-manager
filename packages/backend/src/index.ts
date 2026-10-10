@@ -5,6 +5,8 @@ import { config } from './config.js';
 import { logger } from './utils/logger.js';
 import { DockerService, realDocker } from './docker/docker-service.js';
 import type { ServerInfo } from '@mc/common';
+import { attachWebSocket } from './ws/ws-server.js';
+import { broadcast, markAuthenticated } from './ws/ws-broadcast.js';
 
 process.on('uncaughtException', (err) => logger.error({ err }, 'uncaught exception (kept alive)'));
 process.on('unhandledRejection', (reason) => logger.error({ reason }, 'unhandled rejection (kept alive)'));
@@ -21,7 +23,8 @@ async function main() {
 
   const docker = new DockerService(realDocker(config.mc.dockerSocket), config.mc.container, config.mc.backupContainer);
   app.locals.docker = docker;
-  await docker.start();
+  const wss = attachWebSocket(server, prisma);
+  app.locals.wss = wss;
 
   // Construit la réponse de GET /api/server. Les tâches 11 et 12 enrichissent
   // players/mspt/tps/worldBytes/diskFree via app.locals.metrics.
@@ -46,10 +49,21 @@ async function main() {
     };
   };
 
+  docker.on('status', () => {
+    void app.locals.serverInfo().then((info: ServerInfo) => broadcast(wss, { type: 'server.status', info }));
+  });
+  wss.on('authenticated', (socket) => {
+    markAuthenticated(socket);
+    void app.locals.serverInfo().then((info: ServerInfo) => socket.send(JSON.stringify({ type: 'server.status', info })));
+  });
+  // serverInfo et les listeners sont en place : les événements de start() peuvent partir.
+  await docker.start();
+
   server.listen(config.port, () => logger.info(`MC Manager backend on http://localhost:${config.port}`));
 
   const shutdown = async () => {
     logger.info('shutting down');
+    wss.close();
     server.close();
     docker.stop();
     await prisma.$disconnect();
