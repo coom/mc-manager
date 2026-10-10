@@ -39,7 +39,7 @@ pnpm --filter @mc/backend exec vitest run -t "nom du test"
 node packages/frontend/scripts/merge-i18n.mjs   # fusionne dans fr/en et échoue si les clés divergent de en.json
 ```
 
-La CI (`.github/workflows/ci.yml`) enchaîne : `pnpm install --frozen-lockfile`, `pnpm audit --audit-level high`, `db:generate`, build de common, lint, typecheck, test, build, puis build des deux Dockerfiles (`Dockerfile.backend`, `Dockerfile.frontend`). Reproduire cet ordre en local avant de pousser.
+La CI (`.github/workflows/ci.yml`) enchaîne : `pnpm install --frozen-lockfile`, `pnpm audit --audit-level high` (deux avis GHSA sans correctif amont sont ignorés via `pnpm.auditConfig.ignoreGhsas` dans `package.json` : `deepmerge-ts` tiré par la CLI Prisma et `braces` tiré par Tailwind, outils de build uniquement ; retirer l’exclusion dès qu’Ne version corrigée existe), `db:generate`, build de common, lint, typecheck, test, build, puis build des deux Dockerfiles (`Dockerfile.backend`, `Dockerfile.frontend`). Reproduire cet ordre en local avant de pousser.
 
 Déploiement : `docker compose up -d --build` (WebApp seule, rejoint le réseau Docker du serveur Minecraft). `docker-compose.example.yml` est une stack Minecraft de référence qui crée les volumes `mc-data`, `mc-backups` et le réseau `mc-network`. Le déploiement n'a été validé que par `docker compose config`, pas encore par un test de bout en bout.
 
