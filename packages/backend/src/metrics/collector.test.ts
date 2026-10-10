@@ -19,6 +19,18 @@ function deps(over: Partial<ConstructorParameters<typeof MetricsCollector>[1]> =
 }
 
 describe('MetricsCollector', () => {
+  it('hands the online names to onPlayers', async () => {
+    const onPlayers = vi.fn();
+    const c = new MetricsCollector(prisma, deps({ onPlayers }), { intervalMs: 15_000, diskIntervalMs: 0 });
+    await c.tick();
+    expect(onPlayers).toHaveBeenCalledWith(['Alice']);
+  });
+  it('does not call onPlayers when the server is not ready', async () => {
+    const onPlayers = vi.fn();
+    const c = new MetricsCollector(prisma, deps({ status: () => 'stopped' as const, onPlayers }), { intervalMs: 15_000, diskIntervalMs: 0 });
+    await c.tick();
+    expect(onPlayers).not.toHaveBeenCalled();
+  });
   it('stores a full sample when ready and exposes latest()', async () => {
     const d = deps();
     const c = new MetricsCollector(prisma, d, { intervalMs: 15_000, diskIntervalMs: 0 });

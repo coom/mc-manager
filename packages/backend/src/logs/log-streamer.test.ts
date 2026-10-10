@@ -16,6 +16,19 @@ function setup(tty: boolean) {
 }
 
 describe('LogStreamer', () => {
+  it('strips a Docker timestamp prefix and passes the date along', async () => {
+    const { logs, streamer } = setup(true);
+    const seen: [string, Date | null][] = [];
+    streamer.on('line', (l, at) => seen.push([l.message, at]));
+    await streamer.start();
+    logs.write('2026-10-10T10:00:00.123456789Z [10:00:00] [main/INFO]: stamped\n[10:00:01] [main/INFO]: bare\n');
+    await wait(10);
+    expect(seen[0][0]).toBe('stamped');
+    expect(seen[0][1]?.toISOString()).toBe('2026-10-10T10:00:00.123Z');
+    expect(seen[1]).toEqual(['bare', null]);
+    expect(streamer.history().map((l) => l.raw)).toEqual(['[10:00:00] [main/INFO]: stamped', '[10:00:01] [main/INFO]: bare']);
+    streamer.stop();
+  });
   it('emits parsed lines and keeps a bounded history', async () => {
     const { logs, streamer } = setup(true);
     const seen: string[] = [];

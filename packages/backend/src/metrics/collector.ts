@@ -5,6 +5,8 @@ import { aggregateHour, purgeHourly, purgeSamples } from './aggregate.js';
 import { logger } from '../utils/logger.js';
 
 export interface CollectorDeps {
+  /** Noms en ligne à chaque `list` réussi (réconciliation du journal joueurs). */
+  onPlayers?: (names: string[]) => void;
   status: () => ServerStatus;
   stats: () => Promise<ServerStats>;
   rcon: (cmd: string) => Promise<string>;
@@ -67,6 +69,7 @@ export class MetricsCollector {
       stats = await this.deps.stats().catch(() => stats);
       try {
         players = parseList(await this.deps.rcon('list'));
+        if (players) this.deps.onPlayers?.(players.names);
         mspt = parseTickQuery(await this.deps.rcon('tick query'))?.mspt ?? null;
         if (this.tpsSupported !== false) {
           tps = parseTps(await this.deps.rcon('tps'));

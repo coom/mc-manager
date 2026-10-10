@@ -14,6 +14,8 @@ import { metricsRoutes } from './routes/metrics.routes.js';
 import { backupsRoutes, backupDownloadRoutes } from './routes/backups.routes.js';
 import { DownloadTokenStore } from './backups/download-tokens.js';
 import { auditRoutes } from './routes/audit.routes.js';
+import { playersRoutes, bansRoutes, listsRoutes, whitelistRoutes } from './routes/players.routes.js';
+import { journalRoutes } from './routes/journal.routes.js';
 
 export function createApp(): Express {
   const app = express();
@@ -45,6 +47,11 @@ export function createApp(): Express {
   app.use('/api/metrics', metricsRoutes);
   app.use('/api/backups', backupsRoutes);
   app.use('/api/audit', auditRoutes);
+  app.use('/api/players', playersRoutes);
+  app.use('/api/bans', bansRoutes);
+  app.use('/api/lists', listsRoutes);
+  app.use('/api/whitelist', whitelistRoutes);
+  app.use('/api/journal', journalRoutes);
 
   app.use(errorHandler);
   return app;

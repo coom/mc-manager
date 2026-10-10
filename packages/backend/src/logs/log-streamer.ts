@@ -5,6 +5,15 @@ import type { DockerService } from '../docker/docker-service.js';
 import { parseLogLine } from './parse-line.js';
 import { logger } from '../utils/logger.js';
 
+/** Préfixe `timestamps: true` de Docker : `2026-10-10T10:00:00.123456789Z ` devant chaque ligne. */
+const TS_PREFIX = /^(\d{4}-\d{2}-\d{2}T[0-9:.]+Z) /;
+export function splitTimestamp(raw: string): { at: Date | null; text: string } {
+  const m = TS_PREFIX.exec(raw);
+  if (!m) return { at: null, text: raw };
+  const at = new Date(m[1]);
+  return { at: Number.isNaN(at.getTime()) ? null : at, text: raw.slice(m[0].length) };
+}
+
 export class LogStreamer extends EventEmitter {
   private buffer: LogLine[] = [];
   private current: Readable | null = null;
@@ -47,11 +56,12 @@ export class LogStreamer extends EventEmitter {
       partial += chunk.toString('utf8');
       let nl: number;
       while ((nl = partial.indexOf('\n')) >= 0) {
-        const line = parseLogLine(partial.slice(0, nl));
+        const { at, text } = splitTimestamp(partial.slice(0, nl));
+        const line = parseLogLine(text);
         partial = partial.slice(nl + 1);
         this.buffer.push(line);
         if (this.buffer.length > this.cap) this.buffer.shift();
-        this.emit('line', line);
+        this.emit('line', line, at);
       }
     });
     handle.stream.once('error', (err) => logger.warn({ err }, 'log stream error'));

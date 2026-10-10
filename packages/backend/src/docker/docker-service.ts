@@ -193,7 +193,7 @@ export class DockerService extends EventEmitter {
   async logStream(tail: number): Promise<{ stream: Readable; tty: boolean }> {
     const c = await this.requireServer();
     const i = await c.inspect();
-    const stream = await c.logs({ follow: true, stdout: true, stderr: true, tail, timestamps: false });
+    const stream = await c.logs({ follow: true, stdout: true, stderr: true, tail, timestamps: true });
     return { stream, tty: i.Config.Tty };
   }
 

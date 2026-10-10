@@ -10,6 +10,8 @@ import { broadcast, markAuthenticated } from './ws/ws-broadcast.js';
 import { RconService, realRcon } from './rcon/rcon-service.js';
 import { readServerProperties, rconSettings } from './utils/server-properties.js';
 import { LogStreamer } from './logs/log-streamer.js';
+import { PlayerJournal } from './players/player-journal.js';
+import { PlayerAdmin } from './players/player-admin.js';
 import { MetricsCollector } from './metrics/collector.js';
 import { BackupService } from './backups/backup-service.js';
 import { worldSize, diskFree } from './metrics/disk.js';
@@ -54,12 +56,23 @@ async function main() {
     void app.locals.serverInfo().then((info: ServerInfo) => socket.send(JSON.stringify({ type: 'server.status', info })));
     socket.send(JSON.stringify({ type: 'log.history', lines: logs.history() }));
   });
+  // Journal joueurs : abonné avant docker.start()/logs.start() pour ne manquer aucune ligne.
+  app.locals.dataDir = config.mc.dataDir;
+  const journal = new PlayerJournal(prisma, config.mc.dataDir);
+  await journal.start();
+  app.locals.journal = journal;
+  logs.on('line', (line, at) => void journal.handleLine(line, at));
+  docker.on('status', (s) => void journal.onStatus(s));
+  journal.on('session', (e) => broadcast(wss, { type: 'player.session', ...e }));
   // serverInfo et les listeners sont en place : les événements de start() peuvent partir.
   await docker.start();
   const rcon = new RconService(realRcon, docker, { host: config.mc.rconHost, portFallback: config.mc.rconPort },
     async () => rconSettings(await readServerProperties(config.mc.dataDir)));
   app.locals.rcon = rcon;
   await rcon.start();
+  const playerAdmin = new PlayerAdmin(rcon);
+  app.locals.playerAdmin = playerAdmin;
+  playerAdmin.on('listsChanged', () => broadcast(wss, { type: 'player.lists.changed' }));
   await logs.start();
 
   const metrics = new MetricsCollector(prisma, {
@@ -71,9 +84,14 @@ async function main() {
     diskFree: () => diskFree(config.mc.dataDir),
     broadcast: (msg) => broadcast(wss, msg),
     serverInfo: () => app.locals.serverInfo(),
+    onPlayers: (names) => void journal.reconcile(names),
   }, { intervalMs: 15_000, diskIntervalMs: 5 * 60_000 });
   app.locals.metrics = metrics;
   metrics.start();
+  // Purge quotidienne du journal selon la rétention configurée.
+  const purgeJournal = () => journal.purge().catch((err) => logger.warn({ err }, 'journal purge failed'));
+  void purgeJournal();
+  const purgeTimer = setInterval(() => void purgeJournal(), 86_400_000);
 
   const backups = new BackupService(config.mc.backupsDir, docker);
   app.locals.backups = backups;
@@ -90,6 +108,7 @@ async function main() {
     wss.close();
     server.close();
     metrics.stop();
+    clearInterval(purgeTimer);
     logs.stop();
     rcon.stop();
     docker.stop();

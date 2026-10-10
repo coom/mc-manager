@@ -108,6 +108,17 @@ describe('PlayerJournal sessions', () => {
   });
 });
 
+describe('PlayerJournal history filter', () => {
+  it('ignores replayed history lines older than its start', async () => {
+    const { j } = journal();
+    await j.start();
+    await j.handleLine(L('Alice[/8.8.8.8:1] logged in with entity id 1 at (0, 64, 0)'), new Date(t - 60_000));
+    expect(j.online()).toEqual([]);
+    await j.handleLine(L('Alice[/8.8.8.8:1] logged in with entity id 1 at (0, 64, 0)'), new Date(t + 5));
+    expect(j.online()).toHaveLength(1);
+  });
+});
+
 describe('PlayerJournal robustness', () => {
   it('keeps state consistent and the queue alive when a DB step fails', async () => {
     const { j, events } = journal();

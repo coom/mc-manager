@@ -21,6 +21,8 @@ export class PlayerJournal extends EventEmitter {
   private recentlyLeft = new Map<string, number>();
   private queue: Promise<unknown> = Promise.resolve();
 
+  private startedAt: Date | null = null;
+
   constructor(private prisma: PrismaClient, private dataDir: string, private now: () => Date = () => new Date()) { super(); }
 
   online(): OnlinePlayer[] {
@@ -32,6 +34,7 @@ export class PlayerJournal extends EventEmitter {
 
   /** Au démarrage : ferme en base les sessions restées ouvertes par un arrêt du backend. */
   async start(): Promise<void> {
+    this.startedAt = this.now();
     const last = await this.prisma.metricSample.findFirst({ orderBy: { at: 'desc' }, select: { at: true } });
     const orphans = await this.prisma.playerSession.findMany({ where: { leftAt: null } });
     for (const s of orphans) {
@@ -41,7 +44,11 @@ export class PlayerJournal extends EventEmitter {
     if (orphans.length) logger.info({ count: orphans.length }, 'closed orphan player sessions');
   }
 
-  handleLine(line: LogLine): Promise<void> { return this.enqueue(() => this.processLine(line)); }
+  /** `at` : date Docker de la ligne. Les lignes antérieures au démarrage (historique rejoué) sont ignorées. */
+  handleLine(line: LogLine, at: Date | null = null): Promise<void> {
+    if (at && this.startedAt && at.getTime() < this.startedAt.getTime() - 2000) return Promise.resolve();
+    return this.enqueue(() => this.processLine(line));
+  }
   reconcile(names: string[]): Promise<void> { return this.enqueue(() => this.doReconcile(names)); }
   closeAll(): Promise<void> { return this.enqueue(async () => { const at = this.now(); for (const key of [...this.open.keys()]) await this.tryClose(key, at); }); }
   onStatus(status: ServerStatus): Promise<void> {
