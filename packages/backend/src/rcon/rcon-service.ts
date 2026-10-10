@@ -7,6 +7,8 @@ import { logger } from '../utils/logger.js';
 
 export const realRcon: RconLike = { connect: (opts) => Rcon.connect(opts) as unknown as Promise<RconConnection> };
 
+const canConnect = (s: ServerStatus) => s === 'ready' || s === 'unhealthy';
+
 type Credentials = () => Promise<{ enabled: boolean; port: number; password: string | null }>;
 
 export class RconService {
@@ -16,7 +18,11 @@ export class RconService {
   private retryMs = 1000;
   private timer: ReturnType<typeof setTimeout> | null = null;
   private queue: Promise<unknown> = Promise.resolve();
-  private onStatus = (s: ServerStatus) => { if (s === 'ready') void this.connect(); else this.disconnect(); };
+  // unhealthy : le serveur tourne encore (healthcheck lent ou en échec), RCON reste utile pour diagnostiquer.
+  private onStatus = (s: ServerStatus) => {
+    if (canConnect(s)) void this.connect();
+    else if (s === 'stopped' || s === 'stopping' || s === 'unavailable') this.disconnect();
+  };
 
   constructor(private lib: RconLike, private docker: DockerService, private opts: { host: string; portFallback: number }, private credentials: Credentials) {}
 
@@ -25,7 +31,7 @@ export class RconService {
   async start(): Promise<void> {
     this.stopped = false;
     this.docker.on('status', this.onStatus);
-    if (this.docker.getStatus() === 'ready') await this.connect();
+    if (canConnect(this.docker.getStatus())) await this.connect();
   }
 
   stop(): void {
@@ -48,13 +54,13 @@ export class RconService {
 
   private async connect(): Promise<void> {
     if (this.stopped || this.conn || this.connecting) return;
-    if (this.docker.getStatus() !== 'ready') return;
+    if (!canConnect(this.docker.getStatus())) return;
     this.connecting = true;
     try {
       const cred = await this.credentials();
       if (!cred.enabled || !cred.password) { logger.warn('rcon disabled in server.properties'); return; }
       const c = await this.lib.connect({ host: this.opts.host, port: cred.port || this.opts.portFallback, password: cred.password, timeout: 10_000 });
-      if (this.stopped || this.docker.getStatus() !== 'ready') {
+      if (this.stopped || !canConnect(this.docker.getStatus())) {
         try { void c.end(); } catch { /* déjà fermée */ }
         return;
       }

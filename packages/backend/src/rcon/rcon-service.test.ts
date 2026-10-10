@@ -13,9 +13,10 @@ class FakeConn extends EventEmitter implements RconConnection {
   end() { this.emit('end'); }
 }
 
-function setup(status: 'ready' | 'stopped' = 'ready') {
+function setup(status: 'ready' | 'stopped' | 'unhealthy' = 'ready') {
   const docker = new FakeDocker();
-  docker.containers.set('mc', new FakeContainer(inspectFixture(status === 'stopped' ? { Status: 'exited', Running: false } : {})));
+  const state = status === 'stopped' ? { Status: 'exited', Running: false } : status === 'unhealthy' ? { Health: { Status: 'unhealthy' as const } } : {};
+  docker.containers.set('mc', new FakeContainer(inspectFixture(state)));
   const svc = new DockerService(docker, 'mc', 'mc-backup');
   const conns: FakeConn[] = [];
   const rconLib: RconLike = { connect: vi.fn(async () => { const c = new FakeConn(); conns.push(c); return c; }) };
@@ -89,6 +90,46 @@ describe('RconService', () => {
     credentials.mockResolvedValueOnce({ enabled: false, port: 25575, password: null });
     await svc.start(); await rcon.start(); await wait(10);
     expect(rconLib.connect).not.toHaveBeenCalled();
+    rcon.stop(); svc.stop();
+  });
+
+  it('connects when the server starts unhealthy', async () => {
+    const { svc, rcon, conns } = setup('unhealthy');
+    await svc.start(); await rcon.start(); await wait(10);
+    expect(svc.getStatus()).toBe('unhealthy');
+    expect(conns).toHaveLength(1);
+    expect(rcon.isConnected()).toBe(true);
+    rcon.stop(); svc.stop();
+  });
+
+  it('keeps the connection when the server goes from ready to unhealthy', async () => {
+    const { docker, svc, rcon, conns } = setup();
+    await svc.start(); await rcon.start(); await wait(10);
+    const endSpy = vi.spyOn(conns[0], 'end');
+    docker.containers.get('mc')!.state = inspectFixture({ Health: { Status: 'unhealthy' } });
+    docker.emitEvent({ Action: 'health_status: unhealthy', name: 'mc' });
+    await wait(10);
+    expect(svc.getStatus()).toBe('unhealthy');
+    expect(rcon.isConnected()).toBe(true);
+    expect(endSpy).not.toHaveBeenCalled();
+    rcon.stop(); svc.stop();
+  });
+
+  it('does not reconnect during a stop even if the container still inspects healthy', async () => {
+    const { docker, svc, rcon, conns, rconLib } = setup();
+    await svc.start(); await rcon.start(); await wait(10);
+    const c = docker.containers.get('mc')!;
+    const release = c.holdOps();
+    const p = svc.stopServer();
+    await wait(10);
+    expect(rcon.isConnected()).toBe(false);
+    docker.emitEvent({ Action: 'kill', name: 'mc' });
+    await wait(10);
+    expect(rconLib.connect).toHaveBeenCalledTimes(1);
+    expect(conns).toHaveLength(1);
+    c.state = inspectFixture({ Status: 'exited', Running: false });
+    release(); await p; await wait(10);
+    expect(rcon.isConnected()).toBe(false);
     rcon.stop(); svc.stop();
   });
 });
