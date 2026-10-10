@@ -1,0 +1,15 @@
+node_modules/
+dist/
+*.tsbuildinfo
+.env
+*.db
+*.db-journal
+*.log
+.DS_Store
+.vscode/
+.idea/
+packages/backend/generated/
+packages/backend/data/
+packages/backend/prisma/migrations/
+.superpowers/
+.claude/

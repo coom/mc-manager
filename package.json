@@ -1,0 +1,24 @@
+{
+  "name": "mc-manager",
+  "private": true,
+  "scripts": {
+    "dev": "pnpm --parallel -r run dev",
+    "dev:backend": "pnpm --filter @mc/backend run dev",
+    "dev:frontend": "pnpm --filter @mc/frontend run dev",
+    "build": "pnpm -r run build",
+    "db:generate": "pnpm --filter @mc/backend exec prisma generate",
+    "db:push": "pnpm --filter @mc/backend exec prisma db push",
+    "lint": "eslint .",
+    "test": "pnpm -r run test",
+    "typecheck": "pnpm -r run typecheck"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "eslint": "^10.4.1",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "globals": "^17.6.0",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.61.0"
+  },
+  "engines": { "node": ">=20.0.0", "pnpm": ">=9.0.0" }
+}
