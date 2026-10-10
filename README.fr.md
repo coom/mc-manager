@@ -77,7 +77,7 @@ Une stack complète de référence est fournie dans [`docker-compose.example.yml
 | `MC_BACKUPS_DIR` | `/mc/backups` | Point de montage des backups |
 | `MC_RCON_HOST` | `MC_CONTAINER` | Hôte RCON |
 | `MC_RCON_PORT` | `25575` | Port RCON |
-| `DOCKER_SOCKET` | `/var/run/docker.sock` | Chemin du socket Docker dans le conteneur backend |
+| `DOCKER_SOCKET` | `/var/run/docker.sock` | Chemin du socket Docker. Ne sert que si le backend tourne hors Docker (`pnpm dev`) : dans le conteneur le socket est toujours monté sur `/var/run/docker.sock` et le compose ne transmet pas cette variable |
 | `MC_DATA_VOLUME` / `MC_BACKUPS_VOLUME` | obligatoires (compose) | Noms des volumes Docker de la stack Minecraft |
 | `MC_NETWORK` | `mc-network` | Réseau Docker partagé avec Minecraft |
 | `DOCKER_GID` | `999` | Identifiant du groupe du socket Docker sur l'hôte |
@@ -87,6 +87,10 @@ Le mot de passe RCON n'est **jamais** configuré ici : le backend le lit dans `s
 ### Volumes et réseau
 
 `docker-compose.yml` déclare `mc-data` et `mc-backups` comme volumes **externes** dont les noms réels viennent de `MC_DATA_VOLUME` et `MC_BACKUPS_VOLUME` ; ils doivent déjà exister (la stack de référence les crée avec ces noms exacts). Les données Minecraft sont montées en lecture seule sur `/mc/data`, les backups en lecture-écriture sur `/mc/backups`. Si vos données sont dans un dossier de l'hôte plutôt que dans un volume nommé, remplacez les entrées `mc-data:/mc/data:ro` et `mc-backups:/mc/backups` par vos chemins (et supprimez les deux déclarations de volumes de premier niveau). Le backend rejoint le réseau externe `MC_NETWORK` pour atteindre RCON.
+
+### Propriétaire des volumes
+
+Le backend tourne avec l'utilisateur `node` (UID 1000) et doit pouvoir supprimer les archives de `mc-backups`. `itzg/mc-backup` tourne en root par défaut, ce qui laisse un dossier et des archives appartenant à root que le backend ne peut pas supprimer (EACCES). La stack de référence lance donc `mc-backup` avec `user: "1000:1000"` ; faites de même dans votre stack. Pour corriger un volume existant : `docker run --rm -v mc-backups:/b alpine chown -R 1000:1000 /b` (ou `chown -R 1000:1000` sur le chemin de l'hôte).
 
 ### Avertissement sur le socket Docker
 

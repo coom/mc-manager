@@ -14,6 +14,7 @@ services:
       - MC_BACKUP_CONTAINER=${MC_BACKUP_CONTAINER:-mc-backup}
       - MC_DATA_DIR=/mc/data
       - MC_BACKUPS_DIR=/mc/backups
+      - MC_RCON_HOST=${MC_RCON_HOST:-}
       - MC_RCON_PORT=${MC_RCON_PORT:-25575}
     group_add:
       - "${DOCKER_GID:-999}"

@@ -77,7 +77,7 @@ A complete reference stack is provided in [`docker-compose.example.yml`](docker-
 | `MC_BACKUPS_DIR` | `/mc/backups` | Mount point of the backups |
 | `MC_RCON_HOST` | `MC_CONTAINER` | RCON host |
 | `MC_RCON_PORT` | `25575` | RCON port |
-| `DOCKER_SOCKET` | `/var/run/docker.sock` | Docker socket path inside the backend container |
+| `DOCKER_SOCKET` | `/var/run/docker.sock` | Docker socket path. Only matters when running the backend outside Docker (`pnpm dev`): in the container the socket is always bind-mounted at `/var/run/docker.sock` and compose does not forward this variable |
 | `MC_DATA_VOLUME` / `MC_BACKUPS_VOLUME` | required (compose) | Names of the Docker volumes of the Minecraft stack |
 | `MC_NETWORK` | `mc-network` | Docker network shared with Minecraft |
 | `DOCKER_GID` | `999` | Group id of the Docker socket on the host |
@@ -87,6 +87,10 @@ The RCON password is **never** configured here: the backend reads it from `serve
 ### Volumes and network
 
 `docker-compose.yml` declares `mc-data` and `mc-backups` as **external** volumes whose real names come from `MC_DATA_VOLUME` and `MC_BACKUPS_VOLUME`; they must already exist (the reference stack creates them with these exact names). The Minecraft data is mounted read-only on `/mc/data`, the backups read-write on `/mc/backups`. If your data lives in a bind-mounted directory instead of a named volume, replace the `mc-data:/mc/data:ro` and `mc-backups:/mc/backups` entries by your host paths (and remove the two top-level volume declarations). The backend joins the external network `MC_NETWORK` to reach RCON.
+
+### Volume ownership
+
+The backend runs as the `node` user (UID 1000) and must be able to delete archives in `mc-backups`. `itzg/mc-backup` runs as root by default, which leaves a root-owned directory and archives that the backend cannot delete (EACCES). The reference stack therefore runs `mc-backup` with `user: "1000:1000"`; do the same in your own stack. To fix an existing root-owned volume: `docker run --rm -v mc-backups:/b alpine chown -R 1000:1000 /b` (or `chown -R 1000:1000` on the host path).
 
 ### Docker socket warning
 

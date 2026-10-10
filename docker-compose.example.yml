@@ -19,6 +19,8 @@ services:
   mc-backup:
     image: itzg/mc-backup:latest
     container_name: mc-backup
+    # Same UID as the MC Manager backend (node, 1000) so it can delete archives.
+    user: "1000:1000"
     restart: unless-stopped
     depends_on: { mc: { condition: service_healthy } }
     environment:
