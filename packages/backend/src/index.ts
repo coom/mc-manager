@@ -102,6 +102,8 @@ async function main() {
   backups.on('listChanged', () => broadcast(wss, { type: 'backup.list.changed' }));
   const restore = new RestoreService({ dataDir: config.mc.dataDir, backups, docker });
   app.locals.restore = restore;
+  // Marqueur laissé par une restauration interrompue (crash, arrêt) : signalé dans les logs et dans l'interface.
+  await restore.start();
   restore.on('progress', (e) => broadcast(wss, { type: 'restore.progress', ...e }));
   restore.on('done', (e) => { broadcast(wss, { type: 'restore.done', ...e }); broadcast(wss, { type: 'backup.list.changed' }); });
   app.locals.properties = new PropertiesService({ dataDir: config.mc.dataDir, docker, lock: backups.dataLock });
@@ -112,6 +114,7 @@ async function main() {
 
   const shutdown = async () => {
     logger.info('shutting down');
+    if (restore.status().running) logger.warn({ step: restore.status().step }, 'a restore is in progress and will be interrupted: check the Backups page after restart');
     wss.close();
     server.close();
     metrics.stop();

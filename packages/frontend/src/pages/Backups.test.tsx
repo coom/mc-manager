@@ -10,7 +10,7 @@ import { toast } from 'sonner';
 
 vi.mock('sonner', () => ({ toast: { error: vi.fn(), success: vi.fn() } }));
 vi.mock('@/api/backups.api', () => ({
-  backupsApi: { list: vi.fn(), run: vi.fn(), remove: vi.fn(), download: vi.fn(), restore: vi.fn(), restoreStatus: vi.fn() },
+  backupsApi: { list: vi.fn(), run: vi.fn(), remove: vi.fn(), download: vi.fn(), restore: vi.fn(), restoreStatus: vi.fn(), dismissInterrupted: vi.fn() },
 }));
 
 function setup() {
@@ -58,7 +58,7 @@ describe('Backups page restore', () => {
     useServerStore.getState().reset();
     useAuthStore.setState({ accessToken: 't', refreshToken: 'r', user: { id: 1, username: 'u', displayName: 'U', role: 'admin' } });
     vi.mocked(backupsApi.list).mockResolvedValue({ entries: [entry], totalBytes: 10, running: false });
-    vi.mocked(backupsApi.restoreStatus).mockResolvedValue({ running: false, step: null });
+    vi.mocked(backupsApi.restoreStatus).mockResolvedValue({ running: false, step: null, interrupted: null });
     vi.mocked(backupsApi.restore).mockResolvedValue({} as never);
   });
 
@@ -117,5 +117,49 @@ describe('Backups page restore', () => {
     fireEvent.click(await screen.findByRole('button', { name: 'Restore' }));
     await waitFor(() => expect(toast.error).toHaveBeenCalledWith('Another operation is running: backup'));
     expect(useServerStore.getState().restoreRunning).toBe(false);
+  });
+
+  it('clears a stuck restoreRunning when the server reports no restore running (missed restore.done)', async () => {
+    useServerStore.setState({ restoreRunning: true, restoreOutput: ['[extract] world'] });
+    setup();
+    await waitFor(() => expect(useServerStore.getState().restoreRunning).toBe(false));
+  });
+
+  it('clears a stuck backupRunning when the list reports no backup running (missed backup.done)', async () => {
+    useServerStore.setState({ backupRunning: true });
+    setup();
+    await waitFor(() => expect(useServerStore.getState().backupRunning).toBe(false));
+  });
+});
+
+describe('Backups page interrupted restore', () => {
+  const interrupted = { archive: 'world-a.tgz', safetyBackup: 'world-safe.tgz', startedAt: '2026-10-10T10:00:00Z' };
+  beforeEach(() => {
+    useServerStore.getState().reset();
+    vi.mocked(backupsApi.list).mockResolvedValue({ entries: [{ name: 'world-safe.tgz', size: 10, modifiedAt: '2026-10-10T09:00:00Z' }], totalBytes: 10, running: false });
+    vi.mocked(backupsApi.restoreStatus).mockResolvedValue({ running: false, step: null, interrupted });
+    vi.mocked(backupsApi.dismissInterrupted).mockResolvedValue({} as never);
+  });
+
+  it('shows the warning with the safety backup and lets an admin restore it or dismiss', async () => {
+    useAuthStore.setState({ accessToken: 't', refreshToken: 'r', user: { id: 1, username: 'u', displayName: 'U', role: 'admin' } });
+    useServerStore.setState({ info: { status: 'ready', containerName: 'mc' } as never });
+    setup();
+    expect(await screen.findByText('A restore was interrupted')).toBeInTheDocument();
+    expect(screen.getByText(/The restore of world-a\.tgz did not finish/)).toBeInTheDocument();
+    expect(screen.getByText('Safety backup: world-safe.tgz')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Restore this one' }));
+    expect(await screen.findByText('Restore world-safe.tgz?')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Dismiss' }));
+    await waitFor(() => expect(backupsApi.dismissInterrupted).toHaveBeenCalled());
+  });
+
+  it('shows the warning without action buttons to a viewer', async () => {
+    useAuthStore.setState({ accessToken: 't', refreshToken: 'r', user: { id: 2, username: 'v', displayName: 'V', role: 'viewer' } });
+    setup();
+    expect(await screen.findByText('A restore was interrupted')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Dismiss' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Restore this one' })).not.toBeInTheDocument();
   });
 });

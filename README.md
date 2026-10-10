@@ -118,9 +118,13 @@ An admin restores a backup from the Backups page. The operation runs in six step
 5. extract: the archive is extracted into the data directory;
 6. start: the server is started again.
 
-Only gzip archives (`.tgz`, `.tar.gz`) are accepted. The top-level entries of the archive (world folders, files) replace their counterparts in the data directory; everything the archive does not contain is kept.
+Only gzip archives (`.tgz`, `.tar.gz`) are accepted. The top-level entries of the archive (world folders, `plugins`, files) replace their counterparts in the data directory, EXCEPT the paths matching the `mc-backup` exclusions, which are never in the archives and are therefore kept: by default `*.jar`, `cache`, `logs` and `*.tmp` (so plugin and mod jars stay in place); if the `mc-backup` container sets `EXCLUDES`, that list is used instead (an empty `EXCLUDES=` means no exclusion). Everything the archive does not contain at the top level is kept.
 
-If the server is already stopped, no safety backup can be taken: an explicit confirmation ("no safety backup") is required. If the operation fails part way, the interface reports the name of the safety backup so that you can restore it. Only one operation at a time touches the data (manual backup, restore, `server.properties` edit): another request receives a 409.
+Before anything is written, the backend checks that it can write into the data directory and that the volume has at least as much free space as the uncompressed archive (refusal with an explicit message otherwise). The archive is opened once at the check step, so the pruning that `mc-backup` performs after the safety backup cannot remove it mid-restore.
+
+If the server is already stopped, no safety backup can be taken: an explicit confirmation ("no safety backup") is required. If the operation fails before anything was removed (safety backup, stop, preflight), it is reported as `aborted:`, the data is untouched and the server is started again if it had been stopped and "start afterwards" was checked. If it fails part way (`partial restore:`), the interface reports the name of the safety backup so that you can restore it.
+
+**Interrupted restores.** While data is being replaced, the backend keeps a marker file `.mc-manager-restore.json` in the data directory (archive name, safety backup, start time, step); it is removed as soon as the extraction succeeds. If the backend stops or crashes in between, the marker remains: at the next start the backend logs an error and the Backups page shows a persistent warning with the archive and the safety backup. The data may be half restored: restore the safety backup ("Restore this one"), or, once you have handled it by hand, click "Dismiss" (admin, audited) to remove the marker. Only one operation at a time touches the data (manual backup, restore, `server.properties` edit): another request receives a 409.
 
 ## Server configuration
 

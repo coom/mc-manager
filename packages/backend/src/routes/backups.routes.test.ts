@@ -101,13 +101,27 @@ describe('backups routes', () => {
   });
   it('admin restore: defaults, 202, and the audit callback is wired to backup.restore', async () => {
     const app = appWith('admin');
-    const restore = vi.fn(async (_n: string, _o: unknown, auditFn: (d: string) => Promise<void>) => { await auditFn('w.tgz'); });
+    // Le service audite le nom suivi des options (voir restore-service.test.ts).
+    const restore = vi.fn(async (_n: string, _o: unknown, auditFn: (d: string) => Promise<void>) => { await auditFn('w.tgz (startAfter=true, noSafety=false)'); });
     app.locals.restore = { status: () => ({ running: true, step: 'check' }), restore };
     const res = await request(app).post('/api/backups/w.tgz/restore').send({});
     expect(res.status).toBe(202);
     expect(res.body).toEqual({ accepted: true });
     expect(restore).toHaveBeenCalledWith('w.tgz', { startAfter: true, confirmNoSafetyBackup: false }, expect.any(Function));
-    expect(app.locals.prisma.auditLog.create).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ action: 'backup.restore', detail: 'w.tgz' }) }));
+    expect(app.locals.prisma.auditLog.create).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ action: 'backup.restore', detail: 'w.tgz (startAfter=true, noSafety=false)' }) }));
+  });
+  it('admin clears the interrupted-restore marker (audited), viewer gets 403', async () => {
+    const viewer = appWith('viewer');
+    const clearV = vi.fn();
+    viewer.locals.restore = { status: () => ({ running: false, step: null, interrupted: null }), clearInterrupted: clearV };
+    expect((await request(viewer).delete('/api/backups/restore/interrupted')).status).toBe(403);
+    expect(clearV).not.toHaveBeenCalled();
+    const app = appWith('admin');
+    const clearInterrupted = vi.fn().mockResolvedValue(undefined);
+    app.locals.restore = { status: () => ({ running: false, step: null, interrupted: null }), clearInterrupted };
+    expect((await request(app).delete('/api/backups/restore/interrupted')).status).toBe(204);
+    expect(clearInterrupted).toHaveBeenCalled();
+    expect(app.locals.prisma.auditLog.create).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ action: 'backup.restore', detail: 'interrupted marker cleared' }) }));
   });
   it('admin restore forwards the options and surfaces the service error status', async () => {
     const app = appWith('admin');

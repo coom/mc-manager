@@ -26,6 +26,15 @@ backupsRoutes.get('/', async (req: Request, res: Response, next: NextFunction) =
 
 backupsRoutes.get('/restore/status', (req: Request, res: Response) => { res.json(req.app.locals.restore.status()); });
 
+// Restauration interrompue traitée à la main par l'admin : retire le marqueur.
+backupsRoutes.delete('/restore/interrupted', requireRole('admin'), async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    await req.app.locals.restore.clearInterrupted();
+    await audit(req, 'backup.restore', 'interrupted marker cleared');
+    res.status(204).send();
+  } catch (err) { next(err); }
+});
+
 // Restauration : la réponse 202 part après les vérifications (archive, verrou, filet) ; la suite est diffusée en WebSocket.
 backupsRoutes.post('/:name/restore', requireRole('admin'), async (req: Request, res: Response, next: NextFunction) => {
   try {

@@ -307,6 +307,11 @@
       "replace": "remplacement",
       "extract": "extraction",
       "start": "démarrage"
+    },
+    "interrupted": {
+      "title": "Une restauration a été interrompue",
+      "description": "La restauration de {{archive}} ne s'est pas terminée (le backend s'est arrêté ou a planté pendant l'opération). Les données sont peut-être à moitié restaurées : restaurez la sauvegarde de sécurité, ou masquez cet avertissement une fois la situation traitée.",
+      "dismiss": "Masquer"
     }
   },
   "audit": {

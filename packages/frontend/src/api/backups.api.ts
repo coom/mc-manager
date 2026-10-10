@@ -5,6 +5,7 @@ export const backupsApi = {
   run: () => api.post('/backups/run'),
   restore: (name: string, req: RestoreRequest) => api.post(`/backups/${encodeURIComponent(name)}/restore`, req),
   restoreStatus: (): Promise<RestoreStatus> => api.get('/backups/restore/status').then((r) => r.data),
+  dismissInterrupted: () => api.delete('/backups/restore/interrupted'),
   remove: (name: string) => api.delete(`/backups/${encodeURIComponent(name)}`),
   /** Obtient un lien court à usage unique puis laisse le navigateur télécharger (pas de blob en mémoire). */
   download: async (name: string) => {

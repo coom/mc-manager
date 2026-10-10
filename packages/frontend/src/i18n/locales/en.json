@@ -307,6 +307,11 @@
       "replace": "replacing",
       "extract": "extracting",
       "start": "starting"
+    },
+    "interrupted": {
+      "title": "A restore was interrupted",
+      "description": "The restore of {{archive}} did not finish (the backend stopped or crashed while it was running). The data may be half restored: restore the safety backup, or dismiss this warning once you have handled it.",
+      "dismiss": "Dismiss"
     }
   },
   "audit": {

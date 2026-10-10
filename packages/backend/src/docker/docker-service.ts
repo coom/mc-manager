@@ -59,6 +59,14 @@ export class DockerService extends EventEmitter {
     return { status: statusFromInspect(i), startedAt: i.State.Running ? i.State.StartedAt : null, tty: i.Config.Tty, id: i.Id, image: i.Config.Image, env: i.Config.Env ?? [] };
   }
 
+  /** Variables d'environnement du conteneur mc-backup (vide s'il est introuvable). */
+  async backupEnv(): Promise<string[]> {
+    const c = await this.docker.findByName(this.backupName);
+    if (!c) return [];
+    const i = await c.inspect();
+    return i.Config.Env ?? [];
+  }
+
   private setStatus(s: ServerStatus) {
     if (s === this.status) return;
     this.status = s;

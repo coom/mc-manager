@@ -1,9 +1,9 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { mkdtempSync, mkdirSync, writeFileSync, rmSync, existsSync, readFileSync } from 'fs';
+import { mkdtempSync, mkdirSync, writeFileSync, rmSync, existsSync, readFileSync, symlinkSync, linkSync, unlinkSync } from 'fs';
 import { tmpdir } from 'os';
 import path from 'path';
 import * as tar from 'tar';
-import { normalizeEntryPath, validateEntry, isGzipFile, inspectArchive, restoreArchive } from './archive-filter.js';
+import { normalizeEntryPath, validateEntry, isGzipFile, inspectArchive, restoreArchive, openArchive, globToRegExp, removeExcept, DEFAULT_EXCLUDES, RESTORE_MARKER } from './archive-filter.js';
 import { AppError } from '../middleware/error-handler.js';
 
 describe('normalizeEntryPath / validateEntry', () => {
@@ -98,5 +98,114 @@ describe('archives', () => {
     const rel = path.relative(process.cwd(), data);
     await restoreArchive(file, rel, () => undefined);
     expect(readFileSync(path.join(data, 'world', 'level.dat'), 'utf8')).toBe('LEVEL-BACKUP');
+  });
+
+  it('rejects a symbolic link entry at inspection', async (ctx) => {
+    const lsrc = path.join(root, 'lsrc'); mkdirSync(path.join(lsrc, 'world'), { recursive: true });
+    writeFileSync(path.join(lsrc, 'world', 'level.dat'), 'L');
+    try { symlinkSync('/etc/passwd', path.join(lsrc, 'world', 'evil')); } catch { ctx.skip(); return; }
+    const bad = path.join(root, 'symlink.tgz');
+    await tar.create({ gzip: true, cwd: lsrc, file: bad }, ['.']);
+    await expect(inspectArchive(bad)).rejects.toMatchObject({ statusCode: 400, message: expect.stringMatching(/SymbolicLink/) });
+    await expect(restoreArchive(bad, data, () => undefined)).rejects.toMatchObject({ statusCode: 400 });
+    expect(readFileSync(path.join(data, 'world', 'level.dat'), 'utf8')).toBe('LEVEL-CURRENT');
+  });
+
+  it('rejects a hard link entry at inspection', async () => {
+    const lsrc = path.join(root, 'hsrc'); mkdirSync(path.join(lsrc, 'world'), { recursive: true });
+    writeFileSync(path.join(lsrc, 'world', 'a.dat'), 'A');
+    linkSync(path.join(lsrc, 'world', 'a.dat'), path.join(lsrc, 'world', 'b.dat'));
+    const bad = path.join(root, 'hardlink.tgz');
+    await tar.create({ gzip: true, cwd: lsrc, file: bad }, ['.']);
+    await expect(inspectArchive(bad)).rejects.toMatchObject({ statusCode: 400, message: expect.stringMatching(/type Link/) });
+  });
+
+  it('keeps reading from the held descriptor after the archive is unlinked (mc-backup prune)', async () => {
+    const h = await openArchive(file);
+    try {
+      const info = await h.inspect();
+      unlinkSync(file);
+      expect(existsSync(file)).toBe(false);
+      await restoreArchive(h, data, () => undefined, { excludes: DEFAULT_EXCLUDES, info });
+    } finally { await h.close(); }
+    expect(readFileSync(path.join(data, 'world', 'level.dat'), 'utf8')).toBe('LEVEL-BACKUP');
+  });
+
+  it('ignores a restore marker contained in an archive', async () => {
+    writeFileSync(path.join(src, RESTORE_MARKER), '{"archive":"old"}');
+    const withMarker = path.join(root, 'marker.tgz');
+    await tar.create({ gzip: true, cwd: src, file: withMarker }, ['.']);
+    writeFileSync(path.join(data, RESTORE_MARKER), 'CURRENT-MARKER');
+    expect((await inspectArchive(withMarker)).topLevel).not.toContain(RESTORE_MARKER);
+    await restoreArchive(withMarker, data, () => undefined);
+    expect(readFileSync(path.join(data, RESTORE_MARKER), 'utf8')).toBe('CURRENT-MARKER');
+  });
+});
+
+describe('globToRegExp', () => {
+  it.each([
+    ['*.jar', 'EssentialsX.jar', true], ['*.jar', 'EssentialsX.jar.bak', false], ['*.jar', 'x.JAR', false],
+    ['cache', 'cache', true], ['cache', 'cache2', false], ['logs', 'xlogs', false],
+    ['*.tmp', '.tmp', true], ['a?c', 'abc', true], ['a?c', 'ac', false],
+    ['a.b', 'axb', false], ['[x]+(y)', '[x]+(y)', true], ['*', 'anything', true],
+  ])('%s matches %s: %s', (pattern, name, expected) => expect(globToRegExp(pattern).test(name)).toBe(expected));
+});
+
+describe('exclusion-aware replace (mc-backup EXCLUDES)', () => {
+  let root: string; let src: string; let data: string; let file: string;
+  beforeEach(async () => {
+    root = mkdtempSync(path.join(tmpdir(), 'mc-excl-'));
+    src = path.join(root, 'src'); data = path.join(root, 'data'); file = path.join(root, 'world-20261010-110000.tgz');
+    // Archive telle que mc-backup la produit avec EXCLUDES=*.jar,cache,logs,*.tmp : dossiers gardés, jars absents.
+    mkdirSync(path.join(src, 'plugins', 'EssentialsX'), { recursive: true });
+    mkdirSync(path.join(src, 'world'), { recursive: true });
+    writeFileSync(path.join(src, 'plugins', 'EssentialsX', 'config.yml'), 'NEW-CONFIG');
+    writeFileSync(path.join(src, 'plugins', 'other.yml'), 'OTHER');
+    writeFileSync(path.join(src, 'world', 'level.dat'), 'LEVEL-BACKUP');
+    await tar.create({ gzip: true, cwd: src, file }, ['.']);
+    mkdirSync(path.join(data, 'plugins', 'EssentialsX', 'logs'), { recursive: true });
+    mkdirSync(path.join(data, 'plugins', 'EssentialsX', 'cache'), { recursive: true });
+    mkdirSync(path.join(data, 'plugins', 'old-plugin'), { recursive: true });
+    mkdirSync(path.join(data, 'world', 'region'), { recursive: true });
+    writeFileSync(path.join(data, 'plugins', 'EssentialsX.jar'), 'JAR');
+    writeFileSync(path.join(data, 'plugins', 'EssentialsX', 'config.yml'), 'OLD-CONFIG');
+    writeFileSync(path.join(data, 'plugins', 'EssentialsX', 'logs', 'a.log'), 'LOG');
+    writeFileSync(path.join(data, 'plugins', 'EssentialsX', 'cache', 'c.bin'), 'CACHE');
+    writeFileSync(path.join(data, 'plugins', 'EssentialsX', 'x.tmp'), 'TMP');
+    writeFileSync(path.join(data, 'plugins', 'old-plugin', 'stale.yml'), 'STALE');
+    writeFileSync(path.join(data, 'world', 'level.dat'), 'LEVEL-CURRENT');
+    writeFileSync(path.join(data, 'world', 'region', 'r.9.9.mca'), 'NEWER');
+  });
+  afterEach(() => rmSync(root, { recursive: true, force: true }));
+
+  it('keeps plugin jars, logs, cache and tmp files, replaces the rest of each top-level entry', async () => {
+    await restoreArchive(file, data, () => undefined, { excludes: DEFAULT_EXCLUDES });
+    expect(readFileSync(path.join(data, 'plugins', 'EssentialsX.jar'), 'utf8')).toBe('JAR');
+    expect(readFileSync(path.join(data, 'plugins', 'EssentialsX', 'config.yml'), 'utf8')).toBe('NEW-CONFIG');
+    expect(readFileSync(path.join(data, 'plugins', 'other.yml'), 'utf8')).toBe('OTHER');
+    expect(existsSync(path.join(data, 'plugins', 'old-plugin'))).toBe(false);
+    expect(readFileSync(path.join(data, 'plugins', 'EssentialsX', 'logs', 'a.log'), 'utf8')).toBe('LOG');
+    expect(readFileSync(path.join(data, 'plugins', 'EssentialsX', 'cache', 'c.bin'), 'utf8')).toBe('CACHE');
+    expect(readFileSync(path.join(data, 'plugins', 'EssentialsX', 'x.tmp'), 'utf8')).toBe('TMP');
+    // world n'a aucun fichier exclu : remplacé comme avant.
+    expect(readFileSync(path.join(data, 'world', 'level.dat'), 'utf8')).toBe('LEVEL-BACKUP');
+    expect(existsSync(path.join(data, 'world', 'region'))).toBe(false);
+  });
+
+  it('with an empty exclusion list, replaces top-level entries entirely', async () => {
+    await restoreArchive(file, data, () => undefined, { excludes: [] });
+    expect(existsSync(path.join(data, 'plugins', 'EssentialsX.jar'))).toBe(false);
+    expect(existsSync(path.join(data, 'plugins', 'EssentialsX', 'logs'))).toBe(false);
+    expect(readFileSync(path.join(data, 'plugins', 'EssentialsX', 'config.yml'), 'utf8')).toBe('NEW-CONFIG');
+  });
+
+  it('removeExcept: a matching target is kept, a missing one is a no-op, a plain one is removed', async () => {
+    expect(await removeExcept(path.join(data, 'plugins', 'EssentialsX.jar'), ['*.jar'])).toBe(true);
+    expect(existsSync(path.join(data, 'plugins', 'EssentialsX.jar'))).toBe(true);
+    expect(await removeExcept(path.join(data, 'plugins', 'EssentialsX.jar'), [])).toBe(false);
+    expect(existsSync(path.join(data, 'plugins', 'EssentialsX.jar'))).toBe(false);
+    expect(await removeExcept(path.join(data, 'nope'), ['*.jar'])).toBe(false);
+    expect(await removeExcept(path.join(data, 'world'), ['*.jar'])).toBe(false);
+    expect(existsSync(path.join(data, 'world'))).toBe(false);
   });
 });

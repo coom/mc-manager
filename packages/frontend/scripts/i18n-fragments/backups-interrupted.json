@@ -1,0 +1,4 @@
+{ "namespace": "backups", "keys": {
+  "en": { "interrupted": { "title": "A restore was interrupted", "description": "The restore of {{archive}} did not finish (the backend stopped or crashed while it was running). The data may be half restored: restore the safety backup, or dismiss this warning once you have handled it.", "dismiss": "Dismiss" } },
+  "fr": { "interrupted": { "title": "Une restauration a été interrompue", "description": "La restauration de {{archive}} ne s'est pas terminée (le backend s'est arrêté ou a planté pendant l'opération). Les données sont peut-être à moitié restaurées : restaurez la sauvegarde de sécurité, ou masquez cet avertissement une fois la situation traitée.", "dismiss": "Masquer" } }
+} }
