@@ -27,6 +27,7 @@ userRoutes.put('/password-policy', async (req: Request, res: Response, next) => 
     }
     const policy: PasswordPolicy = { minLength, requireComplexity: !!req.body.requireComplexity };
     await savePasswordPolicy(req.app.locals.prisma, policy);
+    await audit(req, 'user.update', 'password-policy');
     res.json(policy);
   } catch (err) { next(err); }
 });

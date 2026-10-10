@@ -46,6 +46,24 @@ describe('BackupService', () => {
     await expect(svc.resolve('sub.tgz')).rejects.toMatchObject({ statusCode: 404 });
   });
 
+  it('resolve works with a relative backups dir and returns an absolute path (needed by sendFile)', async () => {
+    const rel = path.relative(process.cwd(), dir);
+    const relSvc = new BackupService(rel, new DockerService(docker, 'mc', 'mc-backup'));
+    const full = await relSvc.resolve('world-20261009-100000.tgz');
+    expect(path.isAbsolute(full)).toBe(true);
+    expect(full).toBe(path.resolve(dir, 'world-20261009-100000.tgz'));
+    await expect(relSvc.resolve('../world-20261009-100000.tgz')).rejects.toMatchObject({ statusCode: 404 });
+    await expect(relSvc.resolve('missing.tgz')).rejects.toMatchObject({ statusCode: 404 });
+  });
+
+  it('runNow resolves with a non-zero exit code', async () => {
+    backupContainer.execExit = 2;
+    const p = svc.runNow();
+    await wait(5);
+    backupContainer.execStream.end();
+    expect(await p).toBe(2);
+  });
+
   it('remove deletes the file', async () => {
     await svc.remove('world-20261009-100000.tgz');
     expect(existsSync(path.join(dir, 'world-20261009-100000.tgz'))).toBe(false);
@@ -60,7 +78,8 @@ describe('BackupService', () => {
     await expect(svc.runNow()).rejects.toMatchObject({ statusCode: 409 });
     backupContainer.execStream.write('Backing up...\nDone\n');
     backupContainer.execStream.end();
-    await p; await wait(5);
+    expect(await p).toBe(0);
+    await wait(5);
     expect(backupContainer.calls).toContain('exec:backup now');
     expect(progress).toEqual(['Backing up...', 'Done']);
     expect(done).toBe(0);

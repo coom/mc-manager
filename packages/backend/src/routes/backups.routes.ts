@@ -35,7 +35,10 @@ backupsRoutes.post('/run', requireRole('admin'), async (req: Request, res: Respo
     if (backups.isRunning()) { res.status(409).json({ error: 'A backup is already running' }); return; }
     await backups.ensureContainer();
     await audit(req, 'backup.run');
-    backups.runNow().catch(() => { /* déjà journalisé et diffusé par le service */ });
+    // Le résultat (code de sortie ou échec) est audité à la fin, la réponse 202 part tout de suite.
+    backups.runNow()
+      .then((code: number) => audit(req, 'backup.run', `exit ${code}`))
+      .catch((err: Error) => audit(req, 'backup.run', `failed: ${err.message}`));
     res.status(202).json({ accepted: true });
   } catch (err) { next(err); }
 });

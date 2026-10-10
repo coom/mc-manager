@@ -37,8 +37,9 @@ export class BackupService extends EventEmitter {
 
   async resolve(name: string): Promise<string> {
     if (!isSafeBackupName(name)) throw new AppError(404, 'Backup not found');
-    const full = path.join(this.dir, name);
-    if (path.dirname(full) !== path.resolve(this.dir) && path.dirname(full) !== this.dir) throw new AppError(404, 'Backup not found');
+    // Chemin absolu (requis par res.sendFile) même si MC_BACKUPS_DIR est relatif.
+    const full = path.resolve(this.dir, name);
+    if (path.dirname(full) !== path.resolve(this.dir)) throw new AppError(404, 'Backup not found');
     const s = await stat(full).catch(() => null);
     if (!s?.isFile()) throw new AppError(404, 'Backup not found');
     return full;
@@ -49,7 +50,8 @@ export class BackupService extends EventEmitter {
     this.emit('listChanged');
   }
 
-  async runNow(): Promise<void> {
+  /** Lance `backup now` et résout avec le code de sortie (rejette si le conteneur est injoignable). */
+  async runNow(): Promise<number> {
     if (this.running) throw new AppError(409, 'A backup is already running');
     this.running = true;
     try {
@@ -66,6 +68,7 @@ export class BackupService extends EventEmitter {
       if (partial.trim()) this.emit('progress', partial.trim());
       this.emit('done', code);
       if (code === 0) this.emit('listChanged');
+      return code;
     } catch (err) {
       logger.error({ err }, 'backup now failed');
       this.emit('progress', `error: ${(err as Error).message}`);
