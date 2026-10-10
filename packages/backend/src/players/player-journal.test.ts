@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterAll } from 'vitest';
+import { describe, it, expect, beforeEach, afterAll, vi } from 'vitest';
 import { mkdtempSync, writeFileSync, rmSync } from 'fs';
 import { tmpdir } from 'os';
 import path from 'path';
@@ -105,6 +105,60 @@ describe('PlayerJournal sessions', () => {
     await j.onStatus('stopping');
     expect(j.online()).toHaveLength(0);
     expect((await prisma.playerSession.findFirst())?.leftAt).not.toBeNull();
+  });
+});
+
+describe('PlayerJournal robustness', () => {
+  it('keeps state consistent and the queue alive when a DB step fails', async () => {
+    const { j, events } = journal();
+    await j.handleLine(L('Alice[/8.8.8.8:1] logged in with entity id 1 at (0, 64, 0)'));
+    const spy = vi.spyOn(prisma.playerSession, 'update').mockRejectedValueOnce(new Error('db down'));
+    await j.handleLine(L('Alice left the game'));
+    expect(j.online().map((p) => p.name)).toEqual(['Alice']);
+    expect(events.map((e) => (e as { kind: string }).kind)).toEqual(['join']);
+    spy.mockRestore();
+    await j.handleLine(L('Alice left the game'));
+    expect(j.online()).toEqual([]);
+    expect(events.map((e) => (e as { kind: string }).kind)).toEqual(['join', 'leave']);
+    expect((await prisma.playerSession.findFirst())?.leftAt).not.toBeNull();
+  });
+
+  it('closeAll continues past a failing close', async () => {
+    const { j } = journal();
+    await j.handleLine(L('Alice[/8.8.8.8:1] logged in with entity id 1 at (0, 64, 0)'));
+    await j.handleLine(L('Bobby[/8.8.8.8:2] logged in with entity id 2 at (0, 64, 0)'));
+    const spy = vi.spyOn(prisma.playerSession, 'update').mockRejectedValueOnce(new Error('db down'));
+    await j.closeAll();
+    spy.mockRestore();
+    expect(j.online()).toHaveLength(1);
+  });
+
+  it('a failed create keeps the pending uuid for the next attempt', async () => {
+    const { j } = journal();
+    await j.handleLine(L(`UUID of player Alice is ${UUID}`));
+    const spy = vi.spyOn(prisma.playerSession, 'create').mockRejectedValueOnce(new Error('db down'));
+    await j.handleLine(L('Alice[/8.8.8.8:1] logged in with entity id 1 at (0, 64, 0)'));
+    spy.mockRestore();
+    expect(j.online()).toEqual([]);
+    await j.handleLine(L('Alice[/8.8.8.8:2] logged in with entity id 2 at (0, 64, 0)'));
+    expect(j.online()[0].uuid).toBe(UUID);
+  });
+
+  it.each(['unavailable', 'stopped'] as const)('closes open sessions on status %s', async (status) => {
+    const { j } = journal();
+    await j.handleLine(L('Bob[/8.8.8.8:1] logged in with entity id 1 at (0, 64, 0)'));
+    await j.onStatus(status);
+    expect(j.online()).toEqual([]);
+    expect((await prisma.playerSession.findFirst())?.leftAt).not.toBeNull();
+  });
+
+  it('reconcile does not consume a pending uuid', async () => {
+    const { j } = journal();
+    await j.handleLine(L(`UUID of player Alice is ${UUID}`));
+    await j.reconcile(['Alice']);
+    expect((await prisma.playerSession.findFirst())?.uuid).toBeNull();
+    await j.handleLine(L('Alice[/8.8.8.8:1] logged in with entity id 1 at (0, 64, 0)'));
+    expect(j.online()[0].uuid).toBe(UUID);
   });
 });
 
