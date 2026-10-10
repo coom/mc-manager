@@ -265,5 +265,21 @@
     "noPlayers": "Personne en ligne",
     "playersOverTime": "Fréquentation",
     "playersMax": "Pic de joueurs"
+  },
+  "backups": {
+    "title": "Sauvegardes",
+    "name": "Nom",
+    "date": "Date",
+    "size": "Taille",
+    "total": "{{count}} archives, {{size}}",
+    "runNow": "Sauvegarder maintenant",
+    "running": "Sauvegarde en cours…",
+    "finished": "Terminé",
+    "deleted": "Sauvegarde supprimée",
+    "empty": "Aucune sauvegarde",
+    "confirmDelete": {
+      "title": "Supprimer cette sauvegarde ?",
+      "description": "{{name}} sera supprimée définitivement."
+    }
   }
 }

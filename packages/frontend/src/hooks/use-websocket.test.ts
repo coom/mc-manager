@@ -97,6 +97,13 @@ describe('useWebSocket', () => {
     expect(count()).toBe(1);
   });
 
+  it('invalidates the backups query on backup.list.changed', () => {
+    renderHook(() => useWebSocket(), { wrapper });
+    const spy = vi.spyOn(queryClient, 'invalidateQueries');
+    act(() => FakeSocket.instances[0].onmessage?.({ data: JSON.stringify({ type: 'backup.list.changed' }) }));
+    expect(spy.mock.calls.map((c) => c[0]?.queryKey)).toEqual([['backups']]);
+  });
+
   it('invalidates the server, backups and metrics queries on open', () => {
     const spy = vi.spyOn(queryClient, 'invalidateQueries');
     renderHook(() => useWebSocket(), { wrapper });

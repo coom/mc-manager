@@ -35,7 +35,13 @@ export function useWebSocket(): void {
         void queryClient.invalidateQueries({ queryKey: ['backups'] });
         void queryClient.invalidateQueries({ queryKey: ['metrics'] });
       };
-      socket.onmessage = (e) => { try { apply(JSON.parse(e.data) as WsMessage); } catch { /* message illisible, ignoré */ } };
+      socket.onmessage = (e) => {
+        try {
+          const msg = JSON.parse(e.data) as WsMessage;
+          apply(msg);
+          if (msg.type === 'backup.list.changed' || msg.type === 'backup.done') void queryClient.invalidateQueries({ queryKey: ['backups'] });
+        } catch { /* message illisible, ignoré */ }
+      };
       socket.onclose = (e) => {
         setConnected(false);
         if (stopped) return;

@@ -265,5 +265,21 @@
     "noPlayers": "Nobody online",
     "playersOverTime": "Players over time",
     "playersMax": "Peak players"
+  },
+  "backups": {
+    "title": "Backups",
+    "name": "Name",
+    "date": "Date",
+    "size": "Size",
+    "total": "{{count}} archives, {{size}}",
+    "runNow": "Backup now",
+    "running": "Backup in progress…",
+    "finished": "Finished",
+    "deleted": "Backup deleted",
+    "empty": "No backup yet",
+    "confirmDelete": {
+      "title": "Delete this backup?",
+      "description": "{{name}} will be permanently deleted."
+    }
   }
 }

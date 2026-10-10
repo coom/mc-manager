@@ -1,0 +1,4 @@
+{ "namespace": "backups", "keys": {
+  "en": { "title": "Backups", "name": "Name", "date": "Date", "size": "Size", "total": "{{count}} archives, {{size}}", "runNow": "Backup now", "running": "Backup in progress…", "finished": "Finished", "deleted": "Backup deleted", "empty": "No backup yet", "confirmDelete": { "title": "Delete this backup?", "description": "{{name}} will be permanently deleted." } },
+  "fr": { "title": "Sauvegardes", "name": "Nom", "date": "Date", "size": "Taille", "total": "{{count}} archives, {{size}}", "runNow": "Sauvegarder maintenant", "running": "Sauvegarde en cours…", "finished": "Terminé", "deleted": "Sauvegarde supprimée", "empty": "Aucune sauvegarde", "confirmDelete": { "title": "Supprimer cette sauvegarde ?", "description": "{{name}} sera supprimée définitivement." } }
+} }
