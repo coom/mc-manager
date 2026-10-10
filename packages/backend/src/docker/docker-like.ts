@@ -3,7 +3,7 @@ import type { Readable } from 'stream';
 export interface ContainerInspect {
   Id: string;
   Name: string;
-  Config: { Tty: boolean; Image: string; Labels?: Record<string, string> };
+  Config: { Tty: boolean; Image: string; Labels?: Record<string, string>; Env?: string[] };
   State: { Status: string; Running: boolean; StartedAt: string; Health?: { Status: 'starting' | 'healthy' | 'unhealthy' | 'none' } };
 }
 

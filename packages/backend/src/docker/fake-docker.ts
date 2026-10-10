@@ -35,10 +35,10 @@ export class FakeDocker implements DockerLike {
   }
 }
 
-export function inspectFixture(over: Partial<ContainerInspect['State']> & { Tty?: boolean } = {}): ContainerInspect {
-  const { Tty = false, ...state } = over;
+export function inspectFixture(over: Partial<ContainerInspect['State']> & { Tty?: boolean; Env?: string[] } = {}): ContainerInspect {
+  const { Tty = false, Env = [], ...state } = over;
   return {
-    Id: 'abc', Name: '/mc', Config: { Tty, Image: 'itzg/minecraft-server:latest' },
+    Id: 'abc', Name: '/mc', Config: { Tty, Image: 'itzg/minecraft-server:latest', Env },
     State: { Status: 'running', Running: true, StartedAt: '2026-10-10T10:00:00Z', Health: { Status: 'healthy' }, ...state },
   };
 }

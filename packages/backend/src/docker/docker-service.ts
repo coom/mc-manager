@@ -52,11 +52,11 @@ export class DockerService extends EventEmitter {
 
   getStatus(): ServerStatus { return this.status; }
 
-  async inspectServer(): Promise<{ status: ServerStatus; startedAt: string | null; tty: boolean; id: string; image: string } | null> {
+  async inspectServer(): Promise<{ status: ServerStatus; startedAt: string | null; tty: boolean; id: string; image: string; env: string[] } | null> {
     const c = await this.docker.findByName(this.serverName);
     if (!c) return null;
     const i = await c.inspect();
-    return { status: statusFromInspect(i), startedAt: i.State.Running ? i.State.StartedAt : null, tty: i.Config.Tty, id: i.Id, image: i.Config.Image };
+    return { status: statusFromInspect(i), startedAt: i.State.Running ? i.State.StartedAt : null, tty: i.Config.Tty, id: i.Id, image: i.Config.Image, env: i.Config.Env ?? [] };
   }
 
   private setStatus(s: ServerStatus) {

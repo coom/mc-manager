@@ -9,6 +9,7 @@ import { authMiddleware } from './middleware/auth.js';
 import { authRoutes } from './routes/auth.routes.js';
 import { setupRoutes } from './routes/setup.routes.js';
 import { userRoutes } from './routes/users.routes.js';
+import { propertiesRoutes } from './routes/properties.routes.js';
 import { serverRoutes } from './routes/server.routes.js';
 import { metricsRoutes } from './routes/metrics.routes.js';
 import { backupsRoutes, backupDownloadRoutes } from './routes/backups.routes.js';
@@ -43,6 +44,7 @@ export function createApp(): Express {
   app.use('/api/backups', backupDownloadRoutes);
   app.use('/api', authMiddleware);
   app.use('/api/users', userRoutes);
+  app.use('/api/server/properties', propertiesRoutes);
   app.use('/api/server', serverRoutes);
   app.use('/api/metrics', metricsRoutes);
   app.use('/api/backups', backupsRoutes);
