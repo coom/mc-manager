@@ -37,6 +37,8 @@ ENV NODE_ENV=production
 WORKDIR /app
 
 COPY --from=build /app/node_modules ./node_modules
+# Sans les fichiers « city », geoip-lite se rabat sur la base pays seule (~7 Mo au lieu de ~110 Mo en mémoire).
+RUN find /app/node_modules -path '*geoip-lite/data/geoip-city*.dat' -delete
 COPY --from=build /app/package.json ./package.json
 COPY --from=build /app/pnpm-workspace.yaml ./pnpm-workspace.yaml
 COPY --from=build /app/packages/common/dist ./packages/common/dist

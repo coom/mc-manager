@@ -9,11 +9,11 @@ export type PlayerEvent =
 
 const NAME = '([A-Za-z0-9_]{3,16})';
 const RE_UUID = new RegExp(`^UUID of player ${NAME} is ([0-9a-fA-F-]{36})$`);
-const RE_JOIN = new RegExp(`^${NAME}\\[/(.+?)\\] logged in with entity id \\d+`);
+const RE_JOIN = new RegExp(`^${NAME}\\[(?:/(.+?)|IP hidden)\\] logged in with entity id \\d+`);
 const RE_LEAVE = new RegExp(`^${NAME} left the game$`);
 const RE_LOST = new RegExp(`^${NAME} lost connection: `);
-const RE_REFUSED = new RegExp(`^Disconnecting ${NAME} \\(/(.+?)\\): (.*)$`);
-const RE_REFUSED_PROFILE = /^Disconnecting com\.mojang\.authlib\.GameProfile@\S*?\[.*?name=([A-Za-z0-9_]{3,16})(?=[,\]]).*?\] \(\/(.+?)\): (.*)$/;
+const RE_REFUSED = new RegExp(`^Disconnecting ${NAME} \\((?:/(.+?)|IP hidden)\\): (.*)$`);
+const RE_REFUSED_PROFILE = /^Disconnecting com\.mojang\.authlib\.GameProfile@\S*?\[.*?name=([A-Za-z0-9_]{3,16})(?=[,\]]).*?\] \((?:\/(.+?)|IP hidden)\): (.*)$/;
 
 /** Applique au champ `message` d'une LogLine (niveau et thread déjà retirés). */
 export function parsePlayerLine(message: string): PlayerEvent | null {
@@ -21,10 +21,10 @@ export function parsePlayerLine(message: string): PlayerEvent | null {
   if (message.startsWith('<')) return null;
   let m: RegExpExecArray | null;
   if ((m = RE_UUID.exec(message))) return { type: 'uuid', name: m[1], uuid: m[2].toLowerCase() };
-  if ((m = RE_JOIN.exec(message))) return { type: 'join', name: m[1], ip: normalizeIp(m[2]) };
+  if ((m = RE_JOIN.exec(message))) return { type: 'join', name: m[1], ip: m[2] ? normalizeIp(m[2]) : '' };
   if ((m = RE_LEAVE.exec(message)) || (m = RE_LOST.exec(message))) return { type: 'leave', name: m[1] };
   if ((m = RE_REFUSED.exec(message)) || (m = RE_REFUSED_PROFILE.exec(message))) {
-    const ip = normalizeIp(m[2]);
+    const ip = m[2] ? normalizeIp(m[2]) : null;
     return { type: 'refused', name: m[1], ip: ip || null, message: m[3].trim() };
   }
   return null;

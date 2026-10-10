@@ -157,10 +157,17 @@ describe('actions', () => {
 });
 
 describe('GET /api/lists', () => {
-  it('returns the four lists for any role', async () => {
+  it('returns the four lists to an admin, including banned ips', async () => {
+    writeFileSync(path.join(dir, 'banned-ips.json'), JSON.stringify([{ ip: '1.2.3.4', created: '', source: 'Server', expires: 'forever', reason: '' }]));
+    const res = await request(appWith('admin').app).get('/api/lists');
+    expect(res.status).toBe(200);
+    expect(res.body).toMatchObject({ whitelist: [], ops: [], bannedPlayers: [], bannedIps: [{ ip: '1.2.3.4' }], whitelistEnabled: false });
+  });
+  it('hides banned ips from a viewer', async () => {
     writeFileSync(path.join(dir, 'banned-ips.json'), JSON.stringify([{ ip: '1.2.3.4', created: '', source: 'Server', expires: 'forever', reason: '' }]));
     const res = await request(appWith('viewer').app).get('/api/lists');
     expect(res.status).toBe(200);
-    expect(res.body).toMatchObject({ whitelist: [], ops: [], bannedPlayers: [], bannedIps: [{ ip: '1.2.3.4' }], whitelistEnabled: false });
+    expect(res.body.bannedIps).toEqual([]);
+    expect(JSON.stringify(res.body)).not.toContain('1.2.3.4');
   });
 });

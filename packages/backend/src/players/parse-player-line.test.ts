@@ -18,6 +18,14 @@ describe('parsePlayerLine', () => {
     expect(parsePlayerLine('Bob[/[2001:db8::1]:51234] logged in with entity id 5 at (0.0, 64.0, 0.0)'))
       .toEqual({ type: 'join', name: 'Bob', ip: '2001:db8::1' });
   });
+  it('reads a join on a log-ips=false server with an empty ip', () => {
+    expect(parsePlayerLine('Bob[IP hidden] logged in with entity id 5 at (0.0, 64.0, 0.0)'))
+      .toEqual({ type: 'join', name: 'Bob', ip: '' });
+  });
+  it('reads a refusal on a log-ips=false server with a null ip', () => {
+    expect(parsePlayerLine('Disconnecting Mallory (IP hidden): You are banned from this server.'))
+      .toEqual({ type: 'refused', name: 'Mallory', ip: null, message: 'You are banned from this server.' });
+  });
   it('reads a leave', () => {
     expect(parsePlayerLine('Alice_01 left the game')).toEqual({ type: 'leave', name: 'Alice_01' });
   });

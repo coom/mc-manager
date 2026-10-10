@@ -300,3 +300,6 @@ README (fr, en) : section « Joueurs et journal » (fonctions, rôles, rétentio
 1. Le flux de logs Docker est ouvert avec `timestamps: true` ; `LogStreamer` retire le préfixe et passe la date à `PlayerJournal.handleLine(line, at)`, qui ignore les lignes antérieures à son démarrage. Le rejeu des 500 lignes d'historique ne crée donc aucune session fantôme (l'horodatage de la section 3.3 reste l'horloge du backend).
 2. Le ban IP d'un joueur en ligne passe par `POST /api/players/:name/ban-ip`, qui lit l'IP côté serveur (`journal.currentIp`) puisque le navigateur ne la reçoit jamais ; `POST /api/bans/ip` reste disponible pour bannir une adresse arbitraire.
 3. Les méthodes de `PlayerAdmin` sont asynchrones ; une fenêtre de grâce de réconciliation de 30 s protège les deux sens.
+4. Le message WebSocket `player.session` a pour charge utile `{ kind, player: OnlinePlayer, leftAt? }` et non la forme à plat de la section 5.5.
+5. `WebLoginReason` inclut `'mfa'`.
+6. Les viewers ne reçoivent aucune IP, y compris dans les détails d'audit des bans IP et la liste des IP bannies (contradiction entre §6.2 et §7 tranchée en faveur de §7).

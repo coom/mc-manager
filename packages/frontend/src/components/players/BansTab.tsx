@@ -27,7 +27,7 @@ export function BansTab() {
   });
   const fmt = (s: string) => { const d = new Date(s.replace(/ \+(\d{2})(\d{2})$/, '+$1:$2').replace(' ', 'T')); return Number.isNaN(d.getTime()) ? s : d.toLocaleString(i18n.language); };
   if (!data) return null;
-  const empty = data.bannedPlayers.length === 0 && data.bannedIps.length === 0;
+  const empty = data.bannedPlayers.length === 0 && (!isAdmin || data.bannedIps.length === 0);
   return (
     <div className="space-y-6">
       {empty && <EmptyState title={t('players.bans.empty')} />}
@@ -43,7 +43,7 @@ export function BansTab() {
           </table>
         </section>
       )}
-      {data.bannedIps.length > 0 && (
+      {isAdmin && data.bannedIps.length > 0 && (
         <section>
           <h2 className="mb-2 text-sm font-medium">{t('players.bans.ipsTitle')}</h2>
           <table className="w-full text-sm">

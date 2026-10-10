@@ -13,15 +13,16 @@ import { toast } from 'sonner';
 const user = () => userEvent.setup({ pointerEventsCheck: 0 });
 
 vi.mock('sonner', () => ({ toast: { error: vi.fn(), success: vi.fn() } }));
-vi.mock('@/api/players.api', () => ({ playersApi: { online: vi.fn(), kick: vi.fn().mockResolvedValue({}), ban: vi.fn().mockResolvedValue({}), banIp: vi.fn(), op: vi.fn().mockResolvedValue({}), deop: vi.fn(), pardon: vi.fn() } }));
+vi.mock('@/api/players.api', () => ({ playersApi: { online: vi.fn(), lists: vi.fn(), kick: vi.fn().mockResolvedValue({}), ban: vi.fn().mockResolvedValue({}), banIp: vi.fn(), op: vi.fn().mockResolvedValue({}), deop: vi.fn(), pardon: vi.fn() } }));
 
 const alice = { name: 'Alice', uuid: '069a79f4-44e9-4726-a5be-fca90e38aaf5', joinedAt: '2026-10-10T10:00:00Z', country: 'FR', hasIp: true };
 const bob = { name: 'Bob', uuid: null, joinedAt: '2026-10-10T10:05:00Z', country: null, hasIp: false };
 
-function setup(role: 'admin' | 'viewer', status: 'ready' | 'stopped' = 'ready') {
+function setup(role: 'admin' | 'viewer', status: 'ready' | 'stopped' = 'ready', lists: Record<string, unknown> = {}) {
   useAuthStore.setState({ accessToken: 't', refreshToken: 'r', user: { id: 1, username: 'u', displayName: 'U', role } });
   useServerStore.setState({ info: { status, containerName: 'mc' } as never });
   vi.mocked(playersApi.online).mockResolvedValue({ items: [alice, bob], total: 2, page: 1, limit: 2 });
+  vi.mocked(playersApi.lists).mockResolvedValue({ whitelist: [], bannedPlayers: [], bannedIps: [], ops: [], whitelistEnabled: false, ...lists });
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   render(<QueryClientProvider client={qc}><MemoryRouter><OnlineTab /></MemoryRouter></QueryClientProvider>);
 }
@@ -91,6 +92,20 @@ describe('OnlineTab', () => {
     setup('admin', 'stopped');
     await screen.findByText('Alice');
     expect(screen.getAllByRole('button', { name: 'Actions' })[0]).toBeDisabled();
+  });
+
+  it('offers deop and pardon, not op and ban, for an online operator who is banned', async () => {
+    const u = user();
+    setup('admin', 'ready', {
+      ops: [{ uuid: alice.uuid.toUpperCase(), name: 'Alice', level: 4, bypassesPlayerLimit: false }],
+      bannedPlayers: [{ uuid: '', name: 'alice', created: '', source: 'Server', expires: 'forever', reason: '' }],
+    });
+    await screen.findByText('Alice');
+    await waitFor(() => expect(playersApi.lists).toHaveBeenCalled());
+    await u.click(screen.getAllByRole('button', { name: 'Actions' })[0]);
+    expect(await screen.findByRole('menuitem', { name: 'Remove operator' })).toBeInTheDocument();
+    expect(screen.queryByRole('menuitem', { name: 'Make operator' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('menuitem', { name: 'Ban' })).not.toBeInTheDocument();
   });
 
   it('shows the server error on failure', async () => {

@@ -14,6 +14,13 @@ auditRoutes.get('/', async (req: Request, res: Response, next: NextFunction) => 
       prisma.auditLog.count({ where }),
       prisma.auditLog.findMany({ where, orderBy: { id: 'desc' }, skip: (page - 1) * pageSize, take: pageSize }),
     ]);
-    res.json({ total, page, pageSize, entries: rows.map((r: { at: Date }) => ({ ...r, at: r.at.toISOString() })) });
+    const isAdmin = req.user?.role === 'admin';
+    // Les viewers ne reçoivent aucune IP : ni celle de l'acteur, ni celles des détails de ban/pardon IP.
+    const entries = rows.map((r: { at: Date; action: string; detail: string | null }) => ({
+      ...r,
+      at: r.at.toISOString(),
+      ...(isAdmin ? {} : { ip: null, detail: r.action === 'player.ban_ip' || r.action === 'player.pardon_ip' ? null : r.detail }),
+    }));
+    res.json({ total, page, pageSize, entries });
   } catch (err) { next(err); }
 });

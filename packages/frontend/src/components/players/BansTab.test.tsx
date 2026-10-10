@@ -21,10 +21,10 @@ function setup(role: 'admin' | 'viewer') {
 
 describe('BansTab', () => {
   beforeAll(async () => { await i18n.changeLanguage('en'); });
-  it('viewer sees both lists without lift buttons', async () => {
+  it('viewer sees the player bans but never an ip, without lift buttons', async () => {
     setup('viewer');
     expect(await screen.findByText('Mallory')).toBeInTheDocument();
-    expect(screen.getByText('198.51.100.7')).toBeInTheDocument();
+    expect(screen.queryByText('198.51.100.7')).not.toBeInTheDocument();
     expect(screen.getByText('griefing')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Lift' })).not.toBeInTheDocument();
   });

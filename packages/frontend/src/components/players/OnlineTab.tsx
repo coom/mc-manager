@@ -16,6 +16,8 @@ export function OnlineTab() {
   const { t, i18n } = useTranslation();
   const isAdmin = useAuthStore((s) => s.isAdmin());
   const { data } = useQuery({ queryKey: ['players', 'online'], queryFn: playersApi.online });
+  const { data: lists } = useQuery({ queryKey: ['lists'], queryFn: playersApi.lists, enabled: isAdmin });
+  const matches = (e: { uuid: string; name: string }, p: { name: string; uuid: string | null }) => (p.uuid && e.uuid.toLowerCase() === p.uuid.toLowerCase()) || e.name.toLowerCase() === p.name.toLowerCase();
   const items = data?.items ?? [];
   if (data && items.length === 0) return <EmptyState title={t('players.noneOnline')} />;
   return (
@@ -26,7 +28,7 @@ export function OnlineTab() {
           <td className="py-2"><PlayerName name={p.name} uuid={p.uuid} /></td>
           <td>{new Date(p.joinedAt).toLocaleString(i18n.language)}</td>
           <td><CountryFlag country={p.country} hasIp={p.hasIp} /></td>
-          {isAdmin && <td className="text-right"><PlayerActionsMenu name={p.name} hasIp={p.hasIp} online /></td>}
+          {isAdmin && <td className="text-right"><PlayerActionsMenu name={p.name} hasIp={p.hasIp} online op={!!lists?.ops.some((e) => matches(e, p))} banned={!!lists?.bannedPlayers.some((e) => matches(e, p))} /></td>}
         </tr>
       ))}</tbody>
     </table>

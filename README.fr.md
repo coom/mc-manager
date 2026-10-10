@@ -130,9 +130,9 @@ i18n : écrire un fragment dans `packages/frontend/scripts/i18n-fragments/*.json
 
 ## Confidentialité
 
-Le dashboard affiche des avatars de joueurs chargés depuis le service tiers [mc-heads.net](https://mc-heads.net) : le navigateur de chaque utilisateur lui transmet les noms des joueurs en ligne. Les polices de l'interface (Outfit, JetBrains Mono) sont aussi chargées depuis Google Fonts (`fonts.googleapis.com`), ce qui expose l'adresse IP du visiteur à Google. Il n'y a aucun autre appel externe.
+Le dashboard, la page Joueurs et les fiches joueur affichent des avatars de joueurs chargés depuis le service tiers [mc-heads.net](https://mc-heads.net) : le navigateur de chaque utilisateur lui transmet les noms des joueurs en ligne. Les polices de l'interface (Outfit, JetBrains Mono) sont aussi chargées depuis Google Fonts (`fonts.googleapis.com`), ce qui expose l'adresse IP du visiteur à Google. Il n'y a aucun autre appel externe.
 
-La géolocalisation des IP utilise la base `geoip-lite` embarquée dans l'image : aucun appel externe, pays uniquement. Les IP ne sont visibles que des admins, et le journal est purgé selon la rétention configurée.
+La géolocalisation des IP utilise la base `geoip-lite` embarquée dans l'image (celle livrée avec geoip-lite 2.0.2, sans mise à jour automatique) : aucun appel externe, pays uniquement. Les IP ne sont visibles que des admins, et le journal est purgé selon la rétention configurée.
 
 ## Feuille de route
 

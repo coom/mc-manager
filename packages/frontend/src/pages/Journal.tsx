@@ -24,7 +24,7 @@ export default function Journal() {
   const [from, setFrom] = useState('');
   const [to, setTo] = useState('');
   const [page, setPage] = useState(1);
-  const params: JournalQuery = { q: q || undefined, from: from ? new Date(from).toISOString() : undefined, to: to ? new Date(`${to}T23:59:59`).toISOString() : undefined, page, limit: LIMIT };
+  const params: JournalQuery = { q: q || undefined, from: from ? new Date(`${from}T00:00:00`).toISOString() : undefined, to: to ? new Date(`${to}T23:59:59`).toISOString() : undefined, page, limit: LIMIT };
   const players = useQuery({ queryKey: ['journal', 'players', params], queryFn: () => journalApi.players(params), enabled: isAdmin && tab === 'players' });
   const failures = useQuery({ queryKey: ['journal', 'failures', params], queryFn: () => journalApi.failures(params), enabled: isAdmin && tab === 'failures' });
   const web = useQuery({ queryKey: ['journal', 'web', params], queryFn: () => journalApi.web(params), enabled: isAdmin && tab === 'web' });

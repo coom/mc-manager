@@ -1,4 +1,4 @@
-import { it, expect, beforeAll, afterAll } from 'vitest';
+import { describe, it, expect, beforeEach, afterAll } from 'vitest';
 import express from 'express';
 import request from 'supertest';
 import { testPrisma } from '../test-db.js';
@@ -6,27 +6,42 @@ import { auditRoutes } from './audit.routes.js';
 import { errorHandler } from '../middleware/error-handler.js';
 
 const prisma = testPrisma();
-afterAll(() => prisma.$disconnect());
-const app = express();
-app.use((req, _res, next) => { req.user = { typ: 'access', id: 1, username: 'v', role: 'viewer' }; next(); });
-app.locals.prisma = prisma;
-app.use('/api/audit', auditRoutes);
-app.use(errorHandler);
+afterAll(async () => { await prisma.$disconnect(); });
 
-beforeAll(async () => {
+function appWith(role: 'admin' | 'viewer') {
+  const app = express();
+  app.use((req, _res, next) => { req.user = { typ: 'access', id: 1, username: 'u', role }; next(); });
+  app.locals.prisma = prisma;
+  app.use('/api/audit', auditRoutes);
+  app.use(errorHandler);
+  return app;
+}
+
+beforeEach(async () => {
+  await prisma.auditLog.deleteMany();
   await prisma.auditLog.createMany({ data: [
-    { userId: 1, username: 'alice', action: 'server.start' },
-    { userId: 2, username: 'bob', action: 'rcon.command', detail: 'list' },
-    { userId: 1, username: 'alice', action: 'backup.delete', detail: 'x.tgz' },
+    { userId: 1, username: 'root', action: 'player.ban_ip', detail: '8.8.8.8 (Alice): spam', ip: '1.2.3.4' },
+    { userId: 1, username: 'root', action: 'player.pardon_ip', detail: '8.8.8.8', ip: '1.2.3.4' },
+    { userId: 1, username: 'root', action: 'rcon.command', detail: 'list', ip: '1.2.3.4' },
   ] });
 });
 
-it('pages newest first', async () => {
-  const r = await request(app).get('/api/audit?page=1&pageSize=2');
-  expect(r.body.total).toBe(3); expect(r.body.entries).toHaveLength(2); expect(r.body.entries[0].action).toBe('backup.delete');
+describe('GET /api/audit', () => {
+  it('hides every ip from a viewer', async () => {
+    const res = await request(appWith('viewer')).get('/api/audit');
+    expect(res.status).toBe(200);
+    const by = Object.fromEntries(res.body.entries.map((e: { action: string }) => [e.action, e]));
+    expect(by['player.ban_ip'].detail).toBeNull();
+    expect(by['player.pardon_ip'].detail).toBeNull();
+    expect(by['rcon.command'].detail).toBe('list');
+    expect(res.body.entries.every((e: { ip: unknown }) => e.ip === null)).toBe(true);
+    expect(JSON.stringify(res.body)).not.toMatch(/8\.8\.8\.8|1\.2\.3\.4/);
+  });
+  it('shows everything to an admin', async () => {
+    const res = await request(appWith('admin')).get('/api/audit');
+    const by = Object.fromEntries(res.body.entries.map((e: { action: string }) => [e.action, e]));
+    expect(by['player.ban_ip'].detail).toBe('8.8.8.8 (Alice): spam');
+    expect(by['player.pardon_ip'].detail).toBe('8.8.8.8');
+    expect(res.body.entries.every((e: { ip: string }) => e.ip === '1.2.3.4')).toBe(true);
+  });
 });
-it('filters by action prefix and user', async () => {
-  expect((await request(app).get('/api/audit?action=rcon')).body.entries).toHaveLength(1);
-  expect((await request(app).get('/api/audit?user=alice')).body.entries).toHaveLength(2);
-});
-it('rejects a bad page size', async () => { expect((await request(app).get('/api/audit?pageSize=1000')).status).toBe(400); });

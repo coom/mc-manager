@@ -88,7 +88,11 @@ bansRoutes.delete('/ip/:ip', wrap(async (req, res) => {
 }));
 
 export const listsRoutes: Router = Router();
-listsRoutes.get('/', wrap(async (req, res) => { res.json(await readLists(req.app.locals.dataDir)); }));
+listsRoutes.get('/', wrap(async (req, res) => {
+  const lists = await readLists(req.app.locals.dataDir);
+  // Les viewers ne reçoivent aucune IP.
+  res.json(req.user?.role === 'admin' ? lists : { ...lists, bannedIps: [] });
+}));
 
 export const whitelistRoutes: Router = Router();
 whitelistRoutes.use(requireRole('admin'));

@@ -37,6 +37,17 @@ describe('Journal page', () => {
     fireEvent.change(screen.getByPlaceholderText('Name'), { target: { value: 'ali' } });
     await waitFor(() => expect(journalApi.players).toHaveBeenCalledWith(expect.objectContaining({ q: 'ali', page: 1 })));
   });
+  it('converts the from date to a local-day boundary and returns to page 1', async () => {
+    setup();
+    await screen.findByText('Alice');
+    vi.mocked(journalApi.players).mockResolvedValue({ total: 120, page: 1, limit: 50, items: [] });
+    fireEvent.change(screen.getByLabelText('From'), { target: { value: '2026-10-09' } });
+    expect(await screen.findByText('1 / 3')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: '›' }));
+    await waitFor(() => expect(journalApi.players).toHaveBeenCalledWith(expect.objectContaining({ page: 2 })));
+    fireEvent.change(screen.getByLabelText('From'), { target: { value: '2026-10-10' } });
+    await waitFor(() => expect(journalApi.players).toHaveBeenLastCalledWith(expect.objectContaining({ from: new Date('2026-10-10T00:00:00').toISOString(), page: 1 })));
+  });
   it('switches to refusals and web logins', async () => {
     setup();
     await screen.findByText('Alice');

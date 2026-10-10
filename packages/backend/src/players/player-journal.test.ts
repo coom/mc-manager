@@ -63,6 +63,14 @@ describe('PlayerJournal sessions', () => {
     expect(j.currentIp('Nobody')).toBeNull();
   });
 
+  it('stores a null ip and no country when the server hides ips (log-ips=false)', async () => {
+    const { j } = journal();
+    await j.handleLine(L('Bob[IP hidden] logged in with entity id 1 at (0, 64, 0)'));
+    expect(j.online()[0]).toMatchObject({ name: 'Bob', country: null, hasIp: false });
+    expect(j.currentIp('Bob')).toBeNull();
+    expect(await prisma.playerSession.findFirst()).toMatchObject({ ip: null, country: null });
+  });
+
   it('a second join without leave closes the first session', async () => {
     const { j } = journal();
     await j.handleLine(L('Bob[/8.8.8.8:1] logged in with entity id 1 at (0, 64, 0)'));

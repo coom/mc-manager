@@ -130,9 +130,9 @@ i18n: write a fragment in `packages/frontend/scripts/i18n-fragments/*.json`, the
 
 ## Privacy
 
-The dashboard shows player avatars loaded from the third-party service [mc-heads.net](https://mc-heads.net): the browser of every user sends the names of the online players to that service. The interface fonts (Outfit, JetBrains Mono) are also loaded from Google Fonts (`fonts.googleapis.com`), which exposes the visitor IP address to Google. There is no other external call.
+The dashboard, the Players page and the player sheets show player avatars loaded from the third-party service [mc-heads.net](https://mc-heads.net): the browser of every user sends the names of the online players to that service. The interface fonts (Outfit, JetBrains Mono) are also loaded from Google Fonts (`fonts.googleapis.com`), which exposes the visitor IP address to Google. There is no other external call.
 
-IP geolocation uses the `geoip-lite` database embedded in the image: no external call, country only. IP addresses are visible to admins only, and the journal is purged according to the configured retention.
+IP geolocation uses the `geoip-lite` database embedded in the image (the one shipped with geoip-lite 2.0.2, with no automatic update): no external call, country only. IP addresses are visible to admins only, and the journal is purged according to the configured retention.
 
 ## Roadmap
 
