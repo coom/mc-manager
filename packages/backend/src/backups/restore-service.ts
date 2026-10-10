@@ -10,7 +10,8 @@ export interface RestoreDeps { dataDir: string; backups: BackupService; docker: 
 export interface RestoreOptions { startAfter: boolean; confirmNoSafetyBackup: boolean }
 type AuditFn = (detail: string) => Promise<void>;
 
-class RestoreFailure extends Error { constructor(message: string, public partial = false) { super(message); } }
+interface DoneEvent { ok: boolean; message: string; safetyBackup: string | null }
+class RestoreFailure extends Error {}
 
 /**
  * Restauration d'une archive : check (synchrone, avant le 202) puis, en arrière-plan,
@@ -36,33 +37,45 @@ export class RestoreService extends EventEmitter {
     if (canSafety) await backups.ensureContainer();
     else if (!opts.confirmNoSafetyBackup) throw new AppError(409, 'Server is stopped: no safety backup possible, confirm to proceed');
     const info = await inspectArchive(file);
-    const release = backups.dataLock.acquire('restore');
     this.progress('check', `${name}: ${info.entries} entries, ${info.topLevel.join(', ')}`);
-    void this.run(name, file, opts, canSafety, audit).finally(() => { this.step = null; release(); });
+    const release = backups.dataLock.acquire('restore');
+    void this.run(name, file, opts, canSafety, audit)
+      .then((outcome) => {
+        // Un seul `done`, émis après remise à zéro de l'étape et libération du verrou.
+        this.step = null;
+        release();
+        try { this.emit('done', outcome); } catch (err) { logger.error({ err }, 'restore done listener threw'); }
+      })
+      .catch((err) => { this.step = null; release(); logger.error({ err }, 'restore run crashed'); });
   }
 
-  private async run(name: string, file: string, opts: RestoreOptions, canSafety: boolean, audit: AuditFn): Promise<void> {
+  /** L'audit ne doit jamais faire échouer ni interrompre la restauration. */
+  private async safeAudit(audit: AuditFn, detail: string): Promise<void> {
+    try { await audit(detail); } catch (err) { logger.warn({ err, detail }, 'restore audit failed'); }
+  }
+
+  private async run(name: string, file: string, opts: RestoreOptions, canSafety: boolean, audit: AuditFn): Promise<DoneEvent> {
     let safetyBackup: string | null = null;
     try {
-      await audit(name);
+      await this.safeAudit(audit, name);
       if (canSafety) safetyBackup = await this.safetyBackup();
       await this.stopServer();
       try {
         await restoreArchive(file, this.deps.dataDir, (line) => this.progress(line.startsWith('replace') ? 'replace' : 'extract', line));
       } catch (err) {
-        throw new RestoreFailure(`partial restore: ${(err as Error).message}`, true);
+        throw new RestoreFailure(`partial restore: ${(err as Error).message}`);
       }
       if (opts.startAfter) {
         this.progress('start', 'starting the server');
         await this.deps.docker.startServer().catch((err) => { throw new RestoreFailure(`restored, but the server did not start: ${(err as Error).message}`); });
       }
-      await audit('exit ok');
-      this.emit('done', { ok: true, message: 'restored', safetyBackup });
+      await this.safeAudit(audit, 'exit ok');
+      return { ok: true, message: 'restored', safetyBackup };
     } catch (err) {
-      const message = err instanceof RestoreFailure ? err.message : `failed: ${(err as Error).message}`;
+      const raw = (err as Error).message;
       logger.error({ err, name }, 'restore failed');
-      await audit(`failed: ${message}`).catch(() => undefined);
-      this.emit('done', { ok: false, message, safetyBackup });
+      await this.safeAudit(audit, `failed: ${raw}`);
+      return { ok: false, message: err instanceof RestoreFailure ? raw : `failed: ${raw}`, safetyBackup };
     }
   }
 
@@ -88,11 +101,12 @@ export class RestoreService extends EventEmitter {
     if (docker.getStatus() === 'stopped') { this.progress('stop', 'server already stopped'); return; }
     this.progress('stop', 'stopping the server');
     const stopped = new Promise<void>((resolve, reject) => {
-      const timer = setTimeout(() => { docker.off('status', onStatus); reject(new RestoreFailure(`server did not stop within ${Math.round(this.stopTimeoutMs / 1000)} s`)); }, this.stopTimeoutMs);
-      const onStatus = (s: ServerStatus) => { if (s === 'stopped') { clearTimeout(timer); docker.off('status', onStatus); resolve(); } };
+      const cleanup = () => { clearTimeout(timer); docker.off('status', onStatus); };
+      const timer = setTimeout(() => { cleanup(); reject(new RestoreFailure(`server did not stop within ${Math.round(this.stopTimeoutMs / 1000)} s`)); }, this.stopTimeoutMs);
+      const onStatus = (s: ServerStatus) => { if (s === 'stopped') { cleanup(); resolve(); } };
       docker.on('status', onStatus);
+      docker.stopServer().catch((err) => { cleanup(); reject(new RestoreFailure(`stop request failed: ${(err as Error).message}`)); });
     });
-    void docker.stopServer().catch((err) => logger.warn({ err }, 'stop request failed'));
     await stopped;
   }
 }

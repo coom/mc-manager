@@ -153,6 +153,40 @@ describe('RestoreService', () => {
     expect(existsSync(path.join(data, 'world', 'level.dat'))).toBe(false);
   });
 
+  it('still reports success when the audit callback rejects every time', async () => {
+    stopSucceeds(); safetyBackupSucceeds();
+    const r = service();
+    await r.restore('world-20261010-100000.tgz', { startAfter: true, confirmNoSafetyBackup: false }, async () => { throw new Error('audit down'); });
+    await until(() => events.some((e) => 'done' in (e as object)));
+    const done = (events.find((e) => 'done' in (e as object)) as { done: { ok: boolean } }).done;
+    expect(done.ok).toBe(true);
+    expect(readFileSync(path.join(data, 'world', 'level.dat'), 'utf8')).toBe('BACKUP');
+  });
+
+  it('emits done exactly once and releases the lock when a done listener throws', async () => {
+    stopSucceeds(); safetyBackupSucceeds();
+    const r = service();
+    r.on('done', () => { throw new Error('listener boom'); });
+    await r.restore('world-20261010-100000.tgz', { startAfter: true, confirmNoSafetyBackup: false }, auditFn);
+    await until(() => events.some((e) => 'done' in (e as object)));
+    await wait(50);
+    expect(events.filter((e) => 'done' in (e as object))).toHaveLength(1);
+    expect(lock.busy).toBeNull();
+    expect(r.status().running).toBe(false);
+  });
+
+  it('fails fast when the stop request itself is rejected', async () => {
+    safetyBackupSucceeds();
+    mc.stop = async () => { throw new Error('docker refused'); };
+    const r = service({ stopTimeoutMs: 5000 });
+    await r.restore('world-20261010-100000.tgz', { startAfter: true, confirmNoSafetyBackup: false }, auditFn);
+    await until(() => events.some((e) => 'done' in (e as object)));
+    const done = (events.find((e) => 'done' in (e as object)) as { done: { ok: boolean; message: string } }).done;
+    expect(done.ok).toBe(false);
+    expect(done.message).toMatch(/stop request failed/);
+    expect(readFileSync(path.join(data, 'world', 'level.dat'), 'utf8')).toBe('CURRENT');
+  });
+
   it('holds the data lock for the whole run so a manual backup gets 409 meanwhile', async () => {
     stopSucceeds(); safetyBackupSucceeds();
     const r = service();
