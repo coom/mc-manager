@@ -100,3 +100,44 @@ model AuditLog {
 
   @@index([at])
 }
+
+model PlayerSession {
+  id       Int       @id @default(autoincrement())
+  uuid     String?
+  name     String
+  ip       String?
+  country  String?
+  source   String
+  joinedAt DateTime
+  leftAt   DateTime?
+
+  @@index([joinedAt])
+  @@index([uuid, joinedAt])
+  @@index([name])
+}
+
+model PlayerLoginFailure {
+  id        Int      @id @default(autoincrement())
+  name      String
+  ip        String?
+  country   String?
+  reason    String
+  message   String
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+}
+
+model WebLogin {
+  id        Int      @id @default(autoincrement())
+  username  String
+  userId    Int?
+  ip        String
+  country   String?
+  success   Boolean
+  reason    String?
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([username, createdAt])
+}
