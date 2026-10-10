@@ -12,6 +12,7 @@ import { userRoutes } from './routes/users.routes.js';
 import { serverRoutes } from './routes/server.routes.js';
 import { metricsRoutes } from './routes/metrics.routes.js';
 import { backupsRoutes } from './routes/backups.routes.js';
+import { auditRoutes } from './routes/audit.routes.js';
 
 export function createApp(): Express {
   const app = express();
@@ -39,6 +40,7 @@ export function createApp(): Express {
   app.use('/api/server', serverRoutes);
   app.use('/api/metrics', metricsRoutes);
   app.use('/api/backups', backupsRoutes);
+  app.use('/api/audit', auditRoutes);
 
   app.use(errorHandler);
   return app;

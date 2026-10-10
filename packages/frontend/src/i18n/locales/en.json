@@ -281,5 +281,20 @@
       "title": "Delete this backup?",
       "description": "{{name}} will be permanently deleted."
     }
+  },
+  "audit": {
+    "title": "Audit log",
+    "when": "When",
+    "who": "Who",
+    "action": "Action",
+    "detail": "Detail",
+    "user": "User",
+    "actions": {
+      "all": "All",
+      "server": "Server",
+      "rcon": "RCON",
+      "backup": "Backups",
+      "user": "Users"
+    }
   }
 }

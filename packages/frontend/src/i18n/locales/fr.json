@@ -281,5 +281,20 @@
       "title": "Supprimer cette sauvegarde ?",
       "description": "{{name}} sera supprimée définitivement."
     }
+  },
+  "audit": {
+    "title": "Journal d'audit",
+    "when": "Quand",
+    "who": "Qui",
+    "action": "Action",
+    "detail": "Détail",
+    "user": "Utilisateur",
+    "actions": {
+      "all": "Toutes",
+      "server": "Serveur",
+      "rcon": "RCON",
+      "backup": "Sauvegardes",
+      "user": "Utilisateurs"
+    }
   }
 }

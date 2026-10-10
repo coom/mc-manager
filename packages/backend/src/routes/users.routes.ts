@@ -2,6 +2,7 @@ import { Router, Request, Response } from 'express';
 import bcrypt from 'bcryptjs';
 import { requireRole } from '../middleware/rbac.js';
 import { AppError } from '../middleware/error-handler.js';
+import { audit } from '../audit/audit.js';
 import { validatePassword, loadPasswordPolicy, savePasswordPolicy, type PasswordPolicy } from '../utils/validate-password.js';
 
 const VALID_ROLES = ['admin', 'viewer'];
@@ -61,6 +62,7 @@ userRoutes.post('/', async (req: Request, res: Response, next) => {
       },
     });
 
+    await audit(req, 'user.create', username);
     res.status(201).json({ id: user.id, username: user.username });
   } catch (err) { next(err); }
 });
@@ -108,6 +110,7 @@ userRoutes.put('/:userId', async (req: Request, res: Response, next) => {
     }
 
     await prisma.user.update({ where: { id }, data });
+    await audit(req, 'user.update', String(id));
     res.status(204).send();
   } catch (err) { next(err); }
 });
@@ -125,6 +128,7 @@ userRoutes.delete('/:userId', async (req: Request, res: Response, next) => {
     }
 
     await prisma.user.delete({ where: { id } });
+    await audit(req, 'user.delete', String(id));
     res.status(204).send();
   } catch (err) { next(err); }
 });
