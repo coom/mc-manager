@@ -16,15 +16,17 @@ export function useWebSocket(): void {
   const apply = useServerStore((s) => s.apply);
   const setConnected = useServerStore((s) => s.setConnected);
   const retryRef = useRef(1000);
-  const stoppedRef = useRef(false);
 
   useEffect(() => {
     if (!accessToken) return;
-    stoppedRef.current = false;
+    // Drapeau propre à ce cycle d'effet : une continuation async d'un cycle
+    // précédent ne doit jamais rouvrir un socket après le nettoyage.
+    let stopped = false;
     let socket: WebSocket | null = null;
     let timer: ReturnType<typeof setTimeout> | null = null;
 
     const connect = (token: string) => {
+      if (stopped) return;
       socket = new WebSocket(wsUrl(token));
       socket.onopen = () => {
         retryRef.current = 1000;
@@ -36,13 +38,14 @@ export function useWebSocket(): void {
       socket.onmessage = (e) => { try { apply(JSON.parse(e.data) as WsMessage); } catch { /* message illisible, ignoré */ } };
       socket.onclose = (e) => {
         setConnected(false);
-        if (stoppedRef.current) return;
+        if (stopped) return;
         const delay = retryRef.current;
         retryRef.current = Math.min(delay * 2, 30_000);
         timer = setTimeout(async () => {
-          if (stoppedRef.current) return;
+          if (stopped) return;
           let next: string | null = useAuthStore.getState().accessToken;
           if (e.code === 4401 || e.code === 1008) next = await refreshAccessToken();
+          if (stopped) return;
           if (next) connect(next);
         }, delay);
       };
@@ -50,7 +53,7 @@ export function useWebSocket(): void {
     connect(accessToken);
 
     return () => {
-      stoppedRef.current = true;
+      stopped = true;
       if (timer) clearTimeout(timer);
       socket?.close();
     };
