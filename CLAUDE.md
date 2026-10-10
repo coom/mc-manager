@@ -69,6 +69,7 @@ Les services sont exposés via `req.app.locals.{prisma, docker, rcon, logs, metr
 - **LogStreamer** : un seul abonnement, tampon circulaire de 500 lignes. `start()` ouvre le flux avec `tail = cap` (historique initial) ; ensuite chaque passage à `starting`/`ready` rouvre avec `tail = 0` pour ne pas rejouer les lignes déjà reçues. Les lignes sont parsées en `{ ts, level, thread, message }`, niveau `RAW` sinon.
 - **MetricsCollector** : tick toutes les 15 s (état seul si non `ready`, sinon `list`, `tick query`, `tps`, CPU/RAM), taille du monde et disque toutes les 5 min, tâche horaire qui agrège `MetricSample` en `MetricHourly` puis purge les échantillons de plus de 48 h (lignes horaires gardées 400 jours). Chaque tick écrit en base et diffuse `metrics.tick`.
 - **BackupService** : ne liste que les fichiers réguliers `*.tgz` et `*.tar.gz` de `MC_BACKUPS_DIR`. `runNow()` fait `docker exec <MC_BACKUP_CONTAINER> backup now`, diffuse `backup.progress` ligne par ligne puis `backup.done` ; un seul backup manuel à la fois (409 sinon).
+- **Téléchargement de backup** : `POST /api/backups/:name/link` (admin, audité `backup.download`) émet un jeton aléatoire en mémoire (`DownloadTokenStore`, 60 s, usage unique) ; `GET /api/backups/download/:token` est public (monté avant `authMiddleware`, le navigateur le suit sans en-tête Bearer) et streame le fichier avec `res.sendFile`.
 - **Audit** : toute action d'admin écrit une ligne `AuditLog` avant de répondre.
 
 ## Architecture frontend

@@ -13,7 +13,7 @@ Interface web de suivi et de gestion d'un serveur Minecraft Java hébergé dans 
 - Contrôle du serveur : état en direct (`unavailable`, `stopped`, `starting`, `ready`, `unhealthy`, `stopping`), uptime, start / stop / restart
 - Console : logs du conteneur en direct (pause, filtres texte et niveau) et commandes RCON avec historique
 - Dashboard : joueurs en ligne, courbe de fréquentation (24 h / 7 j / 30 j), CPU, RAM, MSPT / TPS, taille du monde, espace disque restant
-- Backups : liste, téléchargement, suppression, déclenchement manuel avec sortie en direct
+- Backups : liste, téléchargement, suppression, déclenchement manuel avec sortie en direct. Un téléchargement demande au backend un lien à usage unique valable 60 secondes (`POST /api/backups/:name/link`, admin, audité) que le navigateur suit ensuite, l'archive est donc écrite directement sur le disque
 - Journal d'audit de toutes les actions d'admin (commandes RCON, backups, contrôle du serveur, utilisateurs)
 - Thèmes sombre et clair, français et anglais
 

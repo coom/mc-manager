@@ -11,11 +11,13 @@ import { setupRoutes } from './routes/setup.routes.js';
 import { userRoutes } from './routes/users.routes.js';
 import { serverRoutes } from './routes/server.routes.js';
 import { metricsRoutes } from './routes/metrics.routes.js';
-import { backupsRoutes } from './routes/backups.routes.js';
+import { backupsRoutes, backupDownloadRoutes } from './routes/backups.routes.js';
+import { DownloadTokenStore } from './backups/download-tokens.js';
 import { auditRoutes } from './routes/audit.routes.js';
 
 export function createApp(): Express {
   const app = express();
+  app.locals.downloadTokens = new DownloadTokenStore();
   app.set('trust proxy', 1);
   app.use(helmet());
   app.use(cors({ origin: config.frontendUrl, credentials: true }));
@@ -35,6 +37,8 @@ export function createApp(): Express {
   // Routes publiques, puis authMiddleware, puis les routes protégées (les tâches suivantes en ajoutent ici).
   app.use('/api/setup', setupRoutes);
   app.use('/api/auth', authRoutes);
+  // Lien de téléchargement de backup : le navigateur le suit sans en-tête Bearer (jeton à usage unique).
+  app.use('/api/backups', backupDownloadRoutes);
   app.use('/api', authMiddleware);
   app.use('/api/users', userRoutes);
   app.use('/api/server', serverRoutes);

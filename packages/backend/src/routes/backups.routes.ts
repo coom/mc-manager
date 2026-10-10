@@ -2,21 +2,37 @@ import { Router, type Request, type Response, type NextFunction } from 'express'
 import path from 'path';
 import { requireRole } from '../middleware/rbac.js';
 import { audit } from '../audit/audit.js';
+import { AppError } from '../middleware/error-handler.js';
 
 export const backupsRoutes: Router = Router();
+
+/** Route PUBLIQUE (montée avant authMiddleware) : le jeton à usage unique tient lieu d'authentification. */
+export const backupDownloadRoutes: Router = Router();
+
+backupDownloadRoutes.get('/download/:token', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const entry = req.app.locals.downloadTokens.consume(String(req.params.token));
+    if (!entry) throw new AppError(404, 'Download link not found or expired');
+    const full = await req.app.locals.backups.resolve(entry.name);
+    res.setHeader('Content-Type', 'application/gzip');
+    res.setHeader('Content-Disposition', `attachment; filename="${path.basename(full)}"`);
+    res.sendFile(full, (err) => { if (err && !res.headersSent) next(err); });
+  } catch (err) { next(err); }
+});
 
 backupsRoutes.get('/', async (req: Request, res: Response, next: NextFunction) => {
   try { res.json(await req.app.locals.backups.list()); } catch (err) { next(err); }
 });
 
-backupsRoutes.get('/:name/download', requireRole('admin'), async (req: Request, res: Response, next: NextFunction) => {
+// Émet un lien de téléchargement court (60 s, usage unique) : le navigateur le suit directement,
+// sans charger l'archive en mémoire ni porter l'en-tête Bearer.
+backupsRoutes.post('/:name/link', requireRole('admin'), async (req: Request, res: Response, next: NextFunction) => {
   try {
     const name = String(req.params.name);
-    const full = await req.app.locals.backups.resolve(name);
+    await req.app.locals.backups.resolve(name);
     await audit(req, 'backup.download', name);
-    res.setHeader('Content-Type', 'application/gzip');
-    res.setHeader('Content-Disposition', `attachment; filename="${path.basename(full)}"`);
-    res.sendFile(full, (err) => { if (err && !res.headersSent) next(err); });
+    const token = req.app.locals.downloadTokens.issue(name, req.user!.id);
+    res.json({ url: `/api/backups/download/${token}` });
   } catch (err) { next(err); }
 });
 

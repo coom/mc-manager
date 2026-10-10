@@ -6,6 +6,9 @@ import { useAuthStore } from '@/stores/auth.store';
 import { useServerStore } from '@/stores/server.store';
 import { backupsApi } from '@/api/backups.api';
 
+import { toast } from 'sonner';
+
+vi.mock('sonner', () => ({ toast: { error: vi.fn(), success: vi.fn() } }));
 vi.mock('@/api/backups.api', () => ({
   backupsApi: { list: vi.fn(), run: vi.fn(), remove: vi.fn(), download: vi.fn() },
 }));
@@ -37,5 +40,14 @@ describe('Backups page run failure', () => {
     await waitFor(() => expect(backupsApi.run).toHaveBeenCalled());
     await new Promise((r) => setTimeout(r, 50));
     expect(useServerStore.getState().backupRunning).toBe(true);
+  });
+
+  it('downloads through the link API and toasts the server error when it fails', async () => {
+    vi.mocked(backupsApi.list).mockResolvedValue({ entries: [{ name: 'w.tgz', size: 10, modifiedAt: '2026-10-10T10:00:00Z' }], totalBytes: 10, running: false });
+    vi.mocked(backupsApi.download).mockRejectedValue({ response: { status: 404, data: { error: 'Backup not found' } } });
+    setup();
+    fireEvent.click(await screen.findByLabelText('download'));
+    expect(backupsApi.download).toHaveBeenCalledWith('w.tgz');
+    await waitFor(() => expect(toast.error).toHaveBeenCalledWith('Backup not found'));
   });
 });

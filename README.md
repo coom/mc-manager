@@ -13,7 +13,7 @@ Web interface to monitor and manage a Minecraft Java server running in Docker wi
 - Server control: live state (`unavailable`, `stopped`, `starting`, `ready`, `unhealthy`, `stopping`), uptime, start / stop / restart
 - Console: live container logs (pause, text and level filters) and RCON commands with history
 - Dashboard: online players, attendance chart (24 h / 7 d / 30 d), CPU, RAM, MSPT / TPS, world size, free disk space
-- Backups: list, download, delete, manual trigger with live output
+- Backups: list, download, delete, manual trigger with live output. A download asks the backend for a single-use link valid for 60 seconds (`POST /api/backups/:name/link`, admin, audited) that the browser then follows, so the archive streams straight to disk
 - Audit log of every admin action (RCON commands, backups, server control, users)
 - Dark and light themes, English and French
 
