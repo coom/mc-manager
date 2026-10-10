@@ -41,7 +41,8 @@ export function useWebSocket(): void {
         try {
           const msg = JSON.parse(e.data) as WsMessage;
           apply(msg);
-          if (msg.type === 'backup.list.changed' || msg.type === 'backup.done') void queryClient.invalidateQueries({ queryKey: ['backups'] });
+          if (msg.type === 'backup.list.changed' || msg.type === 'backup.done' || msg.type === 'restore.done') void queryClient.invalidateQueries({ queryKey: ['backups'] });
+          if (msg.type === 'restore.done') void queryClient.invalidateQueries({ queryKey: ['server'] });
           if (msg.type === 'player.session') void queryClient.invalidateQueries({ queryKey: ['players'] });
           if (msg.type === 'player.lists.changed') { void queryClient.invalidateQueries({ queryKey: ['lists'] }); void queryClient.invalidateQueries({ queryKey: ['players'] }); }
         } catch { /* message illisible, ignoré */ }

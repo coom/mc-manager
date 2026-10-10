@@ -27,3 +27,17 @@ describe('serverStore', () => {
     expect(useServerStore.getState().backupOutput).toEqual(['a']);
   });
 });
+
+describe('restore messages', () => {
+  it('accumulates restore progress with the step prefix and ends with the result', () => {
+    useServerStore.getState().reset();
+    useServerStore.getState().startRestoreOutput();
+    useServerStore.getState().apply({ type: 'restore.progress', step: 'safety', line: 'running a safety backup' });
+    useServerStore.getState().apply({ type: 'restore.progress', step: 'extract', line: 'extract world (200/400)' });
+    expect(useServerStore.getState().restoreRunning).toBe(true);
+    expect(useServerStore.getState().restoreOutput).toEqual(['[safety] running a safety backup', '[extract] extract world (200/400)']);
+    useServerStore.getState().apply({ type: 'restore.done', ok: false, message: 'partial restore: boom', safetyBackup: 'world-1.tgz' });
+    expect(useServerStore.getState().restoreRunning).toBe(false);
+    expect(useServerStore.getState().restoreResult).toEqual({ ok: false, message: 'partial restore: boom', safetyBackup: 'world-1.tgz' });
+  });
+});

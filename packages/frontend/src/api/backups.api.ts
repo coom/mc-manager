@@ -1,8 +1,10 @@
 import api from './client';
-import type { BackupList } from '@mc/common';
+import type { BackupList, RestoreRequest, RestoreStatus } from '@mc/common';
 export const backupsApi = {
   list: (): Promise<BackupList> => api.get('/backups').then((r) => r.data),
   run: () => api.post('/backups/run'),
+  restore: (name: string, req: RestoreRequest) => api.post(`/backups/${encodeURIComponent(name)}/restore`, req),
+  restoreStatus: (): Promise<RestoreStatus> => api.get('/backups/restore/status').then((r) => r.data),
   remove: (name: string) => api.delete(`/backups/${encodeURIComponent(name)}`),
   /** Obtient un lien court à usage unique puis laisse le navigateur télécharger (pas de blob en mémoire). */
   download: async (name: string) => {

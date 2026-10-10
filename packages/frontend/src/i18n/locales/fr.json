@@ -284,6 +284,28 @@
     "confirmDelete": {
       "title": "Supprimer cette sauvegarde ?",
       "description": "{{name}} sera supprimée définitivement."
+    },
+    "restore": "Restaurer",
+    "restoring": "Restauration en cours…",
+    "restoreDone": "Restauration terminée",
+    "restoreFailed": "Restauration échouée",
+    "restoreSafety": "Sauvegarde de sécurité : {{name}}",
+    "restoreThis": "Restaurer celle-ci",
+    "confirmRestore": {
+      "title": "Restaurer {{name}} ?",
+      "description": "Une sauvegarde de sécurité est faite d'abord, puis le serveur est arrêté, le contenu de l'archive remplace les données actuelles, et le serveur redémarre. Les joueurs seront déconnectés.",
+      "startAfter": "Redémarrer le serveur ensuite",
+      "noSafety": "Le serveur est arrêté : aucune sauvegarde de sécurité n'est possible. Les données actuelles seront écrasées sans filet.",
+      "confirmNoSafety": "J'ai compris, restaurer sans sauvegarde de sécurité",
+      "confirm": "Restaurer"
+    },
+    "steps": {
+      "check": "vérification",
+      "safety": "sauvegarde de sécurité",
+      "stop": "arrêt",
+      "replace": "remplacement",
+      "extract": "extraction",
+      "start": "démarrage"
     }
   },
   "audit": {

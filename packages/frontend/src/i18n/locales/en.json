@@ -284,6 +284,28 @@
     "confirmDelete": {
       "title": "Delete this backup?",
       "description": "{{name}} will be permanently deleted."
+    },
+    "restore": "Restore",
+    "restoring": "Restore in progress…",
+    "restoreDone": "Restore finished",
+    "restoreFailed": "Restore failed",
+    "restoreSafety": "Safety backup: {{name}}",
+    "restoreThis": "Restore this one",
+    "confirmRestore": {
+      "title": "Restore {{name}}?",
+      "description": "A safety backup is taken first, then the server is stopped, the archive content replaces the current data, and the server is started again. Players will be disconnected.",
+      "startAfter": "Start the server afterwards",
+      "noSafety": "The server is stopped: no safety backup can be taken. The current data will be overwritten without a safety net.",
+      "confirmNoSafety": "I understand, restore without a safety backup",
+      "confirm": "Restore"
+    },
+    "steps": {
+      "check": "check",
+      "safety": "safety backup",
+      "stop": "stopping",
+      "replace": "replacing",
+      "extract": "extracting",
+      "start": "starting"
     }
   },
   "audit": {

@@ -1,10 +1,10 @@
 import { useTranslation } from 'react-i18next';
-import { Download, Trash2 } from 'lucide-react';
+import { Download, RotateCcw, Trash2 } from 'lucide-react';
 import type { BackupEntry } from '@mc/common';
 import { Button } from '@/components/ui/button';
 import { formatBytes } from '@/lib/utils';
 
-export function BackupTable({ entries, isAdmin, onDelete, onDownload }: { entries: BackupEntry[]; isAdmin: boolean; onDelete: (n: string) => void; onDownload: (n: string) => void }) {
+export function BackupTable({ entries, isAdmin, busy, onRestore, onDelete, onDownload }: { entries: BackupEntry[]; isAdmin: boolean; busy: boolean; onRestore: (n: string) => void; onDelete: (n: string) => void; onDownload: (n: string) => void }) {
   const { t, i18n } = useTranslation();
   return (
     <table className="w-full text-sm">
@@ -16,6 +16,7 @@ export function BackupTable({ entries, isAdmin, onDelete, onDownload }: { entrie
             <td>{new Date(e.modifiedAt).toLocaleString(i18n.language)}</td>
             <td>{formatBytes(e.size)}</td>
             {isAdmin && <td className="text-right">
+              <Button size="icon" variant="ghost" aria-label="restore" disabled={busy} onClick={() => onRestore(e.name)}><RotateCcw className="h-4 w-4" /></Button>
               <Button size="icon" variant="ghost" aria-label="download" onClick={() => onDownload(e.name)}><Download className="h-4 w-4" /></Button>
               <Button size="icon" variant="ghost" aria-label="delete" className="text-destructive" onClick={() => onDelete(e.name)}><Trash2 className="h-4 w-4" /></Button>
             </td>}
