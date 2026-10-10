@@ -9,9 +9,10 @@ it('bucketMinute floors to the minute', () => expect(bucketMinute(new Date('2026
 describe('querySeries', () => {
   beforeAll(async () => {
     const now = Date.now();
+    const base = bucketMinute(new Date(now - 2 * 60_000));
     await prisma.metricSample.createMany({ data: [
-      { at: new Date(now - 60_000), status: 'ready', players: 1, cpuPercent: 10, memUsed: 100n, mspt: 1 },
-      { at: new Date(now - 45_000), status: 'ready', players: 3, cpuPercent: 30, memUsed: 300n, mspt: 3 },
+      { at: new Date(base.getTime() + 5_000), status: 'ready', players: 1, cpuPercent: 10, memUsed: 100n, mspt: 1 },
+      { at: new Date(base.getTime() + 20_000), status: 'ready', players: 3, cpuPercent: 30, memUsed: 300n, mspt: 3 },
       { at: new Date(now - 30 * 3_600_000), status: 'ready', players: 7 },
     ] });
     await prisma.metricHourly.create({ data: { hour: new Date(now - 5 * 86_400_000), playersAvg: 2, playersMax: 5, cpuAvg: 1, memAvg: 1n, msptAvg: 1, msptMax: 1, samples: 10 } });
