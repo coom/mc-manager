@@ -7,6 +7,11 @@ import { cn } from '@/lib/utils';
 
 const MAX_SHOWN = 20;
 const NO_PLAYERS: string[] = [];
+// Sélecteurs de cible : une explication entre parenthèses, affichée seulement (le texte inséré reste « @a »).
+const HINT_KEYS: Record<string, string> = {
+  '@a': 'console.hints.selectorAll', '@e': 'console.hints.selectorEntities', '@p': 'console.hints.selectorNearest',
+  '@r': 'console.hints.selectorRandom', '@s': 'console.hints.selectorSelf',
+};
 
 export function CommandInput({ onSend }: { onSend: (cmd: string) => Promise<unknown> }) {
   const { t } = useTranslation();
@@ -76,7 +81,12 @@ export function CommandInput({ onSend }: { onSend: (cmd: string) => Promise<unkn
           {from > 0 && <span aria-hidden>…</span>}
           {shown.candidates.slice(from, from + MAX_SHOWN).map((c, i) => {
             const selected = cycle !== null && cycle.index === from + i;
-            return <span key={c} id={optionId(from + i)} role="option" aria-selected={selected} className={cn(selected && 'rounded bg-accent px-1 text-accent-foreground')}>{c}</span>;
+            const hint = HINT_KEYS[c];
+            return (
+              <span key={c} id={optionId(from + i)} role="option" aria-selected={selected} className={cn(selected && 'rounded bg-accent px-1 text-accent-foreground')}>
+                {c}{hint && <span className="opacity-60"> ({t(hint)})</span>}
+              </span>
+            );
           })}
           {shown.candidates.length > from + MAX_SHOWN && <span aria-hidden>+{shown.candidates.length - from - MAX_SHOWN}</span>}
         </div>

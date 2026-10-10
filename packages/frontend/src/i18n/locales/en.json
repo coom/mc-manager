@@ -229,7 +229,14 @@
     "send": "Send",
     "pause": "Pause",
     "resume": "Resume",
-    "suggestions": "Suggestions"
+    "suggestions": "Suggestions",
+    "hints": {
+      "selectorAll": "all players",
+      "selectorEntities": "all entities",
+      "selectorNearest": "nearest player",
+      "selectorRandom": "random player",
+      "selectorSelf": "command executor, none from the console"
+    }
   },
   "server": {
     "status": {

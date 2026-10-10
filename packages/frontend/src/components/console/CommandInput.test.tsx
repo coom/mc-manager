@@ -10,6 +10,8 @@ describe('CommandInput', () => {
     const input = screen.getByRole('textbox') as HTMLInputElement;
     fireEvent.change(input, { target: { value: 'give ' } });
     expect(screen.getByText('Alice')).toBeInTheDocument();
+    // Les sélecteurs portent une explication entre parenthèses, affichée seulement.
+    expect(screen.getByRole('option', { name: /^@a \(.+\)$/ })).toBeInTheDocument();
     fireEvent.keyDown(input, { key: 'Tab' });
     expect(input.value).toBe('give @a ');
     fireEvent.keyDown(input, { key: 'Tab' });

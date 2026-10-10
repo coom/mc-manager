@@ -229,7 +229,14 @@
     "send": "Envoyer",
     "pause": "Pause",
     "resume": "Reprendre",
-    "suggestions": "Suggestions"
+    "suggestions": "Suggestions",
+    "hints": {
+      "selectorAll": "tous les joueurs",
+      "selectorEntities": "toutes les entités",
+      "selectorNearest": "joueur le plus proche",
+      "selectorRandom": "joueur au hasard",
+      "selectorSelf": "exécutant de la commande, aucun depuis la console"
+    }
   },
   "server": {
     "status": {
