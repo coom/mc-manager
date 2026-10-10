@@ -1,7 +1,7 @@
 # MC Manager, lot 1 : socle de gestion d'un serveur Minecraft Java sous Docker
 
 Date : 2026-10-10
-Statut : validé en conversation, en attente de relecture du document
+Statut : validé et implémenté (branche worktree-lot1-socle) ; table des routes mise à jour après la revue finale
 
 ## 1. Objectif et contexte
 
@@ -238,12 +238,13 @@ requête) :
 | `POST /api/server/command` | admin | `{ command }`, renvoie `{ response }` ; journalisé |
 | `GET /api/metrics?range=24h|7d|30d` | viewer | séries temporelles |
 | `GET /api/backups` | viewer | liste |
-| `GET /api/backups/:name/download` | admin | streaming du fichier |
+| `POST /api/backups/:name/link` | admin | émet un lien de téléchargement à usage unique (60 s), audité |
+| `GET /api/backups/download/:token` | public (token) | streaming du fichier ; 404 si token inconnu, expiré ou déjà utilisé |
 | `DELETE /api/backups/:name` | admin | |
 | `POST /api/backups/run` | admin | 202 ou 409 si déjà en cours |
 | `GET /api/audit?page&action&user` | viewer | paginé |
 | `/api/users/*` | admin | porté de ts6-manager |
-| `/api/me/*` | tout utilisateur | compte, MFA, appareils, langue |
+| `/api/auth/me`, `/api/auth/password`, `/api/auth/mfa/*`, `/api/auth/trusted*`, `/api/auth/language` | tout utilisateur | compte, MFA, appareils, langue (routes portées de ts6-manager telles quelles) |
 
 Le middleware `rbac('admin')` refuse en 403. Toute action d'admin écrit une ligne
 `AuditLog` avant de répondre.
