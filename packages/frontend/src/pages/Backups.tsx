@@ -23,7 +23,11 @@ export default function Backups() {
   const [toDelete, setToDelete] = useState<string | null>(null);
   const errMsg = (e: unknown) => (e as { response?: { data?: { error?: string } } }).response?.data?.error ?? t('shared.error');
 
-  const run = useMutation({ mutationFn: backupsApi.run, onMutate: startBackupOutput, onError: (e) => toast.error(errMsg(e)) });
+  const run = useMutation({ mutationFn: backupsApi.run, onMutate: startBackupOutput, onError: (e) => {
+    // Hors 409 (sauvegarde déjà en cours), aucun backup.done ne viendra : on libère l'état.
+    if ((e as { response?: { status?: number } }).response?.status !== 409) useServerStore.setState({ backupRunning: false });
+    toast.error(errMsg(e));
+  } });
   const del = useMutation({ mutationFn: backupsApi.remove, onSuccess: () => { toast.success(t('backups.deleted')); void qc.invalidateQueries({ queryKey: ['backups'] }); }, onError: (e) => toast.error(errMsg(e)) });
   const running = backupRunning || data?.running === true;
 

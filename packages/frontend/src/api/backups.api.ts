@@ -4,7 +4,6 @@ export const backupsApi = {
   list: (): Promise<BackupList> => api.get('/backups').then((r) => r.data),
   run: () => api.post('/backups/run'),
   remove: (name: string) => api.delete(`/backups/${encodeURIComponent(name)}`),
-  downloadUrl: (name: string) => `/api/backups/${encodeURIComponent(name)}/download`,
   download: async (name: string) => {
     const res = await api.get(`/backups/${encodeURIComponent(name)}/download`, { responseType: 'blob', timeout: 0 });
     const url = URL.createObjectURL(res.data);
