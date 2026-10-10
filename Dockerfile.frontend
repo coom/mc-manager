@@ -7,7 +7,7 @@ WORKDIR /app
 # Copy everything at once to avoid BuildKit ordering bug on Windows
 FROM base AS build
 COPY . .
-RUN pnpm install --no-frozen-lockfile
+RUN pnpm install --frozen-lockfile
 RUN pnpm --filter @mc/common run build
 RUN pnpm --filter @mc/frontend run build
 

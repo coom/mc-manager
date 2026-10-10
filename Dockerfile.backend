@@ -22,7 +22,7 @@ COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY packages/common/package.json   ./packages/common/
 COPY packages/backend/package.json  ./packages/backend/
 COPY packages/frontend/package.json ./packages/frontend/
-RUN pnpm install --no-frozen-lockfile
+RUN pnpm install --frozen-lockfile
 
 # Source layer: bring in the rest and build. A code-only change invalidates
 # from here down and reuses the cached dependency layer above.
