@@ -1,0 +1,4 @@
+{ "namespace": "dashboard", "keys": {
+  "en": { "players": "Players", "cpu": "CPU", "memory": "Memory", "mspt": "MSPT", "tps": "TPS", "world": "World size", "diskFree": "Disk free", "onlinePlayers": "Online players", "noPlayers": "Nobody online", "playersOverTime": "Players over time" },
+  "fr": { "players": "Joueurs", "cpu": "CPU", "memory": "Mémoire", "mspt": "MSPT", "tps": "TPS", "world": "Taille du monde", "diskFree": "Disque libre", "onlinePlayers": "Joueurs en ligne", "noPlayers": "Personne en ligne", "playersOverTime": "Fréquentation" }
+} }

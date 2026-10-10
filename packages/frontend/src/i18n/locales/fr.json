@@ -252,5 +252,17 @@
         "description": "Les joueurs connectés seront déconnectés pendant environ une minute."
       }
     }
+  },
+  "dashboard": {
+    "players": "Joueurs",
+    "cpu": "CPU",
+    "memory": "Mémoire",
+    "mspt": "MSPT",
+    "tps": "TPS",
+    "world": "Taille du monde",
+    "diskFree": "Disque libre",
+    "onlinePlayers": "Joueurs en ligne",
+    "noPlayers": "Personne en ligne",
+    "playersOverTime": "Fréquentation"
   }
 }

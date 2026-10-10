@@ -252,5 +252,17 @@
         "description": "Connected players will be disconnected for about a minute."
       }
     }
+  },
+  "dashboard": {
+    "players": "Players",
+    "cpu": "CPU",
+    "memory": "Memory",
+    "mspt": "MSPT",
+    "tps": "TPS",
+    "world": "World size",
+    "diskFree": "Disk free",
+    "onlinePlayers": "Online players",
+    "noPlayers": "Nobody online",
+    "playersOverTime": "Players over time"
   }
 }
