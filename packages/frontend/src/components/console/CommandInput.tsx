@@ -1,4 +1,4 @@
-import { useMemo, useState, type KeyboardEvent } from 'react';
+import { useId, useMemo, useState, type KeyboardEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Input } from '@/components/ui/input';
 import { useServerStore } from '@/stores/server.store';
@@ -10,6 +10,7 @@ const NO_PLAYERS: string[] = [];
 
 export function CommandInput({ onSend }: { onSend: (cmd: string) => Promise<unknown> }) {
   const { t } = useTranslation();
+  const listId = useId();
   const players = useServerStore((s) => s.info?.players?.names ?? NO_PLAYERS);
   const [value, setValue] = useState('');
   const [history, setHistory] = useState<string[]>([]);
@@ -25,23 +26,25 @@ export function CommandInput({ onSend }: { onSend: (cmd: string) => Promise<unkn
 
   const edit = (next: string) => { setValue(next); setCycle(null); setHidden(false); };
 
-  const onTab = (backward: boolean) => {
+  /** Renvoie false quand il n'y a rien à compléter : Tab garde alors son rôle de navigation. */
+  const onTab = (backward: boolean): boolean => {
+    if (hidden || !value) return false;
     const completion = cycle?.completion ?? complete(value, players);
-    if (completion.candidates.length === 0) return;
     const n = completion.candidates.length;
-    const index = cycle ? (cycle.index + (backward ? n - 1 : 1)) % n : 0;
+    if (n === 0) return false;
+    const index = cycle ? (cycle.index + (backward ? n - 1 : 1)) % n : backward ? n - 1 : 0;
     const base = cycle?.base ?? value;
     setCycle({ base, completion, index });
-    setHidden(false);
     setValue(applyCompletion(base, completion, index));
+    return true;
   };
 
   // Pas d'état "busy" : la valeur est vidée immédiatement, donc un second Entrée ne renvoie rien.
   const onKeyDown = async (e: KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Tab') {
-      e.preventDefault();
-      onTab(e.shiftKey);
+      if (onTab(e.shiftKey)) e.preventDefault();
     } else if (e.key === 'Escape') {
+      if (shown) { e.preventDefault(); e.stopPropagation(); }
       setCycle(null); setHidden(true);
     } else if (e.key === 'Enter' && value.trim()) {
       const cmd = value.trim();
@@ -59,18 +62,29 @@ export function CommandInput({ onSend }: { onSend: (cmd: string) => Promise<unkn
     }
   };
 
+  const optionId = (i: number) => `${listId}-${i}`;
   return (
     <div className="flex flex-col gap-1">
       {shown && (
-        <div className="flex flex-wrap gap-x-3 gap-y-0.5 px-1 font-mono text-xs text-muted-foreground" aria-label={t('console.suggestions')}>
-          {from > 0 && <span>…</span>}
-          {shown.candidates.slice(from, from + MAX_SHOWN).map((c, i) => (
-            <span key={c} className={cn(cycle && cycle.index === from + i && 'rounded bg-accent px-1 text-accent-foreground')}>{c}</span>
-          ))}
-          {shown.candidates.length > from + MAX_SHOWN && <span>+{shown.candidates.length - from - MAX_SHOWN}</span>}
+        <div id={listId} role="listbox" aria-label={t('console.suggestions')} className="flex flex-wrap gap-x-3 gap-y-0.5 px-1 font-mono text-xs text-muted-foreground">
+          {from > 0 && <span aria-hidden>…</span>}
+          {shown.candidates.slice(from, from + MAX_SHOWN).map((c, i) => {
+            const selected = cycle !== null && cycle.index === from + i;
+            return <span key={c} id={optionId(from + i)} role="option" aria-selected={selected} className={cn(selected && 'rounded bg-accent px-1 text-accent-foreground')}>{c}</span>;
+          })}
+          {shown.candidates.length > from + MAX_SHOWN && <span aria-hidden>+{shown.candidates.length - from - MAX_SHOWN}</span>}
         </div>
       )}
-      <Input className="font-mono" placeholder={t('console.commandPlaceholder')} value={value} onChange={(e) => edit(e.target.value)} onKeyDown={onKeyDown} />
+      <Input
+        className="font-mono"
+        placeholder={t('console.commandPlaceholder')}
+        value={value}
+        onChange={(e) => edit(e.target.value)}
+        onKeyDown={onKeyDown}
+        aria-autocomplete="list"
+        aria-controls={shown ? listId : undefined}
+        aria-activedescendant={shown && cycle ? optionId(cycle.index) : undefined}
+      />
     </div>
   );
 }

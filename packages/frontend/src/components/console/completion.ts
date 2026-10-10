@@ -132,20 +132,31 @@ function candidatesFor(arg: Arg | undefined, word: string, players: string[]): s
   return namespaced ? matches.map((m) => NAMESPACE + m) : matches;
 }
 
-/** Descend la grammaire le long des mots déjà saisis et renvoie la position attendue pour le mot courant. */
-function resolve(args: Arg[], typed: string[]): Arg | undefined {
+/**
+ * Descend la grammaire le long des mots déjà saisis et renvoie la position attendue pour le mot courant.
+ * Grammaire épuisée ou embranchement inconnu : `none` (rien à proposer, pas de repli sur les joueurs).
+ */
+function resolve(args: Arg[], typed: string[]): Arg {
   let rest = args;
   for (const t of typed) {
     const spec: Arg | undefined = rest[0];
     if (spec !== undefined && typeof spec === 'object' && !Array.isArray(spec)) {
       const key = Object.keys(spec).find((k) => k.toLowerCase() === t.toLowerCase());
-      if (!key) return undefined;
+      if (!key) return 'none';
       rest = spec[key];
     } else {
       rest = rest.slice(1);
     }
   }
-  return rest[0];
+  return rest.length > 0 ? rest[0] : 'none';
+}
+
+function lookup(name: string): Arg[] | undefined {
+  const key = name.toLowerCase();
+  // hasOwnProperty : « constructor » ou « toString » ne doivent pas remonter Object.prototype.
+  if (!Object.prototype.hasOwnProperty.call(GRAMMAR, key)) return undefined;
+  const grammar = GRAMMAR[key];
+  return Array.isArray(grammar) ? grammar : [grammar];
 }
 
 export function complete(input: string, players: string[]): Completion {
@@ -154,11 +165,10 @@ export function complete(input: string, players: string[]): Completion {
   const lastSpace = text.lastIndexOf(' ');
   const word = text.slice(lastSpace + 1);
   const start = offset + lastSpace + 1;
-  if (lastSpace === -1) return { word, start, candidates: filter(COMMAND_NAMES, word) };
-  const [name, ...typed] = text.slice(0, lastSpace).split(/\s+/).filter(Boolean);
-  const grammar = GRAMMAR[name.toLowerCase()];
-  const args = grammar === undefined || Array.isArray(grammar) ? grammar : [grammar];
-  // Position non décrite (ou commande sans grammaire) : les joueurs en ligne, le comportement par défaut.
+  const [name, ...typed] = text.slice(0, Math.max(0, lastSpace)).split(/\s+/).filter(Boolean);
+  if (name === undefined) return { word, start, candidates: filter(COMMAND_NAMES, word) };
+  const args = lookup(name);
+  // Commande inconnue ou sans grammaire : les joueurs en ligne, le comportement par défaut.
   const arg = args && args.length > 0 ? resolve(args, typed) : undefined;
   return { word, start, candidates: candidatesFor(arg, word, players) };
 }

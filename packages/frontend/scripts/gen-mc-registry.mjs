@@ -21,13 +21,16 @@ if (!data) {
 const ids = (arr) => [...new Set(arr.map((e) => e.name))].sort();
 // Les effets sont en CamelCase dans minecraft-data (InstantHealth) ; les commandes attendent instant_health.
 const snake = (s) => s.replace(/([a-z0-9])([A-Z])/g, '$1_$2').toLowerCase();
+// Noms minecraft-data dont la forme snake_case n'est pas l'identifiant de commande.
+const EFFECT_ALIASES = { bad_luck: 'unluck' };
+const effectId = (name) => EFFECT_ALIASES[snake(name)] ?? snake(name);
 
 const registry = {
   version: data.version.minecraftVersion,
   items: ids(data.itemsArray),
   blocks: ids(data.blocksArray),
   entities: ids(data.entitiesArray),
-  effects: [...new Set(data.effectsArray.map((e) => snake(e.name)))].sort(),
+  effects: [...new Set(data.effectsArray.map((e) => effectId(e.name)))].sort(),
   enchantments: ids(data.enchantmentsArray),
 };
 const out = join(dirname(fileURLToPath(import.meta.url)), '..', 'src', 'components', 'console', 'registry.json');

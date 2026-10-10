@@ -45,6 +45,21 @@ describe('complete', () => {
     expect(complete('execute as Ali', players).candidates).toEqual(['Alice']);
   });
 
+  it('proposes nothing once the grammar is exhausted or on an unknown branch', () => {
+    expect(complete('give Alice diamond ', players).candidates).toEqual([]);
+    expect(complete('kick Alice ', players).candidates).toEqual([]);
+    expect(complete('summon zombie ~ ~ ~ ', players).candidates).toEqual([]);
+    expect(complete('time sett ', players).candidates).toEqual([]);
+  });
+
+  it('survives leading spaces and names inherited from Object.prototype', () => {
+    expect(complete(' gi', players).candidates).toEqual(['give']);
+    expect(complete('/ ', players).candidates).toContain('give');
+    // Commandes inconnues, pas des entrées de GRAMMAR : repli sur les joueurs, surtout pas d'exception.
+    expect(complete('constructor ', players).candidates).toContain('Alice');
+    expect(complete('hasOwnProperty x', players).candidates).toEqual([]);
+  });
+
   it('is case-insensitive on the prefix', () => {
     expect(complete('GIVE alice DIA', players).candidates[0]).toBe('diamond');
   });

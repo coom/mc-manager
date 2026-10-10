@@ -24,12 +24,28 @@ describe('CommandInput', () => {
     expect(input.value).toBe('give Alice diamond ');
   });
 
-  it('does nothing on Tab without candidates', () => {
+  it('lets Tab move focus when there is nothing to complete', () => {
     render(<CommandInput onSend={vi.fn()} />);
     const input = screen.getByRole('textbox') as HTMLInputElement;
+    expect(fireEvent.keyDown(input, { key: 'Tab' })).toBe(true);
     fireEvent.change(input, { target: { value: 'zzz' } });
-    fireEvent.keyDown(input, { key: 'Tab' });
+    expect(fireEvent.keyDown(input, { key: 'Tab' })).toBe(true);
     expect(input.value).toBe('zzz');
+    fireEvent.change(input, { target: { value: 'give ' } });
+    expect(fireEvent.keyDown(input, { key: 'Tab' })).toBe(false);
+    fireEvent.keyDown(input, { key: 'Escape' });
+    expect(fireEvent.keyDown(input, { key: 'Tab' })).toBe(true);
+  });
+
+  it('starts from the last candidate on Shift+Tab and keeps the selection visible past the window', () => {
+    render(<CommandInput onSend={vi.fn()} />);
+    const input = screen.getByRole('textbox') as HTMLInputElement;
+    fireEvent.change(input, { target: { value: 'give Alice ' } });
+    fireEvent.keyDown(input, { key: 'Tab', shiftKey: true });
+    const last = input.value.trim().split(' ').pop()!;
+    expect(screen.getByRole('option', { name: last })).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByText('…')).toBeInTheDocument();
+    expect(screen.getAllByRole('option')).toHaveLength(20);
   });
 
   it('submits on Enter and navigates history with arrows', () => {

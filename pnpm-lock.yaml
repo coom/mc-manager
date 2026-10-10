@@ -269,7 +269,7 @@ importers:
         specifier: ^26.1.0
         version: 26.1.0
       minecraft-data:
-        specifier: ^3.117.0
+        specifier: 3.117.0
         version: 3.117.0
       postcss:
         specifier: ^8.5.18
