@@ -37,8 +37,9 @@ export class RestoreService extends EventEmitter {
     if (canSafety) await backups.ensureContainer();
     else if (!opts.confirmNoSafetyBackup) throw new AppError(409, 'Server is stopped: no safety backup possible, confirm to proceed');
     const info = await inspectArchive(file);
-    this.progress('check', `${name}: ${info.entries} entries, ${info.topLevel.join(', ')}`);
     const release = backups.dataLock.acquire('restore');
+    try { this.progress('check', `${name}: ${info.entries} entries, ${info.topLevel.join(', ')}`); }
+    catch (err) { this.step = null; release(); throw err; }
     void this.run(name, file, opts, canSafety, audit)
       .then((outcome) => {
         // Un seul `done`, émis après remise à zéro de l'étape et libération du verrou.
@@ -105,7 +106,7 @@ export class RestoreService extends EventEmitter {
       const timer = setTimeout(() => { cleanup(); reject(new RestoreFailure(`server did not stop within ${Math.round(this.stopTimeoutMs / 1000)} s`)); }, this.stopTimeoutMs);
       const onStatus = (s: ServerStatus) => { if (s === 'stopped') { cleanup(); resolve(); } };
       docker.on('status', onStatus);
-      docker.stopServer().catch((err) => { cleanup(); reject(new RestoreFailure(`stop request failed: ${(err as Error).message}`)); });
+      Promise.resolve().then(() => docker.stopServer()).catch((err) => { cleanup(); reject(new RestoreFailure(`stop request failed: ${(err as Error).message}`)); });
     });
     await stopped;
   }

@@ -175,6 +175,23 @@ describe('RestoreService', () => {
     expect(r.status().running).toBe(false);
   });
 
+  it('leaves no stuck step when the lock is taken between the check and the acquire', async () => {
+    const r = service();
+    backupSvc.ensureContainer = async () => { lock.acquire('backup'); };
+    await expect(r.restore('world-20261010-100000.tgz', { startAfter: true, confirmNoSafetyBackup: false }, auditFn)).rejects.toMatchObject({ statusCode: 409 });
+    expect(r.status()).toEqual({ running: false, step: null });
+    expect(events).toEqual([]);
+    expect(audits).toEqual([]);
+  });
+
+  it('releases the lock and resets the step when a check progress listener throws', async () => {
+    const r = service();
+    r.on('progress', () => { throw new Error('listener boom'); });
+    await expect(r.restore('world-20261010-100000.tgz', { startAfter: true, confirmNoSafetyBackup: false }, auditFn)).rejects.toThrow('listener boom');
+    expect(lock.busy).toBeNull();
+    expect(r.status().running).toBe(false);
+  });
+
   it('fails fast when the stop request itself is rejected', async () => {
     safetyBackupSucceeds();
     mc.stop = async () => { throw new Error('docker refused'); };
