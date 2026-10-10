@@ -1,0 +1,45 @@
+services:
+  backend:
+    build: { context: ., dockerfile: Dockerfile.backend }
+    container_name: mc-manager-backend
+    restart: unless-stopped
+    environment:
+      - NODE_ENV=production
+      - PORT=3001
+      - DATABASE_URL=file:/app/packages/backend/data/mc-manager.db
+      - "JWT_SECRET=${JWT_SECRET:?set JWT_SECRET in .env - openssl rand -hex 32}"
+      - "ENCRYPTION_KEY=${ENCRYPTION_KEY:?set ENCRYPTION_KEY in .env, different from JWT_SECRET}"
+      - FRONTEND_URL=${FRONTEND_URL:-http://localhost:3000}
+      - MC_CONTAINER=${MC_CONTAINER:-mc}
+      - MC_BACKUP_CONTAINER=${MC_BACKUP_CONTAINER:-mc-backup}
+      - MC_DATA_DIR=/mc/data
+      - MC_BACKUPS_DIR=/mc/backups
+      - MC_RCON_PORT=${MC_RCON_PORT:-25575}
+    group_add:
+      - "${DOCKER_GID:-999}"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - backend-data:/app/packages/backend/data
+      - mc-data:/mc/data:ro
+      - mc-backups:/mc/backups
+    networks: [mc-network]
+  frontend:
+    build: { context: ., dockerfile: Dockerfile.frontend }
+    container_name: mc-manager-frontend
+    restart: unless-stopped
+    ports: ["${FRONTEND_PORT:-3000}:8080"]
+    depends_on: [backend]
+    networks: [mc-network]
+volumes:
+  backend-data:
+  # Volumes owned by the Minecraft stack: never created nor deleted here.
+  mc-data:
+    external: true
+    name: ${MC_DATA_VOLUME:?set MC_DATA_VOLUME to the name of the minecraft data volume}
+  mc-backups:
+    external: true
+    name: ${MC_BACKUPS_VOLUME:?set MC_BACKUPS_VOLUME to the name of the backups volume}
+networks:
+  mc-network:
+    external: true
+    name: ${MC_NETWORK:-mc-network}

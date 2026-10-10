@@ -1,0 +1,63 @@
+# syntax=docker/dockerfile:1.4
+# Node 20 reached end-of-life in April 2026 - track the active LTS line.
+FROM node:22-slim AS base
+# The npm bundled with the Node image lags behind and prints upgrade notices
+# on every npx invocation at container start.
+RUN npm install -g npm@11 && corepack enable && corepack prepare pnpm@9 --activate
+
+# System deps: openssl (Prisma engines), ca-certificates.
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends openssl ca-certificates && \
+    apt-get clean && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+FROM base AS build
+
+# Dependency layer: copy ONLY the workspace manifests + lockfile, then install.
+# It is cached by BuildKit and only re-runs when a package.json or the lockfile
+# changes, NOT on every source edit. node_modules is excluded via .dockerignore
+# so the later `COPY . .` never clobbers the installed modules.
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+COPY packages/common/package.json   ./packages/common/
+COPY packages/backend/package.json  ./packages/backend/
+COPY packages/frontend/package.json ./packages/frontend/
+RUN pnpm install --no-frozen-lockfile
+
+# Source layer: bring in the rest and build. A code-only change invalidates
+# from here down and reuses the cached dependency layer above.
+COPY . .
+RUN pnpm --filter @mc/common run build
+RUN pnpm --filter @mc/backend exec prisma generate
+RUN pnpm --filter @mc/backend run build
+
+# Production image
+FROM base AS production
+ENV NODE_ENV=production
+WORKDIR /app
+
+COPY --from=build /app/node_modules ./node_modules
+COPY --from=build /app/package.json ./package.json
+COPY --from=build /app/pnpm-workspace.yaml ./pnpm-workspace.yaml
+COPY --from=build /app/packages/common/dist ./packages/common/dist
+COPY --from=build /app/packages/common/package.json ./packages/common/package.json
+COPY --from=build /app/packages/backend/dist ./packages/backend/dist
+COPY --from=build /app/packages/backend/generated ./packages/backend/generated
+COPY --from=build /app/packages/backend/prisma ./packages/backend/prisma
+COPY --from=build /app/packages/backend/prisma.config.ts ./packages/backend/prisma.config.ts
+COPY --from=build /app/packages/backend/package.json ./packages/backend/package.json
+COPY --from=build /app/packages/backend/node_modules ./packages/backend/node_modules
+
+WORKDIR /app/packages/backend
+# Run as the unprivileged 'node' user shipped with the base image. Only chown
+# the path node actually writes to (SQLite data); app code stays root-owned
+# but world-readable. Reading the Docker socket needs group_add in compose.
+RUN mkdir -p data && chown -R node:node data
+USER node
+ENV HOME=/home/node
+
+EXPOSE 3001
+# The Prisma 7 major upgrade is a deliberate migration, not a container-start
+# decision - silence the CLI update banner until then.
+ENV PRISMA_HIDE_UPDATE_MESSAGE=1
+CMD ["sh", "-c", "npx prisma db push --skip-generate && node dist/index.js"]

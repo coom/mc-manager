@@ -1,0 +1,42 @@
+# Reference stack: Minecraft server + automatic backups.
+# Start it first, then deploy MC Manager with docker-compose.yml.
+services:
+  mc:
+    image: itzg/minecraft-server:latest
+    container_name: mc
+    tty: true
+    stdin_open: true
+    restart: unless-stopped
+    ports: ["25565:25565"]
+    environment:
+      EULA: "TRUE"
+      TYPE: "PAPER"
+      MEMORY: "4G"
+      ENABLE_RCON: "true"
+      RCON_PASSWORD: "change-me"
+    volumes: ["mc-data:/data"]
+    networks: [mc-network]
+  mc-backup:
+    image: itzg/mc-backup:latest
+    container_name: mc-backup
+    restart: unless-stopped
+    depends_on: { mc: { condition: service_healthy } }
+    environment:
+      BACKUP_METHOD: tar
+      BACKUP_INTERVAL: "2h"
+      PRUNE_BACKUPS_DAYS: "7"
+      RCON_HOST: mc
+      RCON_PASSWORD: "change-me"
+      INITIAL_DELAY: "2m"
+    volumes: ["mc-data:/data:ro", "mc-backups:/backups"]
+    networks: [mc-network]
+volumes:
+  # Fixed names so that MC_DATA_VOLUME=mc-data and MC_BACKUPS_VOLUME=mc-backups
+  # match whatever the compose project name is.
+  mc-data:
+    name: mc-data
+  mc-backups:
+    name: mc-backups
+networks:
+  mc-network:
+    name: mc-network
