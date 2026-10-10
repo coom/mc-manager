@@ -21,14 +21,16 @@ USER root
 RUN printf 'server {\n\
     listen 8080;\n\
     server_name _;\n\
+    absolute_redirect off;\n\
     root /usr/share/nginx/html;\n\
     index index.html;\n\
 \n\
     client_max_body_size 10m;\n\
 \n\
     # Backup downloads stream large archives: no buffering, long read timeout.\n\
-    # Declared before "location /api" on purpose.\n\
-    location /api/backups/ {\n\
+    # Scoped to downloads only: a "location /api/backups/" prefix made nginx answer\n\
+    # GET /api/backups (no trailing slash) with a 301 to its internal port 8080.\n\
+    location ^~ /api/backups/download/ {\n\
         proxy_pass http://backend:3001;\n\
         proxy_http_version 1.1;\n\
         proxy_set_header Host $host;\n\

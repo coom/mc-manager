@@ -78,7 +78,7 @@ Les services sont exposés via `req.app.locals.{prisma, docker, rcon, logs, metr
 - `hooks/use-websocket.ts` : connexion après authentification, reconnexion avec backoff, invalidation des queries `server`, `backups` et `metrics` à chaque reconnexion.
 - Pas de `refetchInterval` sur les données poussées par WebSocket ; seul `GET /api/metrics` (courbe de fréquentation) est rafraîchi toutes les 60 s.
 - i18n : `fr.json` et `en.json` ; ne pas éditer les locales à la main pour une nouvelle fonctionnalité, écrire un fragment dans `scripts/i18n-fragments/` puis lancer `merge-i18n.mjs`.
-- nginx (`Dockerfile.frontend`) proxifie `/api` et `/ws` vers `backend:3001` ; `/api/backups/` a un bloc dédié (pas de buffering, timeout de lecture 1 h) déclaré avant `/api` pour les téléchargements volumineux.
+- nginx (`Dockerfile.frontend`) proxifie `/api` et `/ws` vers `backend:3001` ; `/api/backups/download/` a un bloc dédié `^~` (pas de buffering, timeout de lecture 1 h) pour les téléchargements volumineux. Ne jamais élargir ce préfixe à `/api/backups/` : nginx répondrait à `GET /api/backups` par un 301 vers son port interne 8080 (`absolute_redirect off` limite les dégâts, mais la liste resterait redirigée).
 
 ## Invariants de sécurité (ne pas casser)
 
