@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { PassThrough } from 'stream';
 import { LogStreamer } from './log-streamer.js';
 import { DockerService } from '../docker/docker-service.js';
@@ -56,6 +56,70 @@ describe('LogStreamer', () => {
     fresh.write('[10:00:00] [main/INFO]: after\n');
     await wait(10);
     expect(seen).toEqual(['after']);
+    streamer.stop();
+  });
+
+  // Replaces svc.logStream with a version whose promises are resolved manually, one per call.
+  function deferredStreams(svc: DockerService, streams: PassThrough[]) {
+    const resolvers: Array<() => void> = [];
+    let i = 0;
+    svc.logStream = vi.fn(async () => {
+      const stream = streams[i++]!;
+      await new Promise<void>((r) => resolvers.push(r));
+      return { stream, tty: true };
+    });
+    return resolvers;
+  }
+
+  it('keeps a single live stream on rapid starting then ready events', async () => {
+    const { streamer, svc } = setup(true);
+    const first = new PassThrough();
+    const second = new PassThrough();
+    const resolvers = deferredStreams(svc, [first, second]);
+    const seen: string[] = [];
+    streamer.on('line', (l) => seen.push(l.message));
+    const startP = streamer.start(); // open #1 pending
+    await wait(1);
+    svc.emit('status', 'starting'); // open #2 pending
+    await wait(1);
+    resolvers[0]!();
+    resolvers[1]!();
+    await startP;
+    await wait(10);
+    expect(first.destroyed).toBe(true);
+    expect(second.destroyed).toBe(false);
+    second.write('[10:00:00] [main/INFO]: once\n');
+    await wait(10);
+    expect(seen).toEqual(['once']);
+    expect(streamer.history()).toHaveLength(1);
+    streamer.stop();
+  });
+
+  it('destroys a late stream when stop() happens during a pending open', async () => {
+    const { streamer, svc } = setup(true);
+    const late = new PassThrough();
+    const resolvers = deferredStreams(svc, [late]);
+    const seen: string[] = [];
+    streamer.on('line', (l) => seen.push(l.message));
+    const startP = streamer.start();
+    await wait(1);
+    streamer.stop();
+    resolvers[0]!();
+    await startP;
+    expect(late.destroyed).toBe(true);
+    late.write('[10:00:00] [main/INFO]: ghost\n');
+    await wait(10);
+    expect(seen).toEqual([]);
+    expect(streamer.history()).toEqual([]);
+  });
+
+  it('requests the full tail on first open and tail 0 on reopen', async () => {
+    const { streamer, svc } = setup(true);
+    const spy = vi.spyOn(svc, 'logStream');
+    await streamer.start();
+    svc.emit('status', 'starting');
+    await wait(10);
+    expect(spy.mock.calls.map((c) => c[0])).toEqual([3, 0]);
     streamer.stop();
   });
 });

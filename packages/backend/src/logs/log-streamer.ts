@@ -9,7 +9,8 @@ export class LogStreamer extends EventEmitter {
   private buffer: LogLine[] = [];
   private current: Readable | null = null;
   private stopped = false;
-  private onStatus = (s: ServerStatus) => { if (s === 'starting' || s === 'ready') void this.open(); };
+  private generation = 0;
+  private onStatus = (s: ServerStatus) => { if (s === 'starting' || s === 'ready') void this.open(0); };
 
   constructor(private docker: DockerService, private cap = 500) { super(); }
 
@@ -18,23 +19,26 @@ export class LogStreamer extends EventEmitter {
   async start(): Promise<void> {
     this.stopped = false;
     this.docker.on('status', this.onStatus);
-    await this.open();
+    await this.open(this.cap);
   }
 
   stop(): void {
     this.stopped = true;
+    this.generation++;
     this.docker.off('status', this.onStatus);
     this.current?.destroy();
     this.current = null;
   }
 
-  private async open(): Promise<void> {
+  private async open(tail: number): Promise<void> {
+    const gen = ++this.generation;
     this.current?.destroy();
     this.current = null;
     if (this.stopped) return;
     let handle: { stream: Readable; tty: boolean };
-    try { handle = await this.docker.logStream(this.cap); }
+    try { handle = await this.docker.logStream(tail); }
     catch (err) { logger.warn({ err }, 'log stream unavailable'); return; }
+    if (this.stopped || gen !== this.generation) { handle.stream.destroy(); return; }
     this.current = handle.stream;
     const text = new PassThrough();
     if (handle.tty) handle.stream.pipe(text); else this.docker.demux(handle.stream, text);

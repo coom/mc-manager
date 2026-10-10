@@ -53,6 +53,9 @@ async function main() {
   docker.on('status', () => {
     void app.locals.serverInfo().then((info: ServerInfo) => broadcast(wss, { type: 'server.status', info }));
   });
+  const logs = new LogStreamer(docker, 500);
+  app.locals.logs = logs;
+  logs.on('line', (line) => broadcast(wss, { type: 'log.line', line }));
   wss.on('authenticated', (socket) => {
     markAuthenticated(socket);
     void app.locals.serverInfo().then((info: ServerInfo) => socket.send(JSON.stringify({ type: 'server.status', info })));
@@ -60,10 +63,6 @@ async function main() {
   });
   // serverInfo et les listeners sont en place : les événements de start() peuvent partir.
   await docker.start();
-
-  const logs = new LogStreamer(docker, 500);
-  app.locals.logs = logs;
-  logs.on('line', (line) => broadcast(wss, { type: 'log.line', line }));
   await logs.start();
 
   server.listen(config.port, () => logger.info(`MC Manager backend on http://localhost:${config.port}`));
