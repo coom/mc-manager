@@ -23,7 +23,10 @@ export class BackupService extends EventEmitter {
   }
 
   async list(): Promise<BackupList> {
-    const names = await readdir(this.dir).catch(() => [] as string[]);
+    const names = await readdir(this.dir).catch((err: NodeJS.ErrnoException) => {
+      logger.warn({ err, dir: this.dir }, "cannot read backups directory");
+      return [] as string[];
+    });
     const entries = [];
     for (const name of names) {
       if (!isSafeBackupName(name)) continue;
