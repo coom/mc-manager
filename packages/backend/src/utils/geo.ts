@@ -34,7 +34,7 @@ export function isPrivateIp(ip: string): boolean {
   if (/^172\.(1[6-9]|2\d|3[01])\./.test(ip)) return true;
   if (/^169\.254\./.test(ip)) return true;
   if (/^(fc|fd)[0-9a-f]{2}:/i.test(ip)) return true;
-  if (/^fe80:/i.test(ip)) return true;
+  if (/^fe[89ab][0-9a-f]:/i.test(ip)) return true;
   return false;
 }
 

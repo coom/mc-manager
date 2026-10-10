@@ -15,7 +15,7 @@ describe('normalizeIp', () => {
 });
 
 describe('isPrivateIp', () => {
-  it.each(['127.0.0.1', '::1', '10.1.2.3', '192.168.1.1', '172.16.0.1', '172.31.255.255', '169.254.1.1', 'fd12::1', 'fe80::1'])('%s is private', (ip) => expect(isPrivateIp(ip)).toBe(true));
+  it.each(['127.0.0.1', '::1', '10.1.2.3', '192.168.1.1', '172.16.0.1', '172.31.255.255', '169.254.1.1', 'fd12::1', 'fe80::1', 'fe90::1', 'febf::1'])('%s is private', (ip) => expect(isPrivateIp(ip)).toBe(true));
   it.each(['8.8.8.8', '172.32.0.1', '2001:db8::1'])('%s is public', (ip) => expect(isPrivateIp(ip)).toBe(false));
 });
 
