@@ -67,6 +67,19 @@ describe('validateRawProperties', () => {
   it('rejects oversized content', () => {
     expect(validateRawProperties('k=' + 'x'.repeat(70 * 1024))).toMatch(/64 KiB/);
   });
+  it('rejects a Java line continuation (odd number of trailing backslashes)', () => {
+    expect(validateRawProperties('rcon.password=attacker\nmotd=x\\\nrcon.password=********\n'))
+      .toBe('Invalid line 2: line continuation (trailing backslash) is not allowed');
+    expect(validateRawProperties('motd=a\\\\\\')).toMatch(/line 1: line continuation/);
+  });
+  it('accepts an escaped backslash at the end of a line and a backslash in a comment', () => {
+    expect(validateRawProperties('motd=a\\\\\n# comment \\\nlevel-name=world\n')).toBeNull();
+  });
+  it('values written through escapeValue never end with a continuation', () => {
+    const text = updateServerProperties('motd=x\nrcon.password=s\n', { motd: 'ends with \\' });
+    expect(validateRawProperties(text)).toBeNull();
+    expect(parseServerProperties(text)).toEqual({ motd: 'ends with \\', 'rcon.password': 's' });
+  });
 });
 
 describe('maskRconPassword', () => {

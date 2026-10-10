@@ -74,6 +74,10 @@ export function validateRawProperties(text: string): string | null {
     if (!t || t.startsWith('#') || t.startsWith('!')) continue;
     const m = LINE_RE.exec(t);
     if (!m || !KEY_RE.test(m[1])) return `Invalid line ${i + 1}: expected key=value with a lowercase key`;
+    // Java Properties.load replie la ligne suivante sur une ligne finie par un nombre impair de `\` :
+    // `motd=x\` suivi de `rcon.password=********` ferait disparaître la vraie ligne du mot de passe.
+    const trailing = /\\+$/.exec(lines[i]);
+    if (trailing && trailing[0].length % 2 === 1) return `Invalid line ${i + 1}: line continuation (trailing backslash) is not allowed`;
   }
   return null;
 }

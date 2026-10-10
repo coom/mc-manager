@@ -29,7 +29,8 @@ export class PropertiesService {
   private async restartRequired(): Promise<boolean> {
     if (!this.lastWriteAt) return false;
     const i = await this.deps.docker.inspectServer().catch(() => null);
-    if (!i?.startedAt) return true;
+    // Serveur arrêté : il lira le fichier au prochain démarrage, aucun redémarrage n'est requis.
+    if (!i?.startedAt) return false;
     return new Date(i.startedAt).getTime() < this.lastWriteAt.getTime();
   }
 

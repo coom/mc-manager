@@ -96,6 +96,19 @@ describe('PropertiesService', () => {
     docker.containers.set('mc', new FakeContainer(inspectFixture({ StartedAt: new Date(Date.now() + 60_000).toISOString() })));
     expect((await s.read()).restartRequired).toBe(false);
   });
+  it('restartRequired is false while the server is not running', async () => {
+    const s = service();
+    await s.write({ values: { 'max-players': '2' } });
+    docker.containers.set('mc', new FakeContainer(inspectFixture({ Status: 'exited', Running: false })));
+    expect((await s.read()).restartRequired).toBe(false);
+    docker.containers.delete('mc');
+    expect((await s.read()).restartRequired).toBe(false);
+  });
+  it('raw mode refuses a line continuation that would fold the RCON password line', async () => {
+    await expect(service().write({ raw: 'rcon.password=attacker\nmotd=Hello\\\nrcon.password=********\nenable-rcon=true\n' }))
+      .rejects.toMatchObject({ statusCode: 400, message: 'Invalid line 2: line continuation (trailing backslash) is not allowed' });
+    expect(readFileSync(path.join(dir, 'server.properties'), 'utf8')).toBe(text);
+  });
   it('explains an EACCES with the path and the chown command', async () => {
     if (process.platform === 'win32') return; // chmod n'empêche pas l'écriture sous Windows
     chmodSync(dir, 0o500);
