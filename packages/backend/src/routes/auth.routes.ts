@@ -12,6 +12,8 @@ import QRCode from 'qrcode';
 import { createTrustedDevice, clearTrustedCookie, resolveTrustedCookie } from '../utils/trusted-device-service.js';
 import { TRUSTED_COOKIE_NAME } from '../utils/trusted-device.js';
 import { issueSession, gateAfterPassword } from '../auth/session.js';
+import type { WebLoginReason } from '@mc/common';
+import { recordWebLogin } from '../auth/web-login-journal.js';
 
 export const authRoutes: Router = Router();
 
@@ -75,15 +77,20 @@ authRoutes.post('/login', async (req: Request, res: Response, next) => {
     const prisma = req.app.locals.prisma;
 
     const user = await prisma.user.findUnique({ where: { username } });
+    const journal = (success: boolean, reason?: WebLoginReason) =>
+      recordWebLogin(prisma, { username: String(username), userId: user?.id ?? null, ip: req.ip, success, reason });
 
     if (!canLocalLogin(user)) {
+      journal(false, !user ? 'unknown_user' : 'disabled');
       throw new AppError(401, 'Invalid credentials');
     }
 
     const valid = await bcrypt.compare(password, user.passwordHash as string);
     if (!valid) {
+      journal(false, 'bad_password');
       throw new AppError(401, 'Invalid credentials');
     }
+    journal(true);
 
 
     // Forced password change comes first — before MFA enrollment.
@@ -116,7 +123,10 @@ authRoutes.post('/login/mfa', async (req: Request, res: Response, next) => {
       // Fall back to a one-time recovery code
       const stored: string[] = user.mfaRecoveryCodes ? JSON.parse(decrypt(user.mfaRecoveryCodes)) : [];
       const remaining = consumeRecoveryCode(String(code), stored);
-      if (!remaining) throw new AppError(401, 'Invalid code');
+      if (!remaining) {
+        recordWebLogin(prisma, { username: user.username, userId: user.id, ip: req.ip, success: false, reason: 'mfa_failed' });
+        throw new AppError(401, 'Invalid code');
+      }
       await prisma.user.update({
         where: { id: user.id },
         data: { mfaRecoveryCodes: encrypt(JSON.stringify(remaining)) },
@@ -124,6 +134,7 @@ authRoutes.post('/login/mfa', async (req: Request, res: Response, next) => {
     }
 
     // The MFA step always issues a full session, so (unlike /login) no accessToken guard is needed.
+    recordWebLogin(prisma, { username: user.username, userId: user.id, ip: req.ip, success: true, reason: 'mfa' });
     await maybeTrustDevice(prisma, req, res, user.id, req.body.trustDevice);
     res.json(await issueSession(prisma, user));
   } catch (err) {
@@ -196,6 +207,7 @@ authRoutes.post('/trusted/session', async (req: Request, res: Response, next) =>
       clearTrustedCookie(res);
       throw new AppError(401, 'Trusted device not recognized');
     }
+    recordWebLogin(prisma, { username: user.username, userId: user.id, ip: req.ip, success: true, reason: 'trusted_device' });
     res.json(await issueSession(prisma, user));
   } catch (err) { next(err); }
 });
