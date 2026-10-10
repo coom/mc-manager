@@ -1,5 +1,6 @@
 import type { ServerInfo } from './types/server.js';
 import type { OnlinePlayer } from './types/players.js';
+import type { RestoreStep } from './types/backups.js';
 export interface LogLine { ts: string | null; level: 'INFO' | 'WARN' | 'ERROR' | 'DEBUG' | 'RAW'; thread: string | null; message: string; raw: string }
 export type WsMessage =
   | { type: 'server.status'; info: ServerInfo }
@@ -10,4 +11,6 @@ export type WsMessage =
   | { type: 'backup.done'; exitCode: number }
   | { type: 'backup.list.changed' }
   | { type: 'player.session'; kind: 'join' | 'leave'; player: OnlinePlayer; leftAt?: string }
-  | { type: 'player.lists.changed' };
+  | { type: 'player.lists.changed' }
+  | { type: 'restore.progress'; step: RestoreStep; line: string }
+  | { type: 'restore.done'; ok: boolean; message: string; safetyBackup: string | null };

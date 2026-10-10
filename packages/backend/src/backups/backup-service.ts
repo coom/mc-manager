@@ -4,6 +4,7 @@ import path from 'path';
 import { PassThrough } from 'stream';
 import type { BackupList } from '@mc/common';
 import type { DockerService } from '../docker/docker-service.js';
+import { DataLock } from '../data/data-lock.js';
 import { AppError } from '../middleware/error-handler.js';
 import { logger } from '../utils/logger.js';
 
@@ -14,7 +15,9 @@ export function isSafeBackupName(name: string): boolean {
 
 export class BackupService extends EventEmitter {
   private running = false;
-  constructor(private dir: string, private docker: DockerService) { super(); }
+  constructor(private dir: string, private docker: DockerService, private lock: DataLock = new DataLock()) { super(); }
+
+  get dataLock(): DataLock { return this.lock; }
 
   isRunning(): boolean { return this.running; }
 
@@ -49,6 +52,7 @@ export class BackupService extends EventEmitter {
   }
 
   async remove(name: string): Promise<void> {
+    this.lock.assertFree();
     const full = await this.resolve(name);
     try {
       await unlink(full);
@@ -63,9 +67,13 @@ export class BackupService extends EventEmitter {
     this.emit('listChanged');
   }
 
-  /** Lance `backup now` et résout avec le code de sortie (rejette si le conteneur est injoignable). */
-  async runNow(): Promise<number> {
+  /**
+   * Lance `backup now` et résout avec le code de sortie (rejette si le conteneur est injoignable).
+   * `lockHeld` : l'appelant tient déjà le verrou (sauvegarde de sécurité d'une restauration).
+   */
+  async runNow(opts: { lockHeld?: boolean } = {}): Promise<number> {
     if (this.running) throw new AppError(409, 'A backup is already running');
+    const release = opts.lockHeld ? () => undefined : this.lock.acquire('backup');
     this.running = true;
     try {
       const { stream, wait } = await this.docker.execBackup(['backup', 'now']);
@@ -87,6 +95,6 @@ export class BackupService extends EventEmitter {
       this.emit('progress', `error: ${(err as Error).message}`);
       this.emit('done', 1);
       throw err instanceof AppError ? err : new AppError(503, 'Backup container unavailable');
-    } finally { this.running = false; }
+    } finally { this.running = false; release(); }
   }
 }

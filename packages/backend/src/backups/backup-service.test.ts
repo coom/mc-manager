@@ -4,6 +4,7 @@ import { tmpdir } from 'os';
 import path from 'path';
 import { PassThrough } from 'stream';
 import { BackupService, isSafeBackupName } from './backup-service.js';
+import { DataLock } from '../data/data-lock.js';
 import { DockerService } from '../docker/docker-service.js';
 import { FakeDocker, FakeContainer, inspectFixture } from '../docker/fake-docker.js';
 
@@ -90,5 +91,34 @@ describe('BackupService', () => {
     const bare = new BackupService(dir, new DockerService(new FakeDocker(), 'mc', 'mc-backup'));
     await expect(bare.ensureContainer()).rejects.toMatchObject({ statusCode: 503 });
     await expect(svc.ensureContainer()).resolves.toBeUndefined();
+  });
+
+  it('runNow takes the data lock and answers 409 while another operation holds it', async () => {
+    const lock = new DataLock();
+    const locked = new BackupService(dir, new DockerService(docker, 'mc', 'mc-backup'), lock);
+    const release = lock.acquire('restore');
+    await expect(locked.runNow()).rejects.toMatchObject({ statusCode: 409 });
+    release();
+    const p = locked.runNow();
+    expect(lock.busy).toBe('backup');
+    backupContainer.execStream.end('done\n');
+    await p;
+    expect(lock.busy).toBeNull();
+  });
+  it('runNow with lockHeld does not take the lock (used by the restore safety backup)', async () => {
+    const lock = new DataLock();
+    const locked = new BackupService(dir, new DockerService(docker, 'mc', 'mc-backup'), lock);
+    lock.acquire('restore');
+    const p = locked.runNow({ lockHeld: true });
+    backupContainer.execStream.end('done\n');
+    await expect(p).resolves.toBe(0);
+    expect(lock.busy).toBe('restore');
+  });
+  it('remove is refused while an operation holds the lock', async () => {
+    const lock = new DataLock();
+    const locked = new BackupService(dir, new DockerService(docker, 'mc', 'mc-backup'), lock);
+    lock.acquire('restore');
+    await expect(locked.remove('world-20261009-100000.tgz')).rejects.toMatchObject({ statusCode: 409 });
+    expect(existsSync(path.join(dir, 'world-20261009-100000.tgz'))).toBe(true);
   });
 });
