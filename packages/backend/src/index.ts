@@ -7,6 +7,7 @@ import { DockerService, realDocker } from './docker/docker-service.js';
 import type { ServerInfo } from '@mc/common';
 import { attachWebSocket } from './ws/ws-server.js';
 import { broadcast, markAuthenticated } from './ws/ws-broadcast.js';
+import { LogStreamer } from './logs/log-streamer.js';
 
 process.on('uncaughtException', (err) => logger.error({ err }, 'uncaught exception (kept alive)'));
 process.on('unhandledRejection', (reason) => logger.error({ reason }, 'unhandled rejection (kept alive)'));
@@ -55,9 +56,15 @@ async function main() {
   wss.on('authenticated', (socket) => {
     markAuthenticated(socket);
     void app.locals.serverInfo().then((info: ServerInfo) => socket.send(JSON.stringify({ type: 'server.status', info })));
+    socket.send(JSON.stringify({ type: 'log.history', lines: logs.history() }));
   });
   // serverInfo et les listeners sont en place : les événements de start() peuvent partir.
   await docker.start();
+
+  const logs = new LogStreamer(docker, 500);
+  app.locals.logs = logs;
+  logs.on('line', (line) => broadcast(wss, { type: 'log.line', line }));
+  await logs.start();
 
   server.listen(config.port, () => logger.info(`MC Manager backend on http://localhost:${config.port}`));
 
@@ -65,6 +72,7 @@ async function main() {
     logger.info('shutting down');
     wss.close();
     server.close();
+    logs.stop();
     docker.stop();
     await prisma.$disconnect();
     process.exit(0);
