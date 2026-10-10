@@ -52,6 +52,38 @@ describe('RconService', () => {
     rcon.stop(); svc.stop();
   });
 
+  function pendingSetup() {
+    const s = setup();
+    const conn = new FakeConn();
+    const endSpy = vi.spyOn(conn, 'end');
+    let release!: () => void;
+    (s.rconLib.connect as ReturnType<typeof vi.fn>).mockImplementation(() => new Promise((r) => { release = () => r(conn); }));
+    return { ...s, conn, endSpy, release: () => release() };
+  }
+
+  it('discards a connection that completes after stop()', async () => {
+    const { svc, rcon, conn, endSpy, release } = pendingSetup();
+    await svc.start();
+    const started = rcon.start(); await wait(10);
+    rcon.stop();
+    release(); await started; await wait(10);
+    expect(rcon.isConnected()).toBe(false);
+    expect(endSpy).toHaveBeenCalled();
+    expect(conn.listenerCount('end')).toBe(0);
+    svc.stop();
+  });
+
+  it('discards a connection that completes after the server left ready', async () => {
+    const { svc, rcon, endSpy, release } = pendingSetup();
+    await svc.start();
+    const started = rcon.start(); await wait(10);
+    (svc as unknown as { setStatus(s: string): void }).setStatus('stopping');
+    release(); await started; await wait(10);
+    expect(rcon.isConnected()).toBe(false);
+    expect(endSpy).toHaveBeenCalled();
+    rcon.stop(); svc.stop();
+  });
+
   it('reads the password from server.properties, refusing when rcon is disabled', async () => {
     const { svc, rcon, credentials, rconLib } = setup();
     credentials.mockResolvedValueOnce({ enabled: false, port: 25575, password: null });

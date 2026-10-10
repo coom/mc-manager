@@ -54,6 +54,10 @@ export class RconService {
       const cred = await this.credentials();
       if (!cred.enabled || !cred.password) { logger.warn('rcon disabled in server.properties'); return; }
       const c = await this.lib.connect({ host: this.opts.host, port: cred.port || this.opts.portFallback, password: cred.password, timeout: 10_000 });
+      if (this.stopped || this.docker.getStatus() !== 'ready') {
+        try { void c.end(); } catch { /* déjà fermée */ }
+        return;
+      }
       c.on('end', () => { if (this.conn === c) { this.conn = null; this.scheduleRetry(); } });
       c.on('error', (err) => logger.warn({ err }, 'rcon error'));
       this.conn = c;
