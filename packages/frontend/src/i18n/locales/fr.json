@@ -264,7 +264,10 @@
     "onlinePlayers": "Joueurs en ligne",
     "noPlayers": "Personne en ligne",
     "playersOverTime": "Fréquentation",
-    "playersMax": "Pic de joueurs"
+    "playersMax": "Pic de joueurs",
+    "range24h": "24h",
+    "range7d": "7j",
+    "range30d": "30j"
   },
   "backups": {
     "title": "Sauvegardes",

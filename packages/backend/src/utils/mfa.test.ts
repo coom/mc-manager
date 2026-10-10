@@ -27,6 +27,8 @@ describe('TOTP', () => {
     expect(url).toContain('otpauth://totp/');
     expect(url).toContain('alice');
     expect(url).toContain('secret=SECRET');
+    expect(url).toContain('issuer=MC%20Manager');
+    expect(url).not.toContain('TS6');
   });
 });
 

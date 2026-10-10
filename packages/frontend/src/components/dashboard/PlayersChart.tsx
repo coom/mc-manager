@@ -18,7 +18,7 @@ export function PlayersChart() {
       <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle className="text-sm">{t('dashboard.playersOverTime')}</CardTitle>
         <Tabs value={range} onValueChange={(v) => setRange(v as MetricsRange)}><TabsList>
-          <TabsTrigger value="24h">24h</TabsTrigger><TabsTrigger value="7d">7j</TabsTrigger><TabsTrigger value="30d">30j</TabsTrigger>
+          <TabsTrigger value="24h">{t('dashboard.range24h')}</TabsTrigger><TabsTrigger value="7d">{t('dashboard.range7d')}</TabsTrigger><TabsTrigger value="30d">{t('dashboard.range30d')}</TabsTrigger>
         </TabsList></Tabs>
       </CardHeader>
       <CardContent className="h-64">

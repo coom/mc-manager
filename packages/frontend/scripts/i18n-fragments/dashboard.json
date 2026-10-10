@@ -1,4 +1,4 @@
 { "namespace": "dashboard", "keys": {
-  "en": { "players": "Players", "cpu": "CPU", "memory": "Memory", "mspt": "MSPT", "tps": "TPS", "world": "World size", "diskFree": "Disk free", "onlinePlayers": "Online players", "noPlayers": "Nobody online", "playersOverTime": "Players over time", "playersMax": "Peak players" },
-  "fr": { "players": "Joueurs", "cpu": "CPU", "memory": "Mémoire", "mspt": "MSPT", "tps": "TPS", "world": "Taille du monde", "diskFree": "Disque libre", "onlinePlayers": "Joueurs en ligne", "noPlayers": "Personne en ligne", "playersOverTime": "Fréquentation", "playersMax": "Pic de joueurs" }
+  "en": { "players": "Players", "cpu": "CPU", "memory": "Memory", "mspt": "MSPT", "tps": "TPS", "world": "World size", "diskFree": "Disk free", "onlinePlayers": "Online players", "noPlayers": "Nobody online", "playersOverTime": "Players over time", "playersMax": "Peak players", "range24h": "24h", "range7d": "7d", "range30d": "30d" },
+  "fr": { "players": "Joueurs", "cpu": "CPU", "memory": "Mémoire", "mspt": "MSPT", "tps": "TPS", "world": "Taille du monde", "diskFree": "Disque libre", "onlinePlayers": "Joueurs en ligne", "noPlayers": "Personne en ligne", "playersOverTime": "Fréquentation", "playersMax": "Pic de joueurs", "range24h": "24h", "range7d": "7j", "range30d": "30j" }
 } }

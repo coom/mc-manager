@@ -264,7 +264,10 @@
     "onlinePlayers": "Online players",
     "noPlayers": "Nobody online",
     "playersOverTime": "Players over time",
-    "playersMax": "Peak players"
+    "playersMax": "Peak players",
+    "range24h": "24h",
+    "range7d": "7d",
+    "range30d": "30d"
   },
   "backups": {
     "title": "Backups",

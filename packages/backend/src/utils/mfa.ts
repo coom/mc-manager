@@ -11,7 +11,7 @@ export function generateMfaSecret(): string {
 }
 
 /** otpauth:// URI for QR-code enrollment. */
-export function buildOtpAuthUrl(secret: string, account: string, issuer = 'TS6 Manager'): string {
+export function buildOtpAuthUrl(secret: string, account: string, issuer = 'MC Manager'): string {
   return authenticator.keyuri(account, issuer, secret);
 }
 
