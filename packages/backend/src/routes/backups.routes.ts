@@ -24,6 +24,20 @@ backupsRoutes.get('/', async (req: Request, res: Response, next: NextFunction) =
   try { res.json(await req.app.locals.backups.list()); } catch (err) { next(err); }
 });
 
+backupsRoutes.get('/restore/status', (req: Request, res: Response) => { res.json(req.app.locals.restore.status()); });
+
+// Restauration : la réponse 202 part après les vérifications (archive, verrou, filet) ; la suite est diffusée en WebSocket.
+backupsRoutes.post('/:name/restore', requireRole('admin'), async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const name = String(req.params.name);
+    const body = req.body ?? {};
+    for (const k of ['startAfter', 'confirmNoSafetyBackup'] as const) if (body[k] !== undefined && typeof body[k] !== 'boolean') throw new AppError(400, `${k} must be a boolean`);
+    const opts = { startAfter: body.startAfter ?? true, confirmNoSafetyBackup: body.confirmNoSafetyBackup ?? false };
+    await req.app.locals.restore.restore(name, opts, (detail: string) => audit(req, 'backup.restore', detail));
+    res.status(202).json({ accepted: true });
+  } catch (err) { next(err); }
+});
+
 // Émet un lien de téléchargement court (60 s, usage unique) : le navigateur le suit directement,
 // sans charger l'archive en mémoire ni porter l'en-tête Bearer.
 backupsRoutes.post('/:name/link', requireRole('admin'), async (req: Request, res: Response, next: NextFunction) => {
@@ -49,6 +63,7 @@ backupsRoutes.post('/run', requireRole('admin'), async (req: Request, res: Respo
   try {
     const backups = req.app.locals.backups;
     if (backups.isRunning()) { res.status(409).json({ error: 'A backup is already running' }); return; }
+    backups.dataLock.assertFree();
     await backups.ensureContainer();
     await audit(req, 'backup.run');
     // Le résultat (code de sortie ou échec) est audité à la fin, la réponse 202 part tout de suite.

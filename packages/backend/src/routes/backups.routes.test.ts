@@ -7,7 +7,7 @@ import path from 'path';
 import { PassThrough } from 'stream';
 import { backupsRoutes, backupDownloadRoutes } from './backups.routes.js';
 import { DownloadTokenStore } from '../backups/download-tokens.js';
-import { errorHandler } from '../middleware/error-handler.js';
+import { errorHandler, AppError } from '../middleware/error-handler.js';
 import { BackupService } from '../backups/backup-service.js';
 import { DockerService } from '../docker/docker-service.js';
 import { FakeDocker, FakeContainer, inspectFixture } from '../docker/fake-docker.js';
@@ -20,6 +20,7 @@ function appWith(role: 'admin' | 'viewer', fake = new FakeDocker()) {
   dirs.push(dir);
   writeFileSync(path.join(dir, 'w.tgz'), 'content');
   const app = express();
+  app.use(express.json());
   app.locals.downloadTokens = new DownloadTokenStore();
   // Route publique montée avant l'injection de l'utilisateur, comme avant authMiddleware dans app.ts.
   app.use('/api/backups', backupDownloadRoutes);
@@ -89,5 +90,39 @@ describe('backups routes', () => {
     const app = appWith('admin', fake);
     expect((await request(app).post('/api/backups/run')).status).toBe(202);
     await vi.waitFor(() => expect(auditDetails(app)[1]).toMatch(/^failed: /));
+  });
+  it('viewer cannot restore but can read the restore status', async () => {
+    const app = appWith('viewer');
+    app.locals.restore = { status: () => ({ running: false, step: null }), restore: vi.fn() };
+    expect((await request(app).post('/api/backups/w.tgz/restore').send({})).status).toBe(403);
+    const st = await request(app).get('/api/backups/restore/status');
+    expect(st.status).toBe(200);
+    expect(st.body).toEqual({ running: false, step: null });
+  });
+  it('admin restore: defaults, 202, and the audit callback is wired to backup.restore', async () => {
+    const app = appWith('admin');
+    const restore = vi.fn(async (_n: string, _o: unknown, auditFn: (d: string) => Promise<void>) => { await auditFn('w.tgz'); });
+    app.locals.restore = { status: () => ({ running: true, step: 'check' }), restore };
+    const res = await request(app).post('/api/backups/w.tgz/restore').send({});
+    expect(res.status).toBe(202);
+    expect(res.body).toEqual({ accepted: true });
+    expect(restore).toHaveBeenCalledWith('w.tgz', { startAfter: true, confirmNoSafetyBackup: false }, expect.any(Function));
+    expect(app.locals.prisma.auditLog.create).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ action: 'backup.restore', detail: 'w.tgz' }) }));
+  });
+  it('admin restore forwards the options and surfaces the service error status', async () => {
+    const app = appWith('admin');
+    const restore = vi.fn().mockRejectedValue(new AppError(409, 'Server is stopped: no safety backup possible, confirm to proceed'));
+    app.locals.restore = { status: () => ({ running: false, step: null }), restore };
+    const res = await request(app).post('/api/backups/w.tgz/restore').send({ startAfter: false, confirmNoSafetyBackup: false });
+    expect(res.status).toBe(409);
+    expect(restore).toHaveBeenCalledWith('w.tgz', { startAfter: false, confirmNoSafetyBackup: false }, expect.any(Function));
+    expect((await request(app).post('/api/backups/w.tgz/restore').send({ startAfter: 'yes' })).status).toBe(400);
+  });
+  it('run and delete answer 409 while the data lock is held by a restore', async () => {
+    const app = appWith('admin');
+    const release = (app.locals.backups as BackupService).dataLock.acquire('restore');
+    expect((await request(app).post('/api/backups/run')).status).toBe(409);
+    expect((await request(app).delete('/api/backups/w.tgz')).status).toBe(409);
+    release();
   });
 });
