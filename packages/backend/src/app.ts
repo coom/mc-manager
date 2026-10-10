@@ -5,6 +5,10 @@ import cookieParser from 'cookie-parser';
 import rateLimit from 'express-rate-limit';
 import { config } from './config.js';
 import { errorHandler } from './middleware/error-handler.js';
+import { authMiddleware } from './middleware/auth.js';
+import { authRoutes } from './routes/auth.routes.js';
+import { setupRoutes } from './routes/setup.routes.js';
+import { userRoutes } from './routes/users.routes.js';
 
 export function createApp(): Express {
   const app = express();
@@ -24,8 +28,11 @@ export function createApp(): Express {
   app.use('/api/setup/init', authLimiter);
   app.use('/api', rateLimit({ windowMs: 60 * 1000, max: 300, standardHeaders: true, legacyHeaders: false, message: { error: 'Too many requests' } }));
 
-  // Les routes sont montées ici par les tâches suivantes, dans cet ordre :
-  // publiques (/api/setup, /api/auth), puis app.use('/api', authMiddleware), puis les routes protégées.
+  // Routes publiques, puis authMiddleware, puis les routes protégées (les tâches suivantes en ajoutent ici).
+  app.use('/api/setup', setupRoutes);
+  app.use('/api/auth', authRoutes);
+  app.use('/api', authMiddleware);
+  app.use('/api/users', userRoutes);
 
   app.use(errorHandler);
   return app;
