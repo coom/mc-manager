@@ -11,6 +11,7 @@ import { RconService, realRcon } from './rcon/rcon-service.js';
 import { readServerProperties, rconSettings } from './utils/server-properties.js';
 import { LogStreamer } from './logs/log-streamer.js';
 import { MetricsCollector } from './metrics/collector.js';
+import { BackupService } from './backups/backup-service.js';
 import { dirSize, diskFree } from './metrics/disk.js';
 import path from 'path';
 
@@ -85,6 +86,12 @@ async function main() {
   }, { intervalMs: 15_000, diskIntervalMs: 5 * 60_000 });
   app.locals.metrics = metrics;
   metrics.start();
+
+  const backups = new BackupService(config.mc.backupsDir, docker);
+  app.locals.backups = backups;
+  backups.on('progress', (line) => broadcast(wss, { type: 'backup.progress', line }));
+  backups.on('done', (exitCode) => broadcast(wss, { type: 'backup.done', exitCode }));
+  backups.on('listChanged', () => broadcast(wss, { type: 'backup.list.changed' }));
   // Version : lue dans les logs au passage à ready ("Starting minecraft server version 1.21.1")
   logs.on('line', (l) => { const m = /Starting minecraft server version (\S+)/.exec(l.message); if (m) metrics.setVersion(m[1]); });
 

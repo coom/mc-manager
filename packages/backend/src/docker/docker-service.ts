@@ -181,6 +181,8 @@ export class DockerService extends EventEmitter {
 
   demux(stream: Readable, out: NodeJS.WritableStream): void { this.docker.demux(stream, out, out); }
 
+  async hasBackupContainer(): Promise<boolean> { return (await this.docker.findByName(this.backupName)) !== null; }
+
   async execBackup(cmd: string[]): Promise<{ stream: Readable; wait(): Promise<number> }> {
     const c = await this.docker.findByName(this.backupName);
     if (!c) throw new AppError(503, `Container "${this.backupName}" not found`);

@@ -11,6 +11,7 @@ import { setupRoutes } from './routes/setup.routes.js';
 import { userRoutes } from './routes/users.routes.js';
 import { serverRoutes } from './routes/server.routes.js';
 import { metricsRoutes } from './routes/metrics.routes.js';
+import { backupsRoutes } from './routes/backups.routes.js';
 
 export function createApp(): Express {
   const app = express();
@@ -37,6 +38,7 @@ export function createApp(): Express {
   app.use('/api/users', userRoutes);
   app.use('/api/server', serverRoutes);
   app.use('/api/metrics', metricsRoutes);
+  app.use('/api/backups', backupsRoutes);
 
   app.use(errorHandler);
   return app;

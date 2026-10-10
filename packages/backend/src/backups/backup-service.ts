@@ -1,0 +1,76 @@
+import { EventEmitter } from 'events';
+import { readdir, stat, unlink } from 'fs/promises';
+import path from 'path';
+import { PassThrough } from 'stream';
+import type { BackupList } from '@mc/common';
+import type { DockerService } from '../docker/docker-service.js';
+import { AppError } from '../middleware/error-handler.js';
+import { logger } from '../utils/logger.js';
+
+const NAME_RE = /^[A-Za-z0-9][A-Za-z0-9._-]*\.(tgz|tar\.gz)$/;
+export function isSafeBackupName(name: string): boolean {
+  return NAME_RE.test(name) && !name.includes('..') && path.basename(name) === name;
+}
+
+export class BackupService extends EventEmitter {
+  private running = false;
+  constructor(private dir: string, private docker: DockerService) { super(); }
+
+  isRunning(): boolean { return this.running; }
+
+  async ensureContainer(): Promise<void> {
+    if (!(await this.docker.hasBackupContainer())) throw new AppError(503, 'Backup container not found');
+  }
+
+  async list(): Promise<BackupList> {
+    const names = await readdir(this.dir).catch(() => [] as string[]);
+    const entries = [];
+    for (const name of names) {
+      if (!isSafeBackupName(name)) continue;
+      const s = await stat(path.join(this.dir, name)).catch(() => null);
+      if (!s?.isFile()) continue;
+      entries.push({ name, size: s.size, modifiedAt: s.mtime.toISOString() });
+    }
+    entries.sort((a, b) => b.modifiedAt.localeCompare(a.modifiedAt));
+    return { entries, totalBytes: entries.reduce((n, e) => n + e.size, 0), running: this.running };
+  }
+
+  async resolve(name: string): Promise<string> {
+    if (!isSafeBackupName(name)) throw new AppError(404, 'Backup not found');
+    const full = path.join(this.dir, name);
+    if (path.dirname(full) !== path.resolve(this.dir) && path.dirname(full) !== this.dir) throw new AppError(404, 'Backup not found');
+    const s = await stat(full).catch(() => null);
+    if (!s?.isFile()) throw new AppError(404, 'Backup not found');
+    return full;
+  }
+
+  async remove(name: string): Promise<void> {
+    await unlink(await this.resolve(name));
+    this.emit('listChanged');
+  }
+
+  async runNow(): Promise<void> {
+    if (this.running) throw new AppError(409, 'A backup is already running');
+    this.running = true;
+    try {
+      const { stream, wait } = await this.docker.execBackup(['backup', 'now']);
+      const text = new PassThrough();
+      this.docker.demux(stream, text);
+      let partial = '';
+      text.on('data', (chunk: Buffer) => {
+        partial += chunk.toString('utf8');
+        let nl: number;
+        while ((nl = partial.indexOf('\n')) >= 0) { const line = partial.slice(0, nl).replace(/\r$/, ''); partial = partial.slice(nl + 1); if (line) this.emit('progress', line); }
+      });
+      const code = await wait();
+      if (partial.trim()) this.emit('progress', partial.trim());
+      this.emit('done', code);
+      if (code === 0) this.emit('listChanged');
+    } catch (err) {
+      logger.error({ err }, 'backup now failed');
+      this.emit('progress', `error: ${(err as Error).message}`);
+      this.emit('done', 1);
+      throw err instanceof AppError ? err : new AppError(503, 'Backup container unavailable');
+    } finally { this.running = false; }
+  }
+}
