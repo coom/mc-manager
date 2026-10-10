@@ -50,4 +50,22 @@ describe('MetricsCollector', () => {
     const c = new MetricsCollector(prisma, deps({ rcon: async () => { throw new Error('down'); } }), { intervalMs: 15_000, diskIntervalMs: 0 });
     await expect(c.tick()).resolves.toBeUndefined();
   });
+
+  it('skips a tick while the previous one is still running', async () => {
+    let release!: () => void;
+    const gate = new Promise<void>((r) => { release = r; });
+    const rcon = vi.fn(async (cmd: string) => { await gate; return cmd === 'list' ? 'There are 0 of a max of 20 players online:' : 'Unknown command'; });
+    const c = new MetricsCollector(prisma, deps({ rcon }), { intervalMs: 15_000, diskIntervalMs: 0 });
+    const before = await prisma.metricSample.count();
+    const first = c.tick();
+    await new Promise((r) => setTimeout(r, 10));
+    await c.tick();
+    expect(await prisma.metricSample.count()).toBe(before);
+    expect(rcon).toHaveBeenCalledTimes(1);
+    release();
+    await first;
+    expect(await prisma.metricSample.count()).toBe(before + 1);
+    await c.tick();
+    expect(await prisma.metricSample.count()).toBe(before + 2);
+  });
 });

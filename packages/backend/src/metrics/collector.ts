@@ -29,6 +29,8 @@ export class MetricsCollector {
   private tickTimer: ReturnType<typeof setInterval> | null = null;
   private hourTimer: ReturnType<typeof setInterval> | null = null;
   private tpsSupported: boolean | null = null;
+  /** Vrai pendant un tick : un tick lent (RCON jusqu'à 3 x 10 s) ne doit pas se chevaucher avec le suivant. */
+  private running = false;
 
   constructor(private prisma: PrismaClient, private deps: CollectorDeps, private opts: { intervalMs: number; diskIntervalMs: number }) {}
 
@@ -49,6 +51,12 @@ export class MetricsCollector {
   }
 
   async tick(): Promise<void> {
+    if (this.running) { logger.debug('metrics tick skipped: previous tick still running'); return; }
+    this.running = true;
+    try { await this.collect(); } finally { this.running = false; }
+  }
+
+  private async collect(): Promise<void> {
     const status = this.deps.status();
     let players: LatestMetrics['players'] = null;
     let mspt: number | null = null;
