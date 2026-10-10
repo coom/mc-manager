@@ -3,7 +3,7 @@ import path from 'path';
 
 function unescapeValue(v: string): string {
   return v.replace(/\\u([0-9a-fA-F]{4})/g, (_, h) => String.fromCharCode(parseInt(h, 16)))
-          .replace(/\\(.)/g, (_, c) => (c === 'n' ? '\n' : c === 't' ? '\t' : c));
+          .replace(/\\(.)/g, (_, c) => (c === 'n' ? '\n' : c === 't' ? '\t' : c === 'r' ? '\r' : c));
 }
 
 export function parseServerProperties(text: string): Record<string, string> {
@@ -38,7 +38,7 @@ const LINE_RE = /^([^=:\s]+)\s*[=:]\s*(.*)$/;
 
 /** Échappement Java Properties pour une valeur : backslash, séparateurs et marqueurs de commentaire. */
 export function escapeValue(v: string): string {
-  return v.replace(/\\/g, '\\\\').replace(/=/g, '\\=').replace(/:/g, '\\:').replace(/#/g, '\\#').replace(/!/g, '\\!').replace(/\n/g, '\\n').replace(/\t/g, '\\t');
+  return v.replace(/\\/g, '\\\\').replace(/=/g, '\\=').replace(/:/g, '\\:').replace(/#/g, '\\#').replace(/!/g, '\\!').replace(/\n/g, '\\n').replace(/\r/g, '\\r').replace(/\t/g, '\\t').replace(/^ /, '\\ ');
 }
 
 /**
@@ -49,16 +49,18 @@ export function updateServerProperties(text: string, values: Record<string, stri
   const pending = new Map(Object.entries(values));
   const lines = text.split(/\r?\n/);
   if (lines.length && lines[lines.length - 1] === '') lines.pop();
-  const out = lines.map((line) => {
+  const out: string[] = [];
+  const done = new Set<string>();
+  for (const line of lines) {
     const trimmed = line.trim();
-    if (!trimmed || trimmed.startsWith('#') || trimmed.startsWith('!')) return line;
+    if (!trimmed || trimmed.startsWith('#') || trimmed.startsWith('!')) { out.push(line); continue; }
     const m = LINE_RE.exec(trimmed);
-    if (!m) return line;
-    const key = unescapeValue(m[1]);
-    if (!pending.has(key)) return line;
-    const v = pending.get(key)!; pending.delete(key);
-    return `${key}=${escapeValue(v)}`;
-  });
+    const key = m ? unescapeValue(m[1]) : null;
+    if (key === null || !Object.hasOwn(values, key)) { out.push(line); continue; }
+    if (done.has(key)) continue; // doublon d'une clé mise à jour : supprimé (parse garde la dernière occurrence)
+    done.add(key); pending.delete(key);
+    out.push(`${key}=${escapeValue(values[key])}`);
+  }
   for (const [k, v] of pending) out.push(`${k}=${escapeValue(v)}`);
   return out.join('\n') + '\n';
 }
@@ -77,5 +79,5 @@ export function validateRawProperties(text: string): string | null {
 }
 
 export function maskRconPassword(text: string): string {
-  return text.replace(/^(\s*rcon\.password\s*[=:]\s*).*$/m, '$1********');
+  return text.replace(/^(\s*rcon\.password\s*[=:]\s*).*$/gm, '$1********');
 }

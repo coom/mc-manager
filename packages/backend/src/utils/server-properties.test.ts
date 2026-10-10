@@ -47,6 +47,13 @@ describe('updateServerProperties', () => {
   it('round-trips escaped values', () => {
     const v = 'C:\\path #hash !bang \u00e9t\u00e9';
     expect(parseServerProperties(`k=${escapeValue(v)}\n`).k).toBe(v);
+    for (const w of [' leading space', 'a\rb', 'a\r\nb\tc']) expect(parseServerProperties(`k=${escapeValue(w)}\n`).k).toBe(w);
+  });
+  it('drops later duplicates of an updated key so the new value wins', () => {
+    const out = updateServerProperties('a=1\nb=2\na=3\n', { a: '9' });
+    expect(out).toBe('a=9\nb=2\n');
+    expect(parseServerProperties(out).a).toBe('9');
+    expect(updateServerProperties('a=1\nb=2\nb=3\n', { a: '9' })).toBe('a=9\nb=2\nb=3\n');
   });
 });
 
@@ -66,5 +73,8 @@ describe('maskRconPassword', () => {
   it('masks the value whatever the separator and keeps the rest', () => {
     expect(maskRconPassword('a=1\nrcon.password=s3cr3t\nrcon.port:25575\n')).toBe('a=1\nrcon.password=********\nrcon.port:25575\n');
     expect(maskRconPassword('a=1\n')).toBe('a=1\n');
+  });
+  it('masks every occurrence', () => {
+    expect(maskRconPassword('rcon.password=a\nx=1\nrcon.password:b\n')).toBe('rcon.password=********\nx=1\nrcon.password:********\n');
   });
 });
