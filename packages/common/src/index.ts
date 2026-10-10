@@ -1,2 +1,7 @@
 // packages/common/src/index.ts
 export * from './types/auth.js';
+export * from './types/server.js';
+export * from './types/metrics.js';
+export * from './types/backups.js';
+export * from './types/audit.js';
+export * from './ws-messages.js';
