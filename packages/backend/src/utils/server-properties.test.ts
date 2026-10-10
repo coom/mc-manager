@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { parseServerProperties, rconSettings } from './server-properties.js';
+import { parseServerProperties, rconSettings, escapeValue, updateServerProperties, validateRawProperties, maskRconPassword } from './server-properties.js';
 
 const SAMPLE = `#Minecraft server properties
 #Fri Oct 10 10:00:00 UTC 2026
@@ -31,5 +31,40 @@ describe('rconSettings', () => {
   });
   it('defaults when keys are absent', () => {
     expect(rconSettings({})).toEqual({ enabled: false, port: 25575, password: null });
+  });
+});
+
+describe('updateServerProperties', () => {
+  const text = '#Minecraft server properties\n#Fri Oct 10 10:00:00 UTC 2026\nmotd=A Minecraft Server\nmax-players=20\nrcon.password=secret\nwhite-list=false\n';
+  it('replaces values in place, keeps comments, order and unknown lines, appends new keys', () => {
+    const out = updateServerProperties(text, { motd: 'Hello=World', 'max-players': '10', 'view-distance': '12' });
+    expect(out).toBe('#Minecraft server properties\n#Fri Oct 10 10:00:00 UTC 2026\nmotd=Hello\\=World\nmax-players=10\nrcon.password=secret\nwhite-list=false\nview-distance=12\n');
+    expect(parseServerProperties(out)).toMatchObject({ motd: 'Hello=World', 'max-players': '10', 'view-distance': '12', 'rcon.password': 'secret' });
+  });
+  it('handles colon separators and a file without trailing newline', () => {
+    expect(updateServerProperties('a:1\nb=2', { a: '9' })).toBe('a=9\nb=2\n');
+  });
+  it('round-trips escaped values', () => {
+    const v = 'C:\\path #hash !bang \u00e9t\u00e9';
+    expect(parseServerProperties(`k=${escapeValue(v)}\n`).k).toBe(v);
+  });
+});
+
+describe('validateRawProperties', () => {
+  it('accepts comments, blank lines and key=value / key:value', () => {
+    expect(validateRawProperties('# c\n\nmotd=x\nlevel-name:world\n')).toBeNull();
+  });
+  it.each([['no separator', 'motd'], ['bad key', 'Motd=x'], ['bad key 2', 'a b=c']])('rejects %s', (_l, t) => {
+    expect(validateRawProperties(t)).toMatch(/line 1/);
+  });
+  it('rejects oversized content', () => {
+    expect(validateRawProperties('k=' + 'x'.repeat(70 * 1024))).toMatch(/64 KiB/);
+  });
+});
+
+describe('maskRconPassword', () => {
+  it('masks the value whatever the separator and keeps the rest', () => {
+    expect(maskRconPassword('a=1\nrcon.password=s3cr3t\nrcon.port:25575\n')).toBe('a=1\nrcon.password=********\nrcon.port:25575\n');
+    expect(maskRconPassword('a=1\n')).toBe('a=1\n');
   });
 });
