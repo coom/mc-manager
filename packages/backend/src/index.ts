@@ -27,7 +27,7 @@ async function main() {
   // players/mspt/tps/worldBytes/diskFree via app.locals.metrics.
   app.locals.serverInfo = async (): Promise<ServerInfo> => {
     const i = await docker.inspectServer().catch(() => null);
-    const stats = await docker.stats();
+    const stats = await docker.stats().catch(() => ({ cpuPercent: null, memUsed: null, memLimit: null }));
     const startedAt = i?.startedAt ?? null;
     const latest = app.locals.metrics?.latest?.() ?? {};
     return {

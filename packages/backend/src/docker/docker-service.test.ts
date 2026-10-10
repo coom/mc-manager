@@ -1,4 +1,5 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi, afterEach } from 'vitest';
+import { PassThrough, Readable } from 'stream';
 import { DockerService, statusFromInspect, cpuPercentFrom } from './docker-service.js';
 import { FakeDocker, FakeContainer, inspectFixture } from './fake-docker.js';
 
@@ -64,6 +65,11 @@ describe('DockerService', () => {
     docker.emitEvent({ Action: 'die', name: 'other' });
     await wait(10);
     expect(seen).toEqual([]);
+    // Contrôle positif : le même flux réagit bien aux événements de mc.
+    docker.containers.get('mc')!.state = inspectFixture({ Status: 'exited', Running: false });
+    docker.emitEvent({ Action: 'die', name: 'mc' });
+    await wait(10);
+    expect(seen).toEqual(['stopped']);
     svc.stop();
   });
 
@@ -83,5 +89,131 @@ describe('DockerService', () => {
   it('throws a 503 AppError when the container is missing', async () => {
     const svc = new DockerService(new FakeDocker(), 'mc', 'mc-backup');
     await expect(svc.startServer()).rejects.toMatchObject({ statusCode: 503 });
+  });
+
+  const sample = {
+    cpu_stats: { cpu_usage: { total_usage: 2_000 }, system_cpu_usage: 10_000, online_cpus: 2 },
+    precpu_stats: { cpu_usage: { total_usage: 1_000 }, system_cpu_usage: 8_000 },
+    memory_stats: { usage: 1000, limit: 4000, stats: { inactive_file: 200 } },
+  };
+
+  it('stats computes cpu and memory (minus cache)', async () => {
+    const docker = new FakeDocker();
+    docker.containers.set('mc', new FakeContainer(inspectFixture(), sample));
+    const st = await new DockerService(docker, 'mc', 'b').stats();
+    expect(st.cpuPercent).toBeCloseTo(100);
+    expect(st.memUsed).toBe(800);
+    expect(st.memLimit).toBe(4000);
+  });
+
+  it('stats returns nulls when the container is missing, stats throw, or docker is down', async () => {
+    const nulls = { cpuPercent: null, memUsed: null, memLimit: null };
+    expect(await new DockerService(new FakeDocker(), 'mc', 'b').stats()).toEqual(nulls);
+    const docker = new FakeDocker();
+    docker.containers.set('mc', new FakeContainer(inspectFixture()));
+    expect(await new DockerService(docker, 'mc', 'b').stats()).toEqual(nulls);
+    docker.findByName = async () => { throw new Error('socket down'); };
+    expect(await new DockerService(docker, 'mc', 'b').stats()).toEqual(nulls);
+  });
+
+  it('logStream returns the container stream and the tty flag', async () => {
+    const docker = new FakeDocker();
+    const c = new FakeContainer(inspectFixture({ Tty: true }));
+    docker.containers.set('mc', c);
+    const r = await new DockerService(docker, 'mc', 'b').logStream(100);
+    expect(r.stream).toBe(c.logsStream);
+    expect(r.tty).toBe(true);
+  });
+
+  it('execBackup runs the command and wait() resolves to the exit code after the stream ends', async () => {
+    const docker = new FakeDocker();
+    const b = new FakeContainer(inspectFixture(), undefined, undefined, undefined, 3);
+    docker.containers.set('b', b);
+    const r = await new DockerService(docker, 'mc', 'b').execBackup(['backup', 'now']);
+    expect(b.calls).toEqual(['exec:backup now']);
+    r.stream.resume();
+    const w = r.wait();
+    (b.execStream as PassThrough).end();
+    expect(await w).toBe(3);
+  });
+
+  it('execBackup throws 503 when the backup container is missing', async () => {
+    await expect(new DockerService(new FakeDocker(), 'mc', 'b').execBackup(['x'])).rejects.toMatchObject({ statusCode: 503 });
+  });
+
+  it('demux delegates to DockerLike.demux', () => {
+    const docker = new FakeDocker();
+    const spy = vi.spyOn(docker, 'demux');
+    const src = new PassThrough();
+    const out = new PassThrough();
+    new DockerService(docker, 'mc', 'b').demux(src, out);
+    expect(spy).toHaveBeenCalledWith(src, out, out);
+  });
+});
+
+describe('DockerService reconnection', () => {
+  afterEach(() => { vi.useRealTimers(); });
+
+  class FlakyDocker extends FakeDocker {
+    eventCalls = 0;
+    failNext = false;
+    streams: PassThrough[] = [];
+    async events(): Promise<Readable> {
+      this.eventCalls++;
+      if (this.failNext) throw new Error('socket down');
+      const s = new PassThrough();
+      this.streams.push(s);
+      return s as unknown as Readable;
+    }
+  }
+
+  it('goes unavailable on disconnect then resyncs the real status after reconnect', async () => {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+    const docker = new FlakyDocker();
+    docker.containers.set('mc', new FakeContainer(inspectFixture()));
+    const svc = new DockerService(docker, 'mc', 'b');
+    const seen: string[] = [];
+    svc.on('status', (s) => seen.push(s));
+    await svc.start();
+    await vi.advanceTimersByTimeAsync(0);
+    expect(svc.getStatus()).toBe('ready');
+    docker.failNext = true;
+    docker.streams[0].destroy();
+    await vi.advanceTimersByTimeAsync(0);
+    expect(svc.getStatus()).toBe('unavailable');
+    docker.failNext = false;
+    await vi.advanceTimersByTimeAsync(1000);
+    expect(docker.eventCalls).toBe(2);
+    expect(svc.getStatus()).toBe('ready');
+    expect(seen).toEqual(['unavailable', 'ready']);
+    svc.stop();
+  });
+
+  it('stop() during backoff clears the timer and makes no further events() call', async () => {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+    const docker = new FlakyDocker();
+    docker.failNext = true;
+    const svc = new DockerService(docker, 'mc', 'b');
+    await svc.start();
+    await vi.advanceTimersByTimeAsync(0);
+    expect(docker.eventCalls).toBe(1);
+    expect(vi.getTimerCount()).toBe(1);
+    svc.stop();
+    expect(vi.getTimerCount()).toBe(0);
+    await vi.advanceTimersByTimeAsync(60_000);
+    expect(docker.eventCalls).toBe(1);
+  });
+
+  it('stop() while events() is pending destroys the late stream', async () => {
+    const docker = new FakeDocker();
+    let release!: (s: Readable) => void;
+    docker.events = () => new Promise<Readable>((r) => { release = r; });
+    const svc = new DockerService(docker, 'mc', 'b');
+    await svc.start();
+    svc.stop();
+    const late = new PassThrough();
+    release(late as unknown as Readable);
+    await wait(10);
+    expect(late.destroyed).toBe(true);
   });
 });

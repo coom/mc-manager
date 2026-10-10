@@ -43,6 +43,8 @@ export class DockerService extends EventEmitter {
   private eventStream: Readable | null = null;
   private stopped = false;
   private retryMs = 1000;
+  private retryTimer: NodeJS.Timeout | null = null;
+  private wake: (() => void) | null = null;
 
   constructor(private docker: DockerLike, private serverName: string, private backupName: string) { super(); }
 
@@ -88,14 +90,21 @@ export class DockerService extends EventEmitter {
     this.stopped = true;
     this.eventStream?.destroy();
     this.eventStream = null;
+    if (this.retryTimer) clearTimeout(this.retryTimer);
+    this.retryTimer = null;
+    this.wake?.();
+    this.wake = null;
   }
 
   private async listen(): Promise<void> {
     while (!this.stopped) {
       try {
         const stream = await this.docker.events([this.serverName, this.backupName]);
+        if (this.stopped) { stream.destroy(); return; }
         this.eventStream = stream;
         this.retryMs = 1000;
+        // Resynchronise l'état (couvre les événements manqués pendant la coupure).
+        await this.refresh();
         let buf = '';
         await new Promise<void>((resolve, reject) => {
           stream.on('data', (chunk: Buffer) => {
@@ -120,7 +129,12 @@ export class DockerService extends EventEmitter {
       }
       if (this.stopped) return;
       this.setStatus('unavailable');
-      await new Promise((r) => setTimeout(r, this.retryMs));
+      await new Promise<void>((resolve) => {
+        this.wake = resolve;
+        this.retryTimer = setTimeout(resolve, this.retryMs);
+      });
+      this.retryTimer = null;
+      this.wake = null;
       this.retryMs = Math.min(this.retryMs * 2, 30_000);
     }
   }
@@ -149,9 +163,9 @@ export class DockerService extends EventEmitter {
   }
 
   async stats(): Promise<ServerStats> {
-    const c = await this.docker.findByName(this.serverName);
-    if (!c) return { cpuPercent: null, memUsed: null, memLimit: null };
     try {
+      const c = await this.docker.findByName(this.serverName);
+      if (!c) return { cpuPercent: null, memUsed: null, memLimit: null };
       const s = await c.stats({ stream: false });
       const cache = s.memory_stats.stats?.inactive_file ?? s.memory_stats.stats?.cache ?? 0;
       return { cpuPercent: cpuPercentFrom(s), memUsed: s.memory_stats.usage - cache, memLimit: s.memory_stats.limit };
