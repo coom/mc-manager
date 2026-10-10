@@ -27,7 +27,7 @@ export default function Console() {
             <SelectTrigger className="h-8 w-32"><SelectValue /></SelectTrigger>
             <SelectContent><SelectItem value="all">{t('console.levelAll')}</SelectItem><SelectItem value="warn">{t('console.levelWarn')}</SelectItem><SelectItem value="error">{t('console.levelError')}</SelectItem></SelectContent>
           </Select>
-          <Button size="sm" variant="outline" onClick={togglePause}>{paused ? <Play className="h-4 w-4" /> : <Pause className="h-4 w-4" />}</Button>
+          <Button size="sm" variant="outline" aria-label={paused ? t('console.resume') : t('console.pause')} onClick={togglePause}>{paused ? <Play className="h-4 w-4" /> : <Pause className="h-4 w-4" />}</Button>
         </div>
       </div>
       <div className="min-h-0 flex-1"><LogView lines={paused ? frozen : logs} filter={filter} level={level} paused={paused} /></div>

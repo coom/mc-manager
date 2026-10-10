@@ -15,4 +15,15 @@ describe('LogView', () => {
     expect(screen.getByText('b')).toBeInTheDocument();
     expect(screen.getByText('c')).toBeInTheDocument();
   });
+  it('scrolls on a new last line, but not when paused', () => {
+    const spy = vi.fn();
+    Element.prototype.scrollIntoView = spy;
+    const { rerender } = render(<LogView lines={[L('INFO', 'a')]} filter="" level="all" />);
+    spy.mockClear();
+    rerender(<LogView lines={[L('INFO', 'a'), L('INFO', 'b')]} filter="" level="all" />);
+    expect(spy).toHaveBeenCalled();
+    spy.mockClear();
+    rerender(<LogView lines={[L('INFO', 'a'), L('INFO', 'b'), L('INFO', 'c')]} filter="" level="all" paused />);
+    expect(spy).not.toHaveBeenCalled();
+  });
 });

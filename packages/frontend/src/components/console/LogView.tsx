@@ -17,7 +17,8 @@ export function filterLines(lines: LogLine[], filter: string, level: LevelFilter
 export function LogView({ lines, filter, level, paused = false }: { lines: LogLine[]; filter: string; level: LevelFilter; paused?: boolean }) {
   const visible = useMemo(() => filterLines(lines, filter, level), [lines, filter, level]);
   const endRef = useRef<HTMLDivElement>(null);
-  useEffect(() => { if (!paused) endRef.current?.scrollIntoView?.({ block: 'end' }); }, [visible.length, paused]);
+  const last = visible[visible.length - 1];
+  useEffect(() => { if (!paused) endRef.current?.scrollIntoView?.({ block: 'end' }); }, [last, paused]);
   return (
     <div className="h-full overflow-auto rounded-md border bg-black/40 p-3 font-mono text-xs leading-5">
       {visible.map((l, i) => (
