@@ -10,6 +10,7 @@ import { authRoutes } from './routes/auth.routes.js';
 import { setupRoutes } from './routes/setup.routes.js';
 import { userRoutes } from './routes/users.routes.js';
 import { serverRoutes } from './routes/server.routes.js';
+import { metricsRoutes } from './routes/metrics.routes.js';
 
 export function createApp(): Express {
   const app = express();
@@ -35,6 +36,7 @@ export function createApp(): Express {
   app.use('/api', authMiddleware);
   app.use('/api/users', userRoutes);
   app.use('/api/server', serverRoutes);
+  app.use('/api/metrics', metricsRoutes);
 
   app.use(errorHandler);
   return app;

@@ -10,6 +10,9 @@ import { broadcast, markAuthenticated } from './ws/ws-broadcast.js';
 import { RconService, realRcon } from './rcon/rcon-service.js';
 import { readServerProperties, rconSettings } from './utils/server-properties.js';
 import { LogStreamer } from './logs/log-streamer.js';
+import { MetricsCollector } from './metrics/collector.js';
+import { dirSize, diskFree } from './metrics/disk.js';
+import path from 'path';
 
 process.on('uncaughtException', (err) => logger.error({ err }, 'uncaught exception (kept alive)'));
 process.on('unhandledRejection', (reason) => logger.error({ reason }, 'unhandled rejection (kept alive)'));
@@ -71,12 +74,27 @@ async function main() {
   await rcon.start();
   await logs.start();
 
+  const metrics = new MetricsCollector(prisma, {
+    status: () => docker.getStatus(),
+    stats: () => docker.stats(),
+    rcon: (cmd) => rcon.send(cmd),
+    worldSize: () => dirSize(path.join(config.mc.dataDir, 'world')),
+    diskFree: () => diskFree(config.mc.dataDir),
+    broadcast: (msg) => broadcast(wss, msg),
+    serverInfo: () => app.locals.serverInfo(),
+  }, { intervalMs: 15_000, diskIntervalMs: 5 * 60_000 });
+  app.locals.metrics = metrics;
+  metrics.start();
+  // Version : lue dans les logs au passage à ready ("Starting minecraft server version 1.21.1")
+  logs.on('line', (l) => { const m = /Starting minecraft server version (\S+)/.exec(l.message); if (m) metrics.setVersion(m[1]); });
+
   server.listen(config.port, () => logger.info(`MC Manager backend on http://localhost:${config.port}`));
 
   const shutdown = async () => {
     logger.info('shutting down');
     wss.close();
     server.close();
+    metrics.stop();
     logs.stop();
     rcon.stop();
     docker.stop();
