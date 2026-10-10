@@ -7,6 +7,8 @@ import { DockerService, realDocker } from './docker/docker-service.js';
 import type { ServerInfo } from '@mc/common';
 import { attachWebSocket } from './ws/ws-server.js';
 import { broadcast, markAuthenticated } from './ws/ws-broadcast.js';
+import { RconService, realRcon } from './rcon/rcon-service.js';
+import { readServerProperties, rconSettings } from './utils/server-properties.js';
 import { LogStreamer } from './logs/log-streamer.js';
 
 process.on('uncaughtException', (err) => logger.error({ err }, 'uncaught exception (kept alive)'));
@@ -63,6 +65,10 @@ async function main() {
   });
   // serverInfo et les listeners sont en place : les événements de start() peuvent partir.
   await docker.start();
+  const rcon = new RconService(realRcon, docker, { host: config.mc.rconHost, portFallback: config.mc.rconPort },
+    async () => rconSettings(await readServerProperties(config.mc.dataDir)));
+  app.locals.rcon = rcon;
+  await rcon.start();
   await logs.start();
 
   server.listen(config.port, () => logger.info(`MC Manager backend on http://localhost:${config.port}`));
@@ -72,6 +78,7 @@ async function main() {
     wss.close();
     server.close();
     logs.stop();
+    rcon.stop();
     docker.stop();
     await prisma.$disconnect();
     process.exit(0);

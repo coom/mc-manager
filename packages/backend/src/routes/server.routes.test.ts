@@ -10,6 +10,7 @@ function appWith(role: 'admin' | 'viewer', docker: Record<string, unknown>) {
   app.use((req, _res, next) => { req.user = { typ: 'access', id: 1, username: 'u', role }; next(); });
   app.locals.prisma = { auditLog: { create: vi.fn().mockResolvedValue({}) } };
   app.locals.docker = docker;
+  app.locals.rcon = { send: vi.fn().mockResolvedValue('There are 0 of a max of 20 players online:') };
   app.locals.serverInfo = async () => ({ status: docker.getStatus(), containerName: 'mc' });
   app.use('/api/server', serverRoutes);
   app.use(errorHandler);
@@ -37,5 +38,20 @@ describe('server routes', () => {
     expect(res.status).toBe(202);
     expect(docker.startServer).toHaveBeenCalledOnce();
     expect(app.locals.prisma.auditLog.create).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ action: 'server.start' }) }));
+  });
+  it('viewer cannot send commands', async () => {
+    expect((await request(appWith('viewer', docker)).post('/api/server/command').send({ command: 'list' })).status).toBe(403);
+  });
+  it('admin command is forwarded, audited and answered', async () => {
+    const app = appWith('admin', docker);
+    const res = await request(app).post('/api/server/command').send({ command: 'list' });
+    expect(res.status).toBe(200);
+    expect(res.body.response).toContain('players online');
+    expect(app.locals.rcon.send).toHaveBeenCalledWith('list');
+    expect(app.locals.prisma.auditLog.create).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ action: 'rcon.command', detail: 'list' }) }));
+  });
+  it('rejects an empty or oversized command', async () => {
+    expect((await request(appWith('admin', docker)).post('/api/server/command').send({ command: '' })).status).toBe(400);
+    expect((await request(appWith('admin', docker)).post('/api/server/command').send({ command: 'x'.repeat(2000) })).status).toBe(400);
   });
 });

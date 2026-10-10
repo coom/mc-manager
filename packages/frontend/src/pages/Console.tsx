@@ -1,7 +1,11 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pause, Play } from 'lucide-react';
+import { toast } from 'sonner';
 import { useServerStore } from '@/stores/server.store';
+import { useAuthStore } from '@/stores/auth.store';
+import { serverApi } from '@/api/server.api';
+import { CommandInput } from '@/components/console/CommandInput';
 import { LogView, type LevelFilter } from '@/components/console/LogView';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -11,6 +15,8 @@ export default function Console() {
   const { t } = useTranslation();
   const logs = useServerStore((s) => s.logs);
   const connected = useServerStore((s) => s.connected);
+  const apply = useServerStore((s) => s.apply);
+  const isAdmin = useAuthStore((s) => s.isAdmin());
   const [filter, setFilter] = useState('');
   const [level, setLevel] = useState<LevelFilter>('all');
   const [paused, setPaused] = useState(false);
@@ -31,6 +37,13 @@ export default function Console() {
         </div>
       </div>
       <div className="min-h-0 flex-1"><LogView lines={paused ? frozen : logs} filter={filter} level={level} paused={paused} /></div>
+      {isAdmin && <CommandInput onSend={async (cmd) => {
+        try {
+          const { response } = await serverApi.command(cmd);
+          const message = `> ${cmd}\n${response}`;
+          apply({ type: 'log.line', line: { ts: null, level: 'RAW', thread: null, message, raw: message } });
+        } catch (err) { toast.error((err as { response?: { data?: { error?: string } } }).response?.data?.error ?? t('shared.error')); }
+      }} />}
     </div>
   );
 }
