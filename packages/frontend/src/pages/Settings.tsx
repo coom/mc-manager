@@ -14,6 +14,7 @@ import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog';
+import { JournalRetentionCard } from '@/components/settings/JournalRetentionCard';
 import { Users, Plus, Trash2, Check, Lock, KeyRound } from 'lucide-react';
 import { toast } from 'sonner';
 import { useTranslation } from 'react-i18next';
@@ -346,6 +347,7 @@ function UsersTab() {
   return (
     <div className="space-y-4">
       <PasswordPolicyCard />
+      <JournalRetentionCard />
 
       <div className="flex items-center justify-between">
         <p className="text-sm text-muted-foreground">{t('settings.users.subtitle')}</p>

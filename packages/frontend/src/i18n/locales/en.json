@@ -193,12 +193,8 @@
       },
       "journalRetention": {
         "title": "Connection journal retention",
-        "retentionDays": "Retention (days)",
         "hint": "0 keeps everything. Applies to Minecraft sessions, refused connections and MC Manager logins.",
         "save": "Save",
-        "saving": "Saving...",
-        "toastSaved": "Retention saved",
-        "toastSaveFailed": "Failed to save",
         "days": "Retention (days)",
         "saved": "Retention saved",
         "failed": "Could not save retention"

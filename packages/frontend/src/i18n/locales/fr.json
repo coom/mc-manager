@@ -193,12 +193,8 @@
       },
       "journalRetention": {
         "title": "Rétention du journal de connexions",
-        "retentionDays": "Conservation (jours)",
         "hint": "0 conserve tout. S'applique aux sessions Minecraft, aux refus et aux connexions à MC Manager.",
         "save": "Enregistrer",
-        "saving": "Enregistrement...",
-        "toastSaved": "Conservation enregistrée",
-        "toastSaveFailed": "Échec de l'enregistrement",
         "days": "Rétention (jours)",
         "saved": "Rétention enregistrée",
         "failed": "Impossible d'enregistrer la rétention"
