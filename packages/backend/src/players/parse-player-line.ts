@@ -13,7 +13,7 @@ const RE_JOIN = new RegExp(`^${NAME}\\[/(.+?)\\] logged in with entity id \\d+`)
 const RE_LEAVE = new RegExp(`^${NAME} left the game$`);
 const RE_LOST = new RegExp(`^${NAME} lost connection: `);
 const RE_REFUSED = new RegExp(`^Disconnecting ${NAME} \\(/(.+?)\\): (.*)$`);
-const RE_REFUSED_PROFILE = /^Disconnecting com\.mojang\.authlib\.GameProfile@\S*?\[.*?name=([A-Za-z0-9_]{3,16}).*?\] \(\/(.+?)\): (.*)$/;
+const RE_REFUSED_PROFILE = /^Disconnecting com\.mojang\.authlib\.GameProfile@\S*?\[.*?name=([A-Za-z0-9_]{3,16})(?=[,\]]).*?\] \(\/(.+?)\): (.*)$/;
 
 /** Applique au champ `message` d'une LogLine (niveau et thread déjà retirés). */
 export function parsePlayerLine(message: string): PlayerEvent | null {

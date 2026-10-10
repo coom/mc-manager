@@ -32,6 +32,23 @@ describe('parsePlayerLine', () => {
     expect(parsePlayerLine('Disconnecting com.mojang.authlib.GameProfile@1a2b[id=069a79f4-44e9-4726-a5be-fca90e38aaf5,name=Mallory,properties={},legacy=false] (/198.51.100.7:40000): You are banned from this server.'))
       .toEqual({ type: 'refused', name: 'Mallory', ip: '198.51.100.7', message: 'You are banned from this server.' });
   });
+  it('reads a GameProfile refusal with name before id', () => {
+    expect(parsePlayerLine('Disconnecting com.mojang.authlib.GameProfile@1a2b[name=Mallory,id=069a79f4-44e9-4726-a5be-fca90e38aaf5,properties={},legacy=false] (/198.51.100.7:40000): You are banned from this server.'))
+      .toEqual({ type: 'refused', name: 'Mallory', ip: '198.51.100.7', message: 'You are banned from this server.' });
+  });
+  it('rejects a GameProfile refusal whose name exceeds 16 characters', () => {
+    expect(parsePlayerLine('Disconnecting com.mojang.authlib.GameProfile@1a2b[id=069a79f4-44e9-4726-a5be-fca90e38aaf5,name=Abcdefghijklmnopq,properties={},legacy=false] (/198.51.100.7:40000): You are banned from this server.'))
+      .toBeNull();
+  });
+  it('rejects a GameProfile refusal whose name contains an invalid character', () => {
+    expect(parsePlayerLine('Disconnecting com.mojang.authlib.GameProfile@1a2b[id=069a79f4-44e9-4726-a5be-fca90e38aaf5,name=Bob-x,properties={},legacy=false] (/198.51.100.7:40000): You are banned from this server.'))
+      .toBeNull();
+  });
+  it('accepts 3- and 16-character names and rejects 17 on the leave form', () => {
+    expect(parsePlayerLine('Abc left the game')).toEqual({ type: 'leave', name: 'Abc' });
+    expect(parsePlayerLine('Abcdefghijklmnop left the game')).toEqual({ type: 'leave', name: 'Abcdefghijklmnop' });
+    expect(parsePlayerLine('Abcdefghijklmnopq left the game')).toBeNull();
+  });
   it('ignores chat lines that look like events', () => {
     expect(parsePlayerLine('<Alice_01> Bob left the game')).toBeNull();
     expect(parsePlayerLine('<Alice_01> UUID of player Bob is 069a79f4-44e9-4726-a5be-fca90e38aaf5')).toBeNull();
