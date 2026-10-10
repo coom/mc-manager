@@ -50,6 +50,35 @@ describe('OnlineTab', () => {
     await waitFor(() => expect(toast.success).toHaveBeenCalledWith('Alice kicked'));
   });
 
+  it('clears the reason when the dialog is cancelled', async () => {
+    const u = user();
+    setup('admin');
+    await screen.findByText('Alice');
+    await u.click(screen.getAllByRole('button', { name: 'Actions' })[0]);
+    await u.click(await screen.findByRole('menuitem', { name: 'Kick' }));
+    fireEvent.change(await screen.findByLabelText('Reason (optional)'), { target: { value: 'afk' } });
+    await u.click(screen.getByRole('button', { name: 'Cancel' }));
+    await waitFor(() => expect(screen.queryByLabelText('Reason (optional)')).not.toBeInTheDocument());
+    await u.click(screen.getAllByRole('button', { name: 'Actions' })[0]);
+    await u.click(await screen.findByRole('menuitem', { name: 'Kick' }));
+    expect(await screen.findByLabelText('Reason (optional)')).toHaveValue('');
+  });
+
+  it('clears the reason after a successful action', async () => {
+    const u = user();
+    setup('admin');
+    await screen.findByText('Alice');
+    await u.click(screen.getAllByRole('button', { name: 'Actions' })[0]);
+    await u.click(await screen.findByRole('menuitem', { name: 'Kick' }));
+    fireEvent.change(await screen.findByLabelText('Reason (optional)'), { target: { value: 'afk' } });
+    await u.click(screen.getByRole('button', { name: 'Confirm' }));
+    await waitFor(() => expect(toast.success).toHaveBeenCalledWith('Alice kicked'));
+    await waitFor(() => expect(screen.queryByLabelText('Reason (optional)')).not.toBeInTheDocument());
+    await u.click(screen.getAllByRole('button', { name: 'Actions' })[0]);
+    await u.click(await screen.findByRole('menuitem', { name: 'Ban' }));
+    expect(await screen.findByLabelText('Reason (optional)')).toHaveValue('');
+  });
+
   it('ban IP is disabled for a player without ip', async () => {
     const u = user();
     setup('admin');
