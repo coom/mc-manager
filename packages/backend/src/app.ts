@@ -9,6 +9,7 @@ import { authMiddleware } from './middleware/auth.js';
 import { authRoutes } from './routes/auth.routes.js';
 import { setupRoutes } from './routes/setup.routes.js';
 import { userRoutes } from './routes/users.routes.js';
+import { serverRoutes } from './routes/server.routes.js';
 
 export function createApp(): Express {
   const app = express();
@@ -33,6 +34,7 @@ export function createApp(): Express {
   app.use('/api/auth', authRoutes);
   app.use('/api', authMiddleware);
   app.use('/api/users', userRoutes);
+  app.use('/api/server', serverRoutes);
 
   app.use(errorHandler);
   return app;
