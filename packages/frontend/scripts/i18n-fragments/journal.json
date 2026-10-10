@@ -1,0 +1,14 @@
+{ "namespace": "journal", "keys": {
+  "en": {
+    "title": "Connection journal", "tabs": { "players": "Minecraft", "failures": "Refused", "web": "MC Manager" },
+    "when": "When", "name": "Name", "ip": "IP", "country": "Country", "duration": "Duration", "reason": "Reason", "result": "Result", "success": "success", "failure": "failure", "ongoing": "ongoing", "reconciled": "no IP (seen by list)",
+    "filterName": "Name", "from": "From", "to": "To", "empty": "No entry",
+    "reasons": { "not_whitelisted": "not whitelisted", "banned": "banned", "full": "server full", "other": "other", "bad_password": "wrong password", "disabled": "account disabled", "mfa_failed": "wrong 2FA code", "unknown_user": "unknown user", "trusted_device": "trusted device", "mfa": "2FA" }
+  },
+  "fr": {
+    "title": "Journal de connexions", "tabs": { "players": "Minecraft", "failures": "Refus", "web": "MC Manager" },
+    "when": "Quand", "name": "Nom", "ip": "IP", "country": "Pays", "duration": "Durée", "reason": "Raison", "result": "Résultat", "success": "succès", "failure": "échec", "ongoing": "en cours", "reconciled": "sans IP (vu par list)",
+    "filterName": "Nom", "from": "Du", "to": "Au", "empty": "Aucune entrée",
+    "reasons": { "not_whitelisted": "non whitelisté", "banned": "banni", "full": "serveur plein", "other": "autre", "bad_password": "mauvais mot de passe", "disabled": "compte désactivé", "mfa_failed": "mauvais code 2FA", "unknown_user": "utilisateur inconnu", "trusted_device": "appareil de confiance", "mfa": "2FA" }
+  }
+} }

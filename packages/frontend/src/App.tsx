@@ -13,6 +13,9 @@ const SetupPage = lazy(() => import('@/pages/SetupPage'));
 const Dashboard = lazy(() => import('@/pages/Dashboard'));
 const Console = lazy(() => import('@/pages/Console'));
 const Backups = lazy(() => import('@/pages/Backups'));
+const Players = lazy(() => import('@/pages/Players'));
+const PlayerSheet = lazy(() => import('@/pages/PlayerSheet'));
+const Journal = lazy(() => import('@/pages/Journal'));
 const Audit = lazy(() => import('@/pages/Audit'));
 const Settings = lazy(() => import('@/pages/Settings'));
 const NotFound = lazy(() => import('@/pages/NotFound'));
@@ -30,6 +33,9 @@ export function App() {
               <Route path="/" element={<Navigate to="/dashboard" replace />} />
               <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/console" element={<Console />} />
+              <Route path="/players" element={<Players />} />
+              <Route path="/players/:uuid" element={<PlayerSheet />} />
+              <Route path="/journal" element={<Journal />} />
               <Route path="/backups" element={<Backups />} />
               <Route path="/audit" element={<Audit />} />
               <Route path="/settings" element={<Settings />} />

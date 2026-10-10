@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
-const ACTIONS = ['', 'server', 'rcon', 'backup', 'user'];
+const ACTIONS = ['', 'server', 'rcon', 'backup', 'user', 'player', 'whitelist', 'journal'];
 
 export default function Audit() {
   const { t, i18n } = useTranslation();

@@ -1,0 +1,28 @@
+{ "namespace": "players", "keys": {
+  "en": {
+    "title": "Players", "tabs": { "online": "Online", "all": "All players", "whitelist": "Whitelist & ops", "bans": "Bans" },
+    "lan": "LAN", "unknownCountry": "Unknown", "name": "Name", "since": "Online since", "country": "Country", "lastSeen": "Last seen", "sessions": "Sessions", "status": "Status",
+    "noneOnline": "Nobody online", "noneKnown": "No player seen yet", "search": "Search a player",
+    "badges": { "online": "online", "op": "op", "whitelisted": "whitelisted", "banned": "banned" },
+    "actions": { "kick": "Kick", "ban": "Ban", "banIp": "Ban IP", "op": "Make operator", "deop": "Remove operator", "pardon": "Lift ban", "menu": "Actions" },
+    "reason": "Reason (optional)", "confirm": { "kick": "Kick {{name}}?", "ban": "Ban {{name}}?", "banIp": "Ban the IP address of {{name}}?", "op": "Make {{name}} an operator?", "deop": "Remove operator rights from {{name}}?", "pardon": "Lift the ban on {{name}}?", "pardonIp": "Lift the ban on {{ip}}?", "whitelistRemove": "Remove {{name}} from the whitelist?" },
+    "done": { "kick": "{{name}} kicked", "ban": "{{name}} banned", "banIp": "IP banned", "op": "{{name}} is now an operator", "deop": "{{name}} is no longer an operator", "pardon": "Ban lifted", "whitelistAdd": "{{name}} added to the whitelist", "whitelistRemove": "{{name}} removed from the whitelist", "whitelistOn": "Whitelist enabled", "whitelistOff": "Whitelist disabled" },
+    "rconUnavailable": "Server unreachable: actions disabled",
+    "whitelist": { "enabled": "Whitelist enabled", "add": "Add a player", "addButton": "Add", "empty": "Whitelist is empty", "opsTitle": "Operators", "opsEmpty": "No operator", "level": "Level" },
+    "bans": { "playersTitle": "Banned players", "ipsTitle": "Banned IP addresses", "empty": "No ban", "reason": "Reason", "created": "Since", "source": "By", "lift": "Lift" },
+    "sheet": { "previousNames": "Previously known as", "playTimeObserved": "Observed play time", "playTime": "Play time", "deaths": "Deaths", "playerKills": "Player kills", "mobKills": "Mob kills", "distance": "Distance", "jumps": "Jumps", "damageTaken": "Damage taken", "blocksMined": "Blocks mined", "itemsCrafted": "Items crafted", "noStats": "No statistics yet: the server has not written this player's stats file.", "activity": "Activity over 30 days", "minutes": "min", "recentSessions": "Recent sessions", "joined": "Joined", "left": "Left", "duration": "Duration", "stillOnline": "still online", "notFound": "Player not found", "unknown": "unknown" }
+  },
+  "fr": {
+    "title": "Joueurs", "tabs": { "online": "En ligne", "all": "Tous", "whitelist": "Whitelist et ops", "bans": "Bans" },
+    "lan": "LAN", "unknownCountry": "Inconnu", "name": "Nom", "since": "Connecté depuis", "country": "Pays", "lastSeen": "Dernière connexion", "sessions": "Sessions", "status": "Statut",
+    "noneOnline": "Personne en ligne", "noneKnown": "Aucun joueur vu pour l'instant", "search": "Rechercher un joueur",
+    "badges": { "online": "en ligne", "op": "op", "whitelisted": "whitelisté", "banned": "banni" },
+    "actions": { "kick": "Expulser", "ban": "Bannir", "banIp": "Bannir l'IP", "op": "Passer opérateur", "deop": "Retirer opérateur", "pardon": "Lever le ban", "menu": "Actions" },
+    "reason": "Raison (optionnelle)", "confirm": { "kick": "Expulser {{name}} ?", "ban": "Bannir {{name}} ?", "banIp": "Bannir l'adresse IP de {{name}} ?", "op": "Passer {{name}} opérateur ?", "deop": "Retirer les droits d'opérateur de {{name}} ?", "pardon": "Lever le ban de {{name}} ?", "pardonIp": "Lever le ban de {{ip}} ?", "whitelistRemove": "Retirer {{name}} de la whitelist ?" },
+    "done": { "kick": "{{name}} expulsé", "ban": "{{name}} banni", "banIp": "IP bannie", "op": "{{name}} est maintenant opérateur", "deop": "{{name}} n'est plus opérateur", "pardon": "Ban levé", "whitelistAdd": "{{name}} ajouté à la whitelist", "whitelistRemove": "{{name}} retiré de la whitelist", "whitelistOn": "Whitelist activée", "whitelistOff": "Whitelist désactivée" },
+    "rconUnavailable": "Serveur injoignable : actions désactivées",
+    "whitelist": { "enabled": "Whitelist activée", "add": "Ajouter un joueur", "addButton": "Ajouter", "empty": "Whitelist vide", "opsTitle": "Opérateurs", "opsEmpty": "Aucun opérateur", "level": "Niveau" },
+    "bans": { "playersTitle": "Joueurs bannis", "ipsTitle": "Adresses IP bannies", "empty": "Aucun ban", "reason": "Raison", "created": "Depuis", "source": "Par", "lift": "Lever" },
+    "sheet": { "previousNames": "Anciens pseudos", "playTimeObserved": "Temps de jeu observé", "playTime": "Temps de jeu", "deaths": "Morts", "playerKills": "Joueurs tués", "mobKills": "Monstres tués", "distance": "Distance", "jumps": "Sauts", "damageTaken": "Dégâts subis", "blocksMined": "Blocs minés", "itemsCrafted": "Objets fabriqués", "noStats": "Pas encore de statistiques : le serveur n'a pas écrit le fichier de ce joueur.", "activity": "Activité sur 30 jours", "minutes": "min", "recentSessions": "Sessions récentes", "joined": "Arrivée", "left": "Départ", "duration": "Durée", "stillOnline": "toujours en ligne", "notFound": "Joueur introuvable", "unknown": "inconnu" }
+  }
+} }

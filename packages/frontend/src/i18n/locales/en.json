@@ -192,13 +192,16 @@
         "toastSaveFailed": "Failed to save"
       },
       "journalRetention": {
-        "title": "Connection journal",
+        "title": "Connection journal retention",
         "retentionDays": "Retention (days)",
-        "hint": "Entries older than this are purged daily. Set to 0 to keep everything.",
+        "hint": "0 keeps everything. Applies to Minecraft sessions, refused connections and MC Manager logins.",
         "save": "Save",
         "saving": "Saving...",
         "toastSaved": "Retention saved",
-        "toastSaveFailed": "Failed to save"
+        "toastSaveFailed": "Failed to save",
+        "days": "Retention (days)",
+        "saved": "Retention saved",
+        "failed": "Could not save retention"
       },
       "requireMfa": "Require MFA (enroll at first login)",
       "mustChangePassword": "Change password at next logon"
@@ -213,7 +216,9 @@
     "audit": "Audit log",
     "settings": "Settings",
     "logout": "Sign out",
-    "collapse": "Collapse"
+    "collapse": "Collapse",
+    "players": "Players",
+    "journal": "Journal"
   },
   "console": {
     "title": "Console",
@@ -297,7 +302,145 @@
       "server": "Server",
       "rcon": "RCON",
       "backup": "Backups",
-      "user": "Users"
+      "user": "Users",
+      "player": "Players",
+      "whitelist": "Whitelist",
+      "journal": "Journal"
+    }
+  },
+  "journal": {
+    "title": "Connection journal",
+    "tabs": {
+      "players": "Minecraft",
+      "failures": "Refused",
+      "web": "MC Manager"
+    },
+    "when": "When",
+    "name": "Name",
+    "ip": "IP",
+    "country": "Country",
+    "duration": "Duration",
+    "reason": "Reason",
+    "result": "Result",
+    "success": "success",
+    "failure": "failure",
+    "ongoing": "ongoing",
+    "reconciled": "no IP (seen by list)",
+    "filterName": "Name",
+    "from": "From",
+    "to": "To",
+    "empty": "No entry",
+    "reasons": {
+      "not_whitelisted": "not whitelisted",
+      "banned": "banned",
+      "full": "server full",
+      "other": "other",
+      "bad_password": "wrong password",
+      "disabled": "account disabled",
+      "mfa_failed": "wrong 2FA code",
+      "unknown_user": "unknown user",
+      "trusted_device": "trusted device",
+      "mfa": "2FA"
+    }
+  },
+  "players": {
+    "title": "Players",
+    "tabs": {
+      "online": "Online",
+      "all": "All players",
+      "whitelist": "Whitelist & ops",
+      "bans": "Bans"
+    },
+    "lan": "LAN",
+    "unknownCountry": "Unknown",
+    "name": "Name",
+    "since": "Online since",
+    "country": "Country",
+    "lastSeen": "Last seen",
+    "sessions": "Sessions",
+    "status": "Status",
+    "noneOnline": "Nobody online",
+    "noneKnown": "No player seen yet",
+    "search": "Search a player",
+    "badges": {
+      "online": "online",
+      "op": "op",
+      "whitelisted": "whitelisted",
+      "banned": "banned"
+    },
+    "actions": {
+      "kick": "Kick",
+      "ban": "Ban",
+      "banIp": "Ban IP",
+      "op": "Make operator",
+      "deop": "Remove operator",
+      "pardon": "Lift ban",
+      "menu": "Actions"
+    },
+    "reason": "Reason (optional)",
+    "confirm": {
+      "kick": "Kick {{name}}?",
+      "ban": "Ban {{name}}?",
+      "banIp": "Ban the IP address of {{name}}?",
+      "op": "Make {{name}} an operator?",
+      "deop": "Remove operator rights from {{name}}?",
+      "pardon": "Lift the ban on {{name}}?",
+      "pardonIp": "Lift the ban on {{ip}}?",
+      "whitelistRemove": "Remove {{name}} from the whitelist?"
+    },
+    "done": {
+      "kick": "{{name}} kicked",
+      "ban": "{{name}} banned",
+      "banIp": "IP banned",
+      "op": "{{name}} is now an operator",
+      "deop": "{{name}} is no longer an operator",
+      "pardon": "Ban lifted",
+      "whitelistAdd": "{{name}} added to the whitelist",
+      "whitelistRemove": "{{name}} removed from the whitelist",
+      "whitelistOn": "Whitelist enabled",
+      "whitelistOff": "Whitelist disabled"
+    },
+    "rconUnavailable": "Server unreachable: actions disabled",
+    "whitelist": {
+      "enabled": "Whitelist enabled",
+      "add": "Add a player",
+      "addButton": "Add",
+      "empty": "Whitelist is empty",
+      "opsTitle": "Operators",
+      "opsEmpty": "No operator",
+      "level": "Level"
+    },
+    "bans": {
+      "playersTitle": "Banned players",
+      "ipsTitle": "Banned IP addresses",
+      "empty": "No ban",
+      "reason": "Reason",
+      "created": "Since",
+      "source": "By",
+      "lift": "Lift"
+    },
+    "sheet": {
+      "previousNames": "Previously known as",
+      "playTimeObserved": "Observed play time",
+      "playTime": "Play time",
+      "deaths": "Deaths",
+      "playerKills": "Player kills",
+      "mobKills": "Mob kills",
+      "distance": "Distance",
+      "jumps": "Jumps",
+      "damageTaken": "Damage taken",
+      "blocksMined": "Blocks mined",
+      "itemsCrafted": "Items crafted",
+      "noStats": "No statistics yet: the server has not written this player's stats file.",
+      "activity": "Activity over 30 days",
+      "minutes": "min",
+      "recentSessions": "Recent sessions",
+      "joined": "Joined",
+      "left": "Left",
+      "duration": "Duration",
+      "stillOnline": "still online",
+      "notFound": "Player not found",
+      "unknown": "unknown"
     }
   }
 }

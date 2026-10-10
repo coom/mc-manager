@@ -1,0 +1,4 @@
+{ "namespace": "settings", "keys": {
+  "en": { "users": { "journalRetention": { "title": "Connection journal retention", "days": "Retention (days)", "hint": "0 keeps everything. Applies to Minecraft sessions, refused connections and MC Manager logins.", "save": "Save", "saved": "Retention saved", "failed": "Could not save retention" } } },
+  "fr": { "users": { "journalRetention": { "title": "Rétention du journal de connexions", "days": "Rétention (jours)", "hint": "0 conserve tout. S'applique aux sessions Minecraft, aux refus et aux connexions à MC Manager.", "save": "Enregistrer", "saved": "Rétention enregistrée", "failed": "Impossible d'enregistrer la rétention" } } }
+} }

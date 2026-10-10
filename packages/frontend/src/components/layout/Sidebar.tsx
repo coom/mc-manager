@@ -1,5 +1,5 @@
 import { NavLink, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Terminal, Archive, History, Settings, ChevronLeft, ChevronRight } from 'lucide-react';
+import { LayoutDashboard, Terminal, Archive, History, Settings, ChevronLeft, ChevronRight, Users, BookOpenText } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/utils';
 import { useUiStore } from '@/stores/ui.store';
@@ -12,9 +12,11 @@ const navSections = [
   { label: 'nav.server', items: [
     { to: '/dashboard', icon: LayoutDashboard, label: 'nav.dashboard' },
     { to: '/console', icon: Terminal, label: 'nav.console' },
+    { to: '/players', icon: Users, label: 'nav.players' },
   ] },
   { label: 'nav.data', items: [
     { to: '/backups', icon: Archive, label: 'nav.backups' },
+    { to: '/journal', icon: BookOpenText, label: 'nav.journal', adminOnly: true },
     { to: '/audit', icon: History, label: 'nav.audit' },
   ] },
 ];

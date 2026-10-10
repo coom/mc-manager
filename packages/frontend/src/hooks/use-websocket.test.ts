@@ -104,12 +104,23 @@ describe('useWebSocket', () => {
     expect(spy.mock.calls.map((c) => c[0]?.queryKey)).toEqual([['backups']]);
   });
 
-  it('invalidates the server, backups and metrics queries on open', () => {
+  it('invalidates player queries on player.session and lists on player.lists.changed', () => {
+    const spy = vi.spyOn(queryClient, 'invalidateQueries');
+    renderHook(() => useWebSocket(), { wrapper });
+    const ws = FakeSocket.instances[0];
+    act(() => ws.onmessage?.({ data: JSON.stringify({ type: 'player.session', kind: 'join', player: { name: 'A', uuid: null, joinedAt: 'x', country: null, hasIp: false } }) }));
+    expect(spy).toHaveBeenCalledWith({ queryKey: ['players'] });
+    act(() => ws.onmessage?.({ data: JSON.stringify({ type: 'player.lists.changed' }) }));
+    expect(spy).toHaveBeenCalledWith({ queryKey: ['lists'] });
+    expect(spy).toHaveBeenCalledWith({ queryKey: ['players'] });
+  });
+
+  it('invalidates the server, backups, metrics, players and lists queries on open', () => {
     const spy = vi.spyOn(queryClient, 'invalidateQueries');
     renderHook(() => useWebSocket(), { wrapper });
     act(() => FakeSocket.instances[0].onopen?.());
     const keys = spy.mock.calls.map((c) => c[0]?.queryKey);
-    expect(keys).toEqual([['server'], ['backups'], ['metrics']]);
+    expect(keys).toEqual([['server'], ['backups'], ['metrics'], ['players'], ['lists']]);
     expect(useServerStore.getState().connected).toBe(true);
   });
 });

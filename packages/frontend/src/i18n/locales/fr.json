@@ -192,13 +192,16 @@
         "toastSaveFailed": "Échec de l'enregistrement"
       },
       "journalRetention": {
-        "title": "Journal des connexions",
+        "title": "Rétention du journal de connexions",
         "retentionDays": "Conservation (jours)",
-        "hint": "Les entrées plus anciennes sont purgées quotidiennement. Mettez 0 pour tout conserver.",
+        "hint": "0 conserve tout. S'applique aux sessions Minecraft, aux refus et aux connexions à MC Manager.",
         "save": "Enregistrer",
         "saving": "Enregistrement...",
         "toastSaved": "Conservation enregistrée",
-        "toastSaveFailed": "Échec de l'enregistrement"
+        "toastSaveFailed": "Échec de l'enregistrement",
+        "days": "Rétention (jours)",
+        "saved": "Rétention enregistrée",
+        "failed": "Impossible d'enregistrer la rétention"
       },
       "requireMfa": "Exiger le MFA (enrôlement à la 1re connexion)",
       "mustChangePassword": "Changer le mot de passe à la prochaine connexion"
@@ -213,7 +216,9 @@
     "audit": "Journal d'audit",
     "settings": "Paramètres",
     "logout": "Déconnexion",
-    "collapse": "Réduire"
+    "collapse": "Réduire",
+    "players": "Joueurs",
+    "journal": "Journal"
   },
   "console": {
     "title": "Console",
@@ -297,7 +302,145 @@
       "server": "Serveur",
       "rcon": "RCON",
       "backup": "Sauvegardes",
-      "user": "Utilisateurs"
+      "user": "Utilisateurs",
+      "player": "Joueurs",
+      "whitelist": "Whitelist",
+      "journal": "Journal"
+    }
+  },
+  "journal": {
+    "title": "Journal de connexions",
+    "tabs": {
+      "players": "Minecraft",
+      "failures": "Refus",
+      "web": "MC Manager"
+    },
+    "when": "Quand",
+    "name": "Nom",
+    "ip": "IP",
+    "country": "Pays",
+    "duration": "Durée",
+    "reason": "Raison",
+    "result": "Résultat",
+    "success": "succès",
+    "failure": "échec",
+    "ongoing": "en cours",
+    "reconciled": "sans IP (vu par list)",
+    "filterName": "Nom",
+    "from": "Du",
+    "to": "Au",
+    "empty": "Aucune entrée",
+    "reasons": {
+      "not_whitelisted": "non whitelisté",
+      "banned": "banni",
+      "full": "serveur plein",
+      "other": "autre",
+      "bad_password": "mauvais mot de passe",
+      "disabled": "compte désactivé",
+      "mfa_failed": "mauvais code 2FA",
+      "unknown_user": "utilisateur inconnu",
+      "trusted_device": "appareil de confiance",
+      "mfa": "2FA"
+    }
+  },
+  "players": {
+    "title": "Joueurs",
+    "tabs": {
+      "online": "En ligne",
+      "all": "Tous",
+      "whitelist": "Whitelist et ops",
+      "bans": "Bans"
+    },
+    "lan": "LAN",
+    "unknownCountry": "Inconnu",
+    "name": "Nom",
+    "since": "Connecté depuis",
+    "country": "Pays",
+    "lastSeen": "Dernière connexion",
+    "sessions": "Sessions",
+    "status": "Statut",
+    "noneOnline": "Personne en ligne",
+    "noneKnown": "Aucun joueur vu pour l'instant",
+    "search": "Rechercher un joueur",
+    "badges": {
+      "online": "en ligne",
+      "op": "op",
+      "whitelisted": "whitelisté",
+      "banned": "banni"
+    },
+    "actions": {
+      "kick": "Expulser",
+      "ban": "Bannir",
+      "banIp": "Bannir l'IP",
+      "op": "Passer opérateur",
+      "deop": "Retirer opérateur",
+      "pardon": "Lever le ban",
+      "menu": "Actions"
+    },
+    "reason": "Raison (optionnelle)",
+    "confirm": {
+      "kick": "Expulser {{name}} ?",
+      "ban": "Bannir {{name}} ?",
+      "banIp": "Bannir l'adresse IP de {{name}} ?",
+      "op": "Passer {{name}} opérateur ?",
+      "deop": "Retirer les droits d'opérateur de {{name}} ?",
+      "pardon": "Lever le ban de {{name}} ?",
+      "pardonIp": "Lever le ban de {{ip}} ?",
+      "whitelistRemove": "Retirer {{name}} de la whitelist ?"
+    },
+    "done": {
+      "kick": "{{name}} expulsé",
+      "ban": "{{name}} banni",
+      "banIp": "IP bannie",
+      "op": "{{name}} est maintenant opérateur",
+      "deop": "{{name}} n'est plus opérateur",
+      "pardon": "Ban levé",
+      "whitelistAdd": "{{name}} ajouté à la whitelist",
+      "whitelistRemove": "{{name}} retiré de la whitelist",
+      "whitelistOn": "Whitelist activée",
+      "whitelistOff": "Whitelist désactivée"
+    },
+    "rconUnavailable": "Serveur injoignable : actions désactivées",
+    "whitelist": {
+      "enabled": "Whitelist activée",
+      "add": "Ajouter un joueur",
+      "addButton": "Ajouter",
+      "empty": "Whitelist vide",
+      "opsTitle": "Opérateurs",
+      "opsEmpty": "Aucun opérateur",
+      "level": "Niveau"
+    },
+    "bans": {
+      "playersTitle": "Joueurs bannis",
+      "ipsTitle": "Adresses IP bannies",
+      "empty": "Aucun ban",
+      "reason": "Raison",
+      "created": "Depuis",
+      "source": "Par",
+      "lift": "Lever"
+    },
+    "sheet": {
+      "previousNames": "Anciens pseudos",
+      "playTimeObserved": "Temps de jeu observé",
+      "playTime": "Temps de jeu",
+      "deaths": "Morts",
+      "playerKills": "Joueurs tués",
+      "mobKills": "Monstres tués",
+      "distance": "Distance",
+      "jumps": "Sauts",
+      "damageTaken": "Dégâts subis",
+      "blocksMined": "Blocs minés",
+      "itemsCrafted": "Objets fabriqués",
+      "noStats": "Pas encore de statistiques : le serveur n'a pas écrit le fichier de ce joueur.",
+      "activity": "Activité sur 30 jours",
+      "minutes": "min",
+      "recentSessions": "Sessions récentes",
+      "joined": "Arrivée",
+      "left": "Départ",
+      "duration": "Durée",
+      "stillOnline": "toujours en ligne",
+      "notFound": "Joueur introuvable",
+      "unknown": "inconnu"
     }
   }
 }
