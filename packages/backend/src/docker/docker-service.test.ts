@@ -86,6 +86,52 @@ describe('DockerService', () => {
     svc.stop();
   });
 
+  it('keeps stopping sticky during a pending stop, then settles on the real state', async () => {
+    const docker = new FakeDocker();
+    const c = new FakeContainer(inspectFixture());
+    docker.containers.set('mc', c);
+    const svc = new DockerService(docker, 'mc', 'mc-backup');
+    const seen: string[] = [];
+    svc.on('status', (s) => seen.push(s));
+    await svc.start();
+    await wait(10);
+    const release = c.holdOps();
+    const p = svc.stopServer();
+    await wait(10);
+    expect(svc.getStatus()).toBe('stopping');
+    // docker stop émet 'kill' tout de suite ; le conteneur inspecte encore running+healthy.
+    docker.emitEvent({ Action: 'kill', name: 'mc' });
+    await wait(10);
+    docker.emitEvent({ Action: 'health_status: healthy', name: 'mc' });
+    await wait(10);
+    expect(svc.getStatus()).toBe('stopping');
+    c.state = inspectFixture({ Status: 'exited', Running: false });
+    release();
+    await p;
+    await wait(10);
+    expect(svc.getStatus()).toBe('stopped');
+    expect(seen).toEqual(['stopping', 'stopped']);
+    svc.stop();
+  });
+
+  it('accepts stopped from a die event while the stop is still pending', async () => {
+    const docker = new FakeDocker();
+    const c = new FakeContainer(inspectFixture());
+    docker.containers.set('mc', c);
+    const svc = new DockerService(docker, 'mc', 'mc-backup');
+    await svc.start();
+    await wait(10);
+    const release = c.holdOps();
+    const p = svc.stopServer();
+    c.state = inspectFixture({ Status: 'exited', Running: false });
+    docker.emitEvent({ Action: 'die', name: 'mc' });
+    await wait(10);
+    expect(svc.getStatus()).toBe('stopped');
+    release();
+    await p;
+    svc.stop();
+  });
+
   it('throws a 503 AppError when the container is missing', async () => {
     const svc = new DockerService(new FakeDocker(), 'mc', 'mc-backup');
     await expect(svc.startServer()).rejects.toMatchObject({ statusCode: 503 });

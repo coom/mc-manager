@@ -45,6 +45,8 @@ export class DockerService extends EventEmitter {
   private retryMs = 1000;
   private retryTimer: NodeJS.Timeout | null = null;
   private wake: (() => void) | null = null;
+  /** Nombre d'arrêts/redémarrages en cours : tant qu'il est > 0, 'stopping' reste collant. */
+  private pendingOps = 0;
 
   constructor(private docker: DockerLike, private serverName: string, private backupName: string) { super(); }
 
@@ -63,13 +65,23 @@ export class DockerService extends EventEmitter {
     this.emit('status', s);
   }
 
+  /**
+   * Pendant un stop/restart, un conteneur qui s'arrête inspecte encore running (+healthy) et
+   * 'docker stop' émet 'kill' tout de suite : on ignore alors ready/unhealthy/starting pour garder
+   * 'stopping', mais on accepte stopped/unavailable (die/stop).
+   */
+  private applyRefreshed(s: ServerStatus) {
+    if (this.pendingOps > 0 && (s === 'ready' || s === 'unhealthy' || s === 'starting')) return;
+    this.setStatus(s);
+  }
+
   async refresh(): Promise<ServerStatus> {
     try {
       const i = await this.inspectServer();
-      this.setStatus(i ? i.status : 'unavailable');
+      this.applyRefreshed(i ? i.status : 'unavailable');
     } catch (err) {
       logger.warn({ err }, 'docker inspect failed');
-      this.setStatus('unavailable');
+      this.applyRefreshed('unavailable');
     }
     return this.status;
   }
@@ -145,21 +157,27 @@ export class DockerService extends EventEmitter {
     return c;
   }
 
+  /** Vrai si le conteneur du serveur existe (les routes répondent 503 sinon, avant de lancer l'action). */
+  async hasServerContainer(): Promise<boolean> { return (await this.docker.findByName(this.serverName)) !== null; }
+
   async startServer(): Promise<void> { const c = await this.requireServer(); await c.start(); void this.refresh(); }
   async stopServer(): Promise<void> { await this.gracefully('stop'); }
   async restartServer(): Promise<void> { await this.gracefully('restart'); }
 
-  /** Passe en 'stopping' immédiatement (avant tout await), puis resynchronise sur l'état réel. */
+  /**
+   * Passe en 'stopping' immédiatement (avant tout await) et le garde tant que l'opération est en
+   * cours (voir applyRefreshed), puis resynchronise sur l'état réel une fois l'opération terminée.
+   */
   private async gracefully(op: 'stop' | 'restart'): Promise<void> {
+    this.pendingOps++;
     this.setStatus('stopping');
     try {
       const c = await this.requireServer();
       await c[op]({ t: 60 });
-    } catch (err) {
+    } finally {
+      this.pendingOps--;
       void this.refresh();
-      throw err;
     }
-    void this.refresh();
   }
 
   async stats(): Promise<ServerStats> {

@@ -2,7 +2,9 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import express from 'express';
 import request from 'supertest';
 import { serverRoutes } from './server.routes.js';
-import { errorHandler } from '../middleware/error-handler.js';
+import { errorHandler, AppError } from '../middleware/error-handler.js';
+import { DockerService } from '../docker/docker-service.js';
+import { FakeDocker, FakeContainer, inspectFixture } from '../docker/fake-docker.js';
 
 function appWith(role: 'admin' | 'viewer', docker: Record<string, unknown>) {
   const app = express();
@@ -20,7 +22,7 @@ function appWith(role: 'admin' | 'viewer', docker: Record<string, unknown>) {
 describe('server routes', () => {
   let docker: Record<string, unknown>;
   beforeEach(() => {
-    docker = { getStatus: () => 'ready', startServer: vi.fn().mockResolvedValue(undefined), stopServer: vi.fn().mockResolvedValue(undefined), restartServer: vi.fn().mockResolvedValue(undefined) };
+    docker = { getStatus: () => 'ready', hasServerContainer: vi.fn().mockResolvedValue(true), startServer: vi.fn().mockResolvedValue(undefined), stopServer: vi.fn().mockResolvedValue(undefined), restartServer: vi.fn().mockResolvedValue(undefined) };
   });
   it('GET returns the server info', async () => {
     const res = await request(appWith('viewer', docker)).get('/api/server');
@@ -53,5 +55,41 @@ describe('server routes', () => {
   it('rejects an empty or oversized command', async () => {
     expect((await request(appWith('admin', docker)).post('/api/server/command').send({ command: '' })).status).toBe(400);
     expect((await request(appWith('admin', docker)).post('/api/server/command').send({ command: 'x'.repeat(2000) })).status).toBe(400);
+  });
+  it('admin stop answers 202 before the container has stopped, audits, and the state is stopping', async () => {
+    const fake = new FakeDocker();
+    const c = new FakeContainer(inspectFixture());
+    fake.containers.set('mc', c);
+    const svc = new DockerService(fake, 'mc', 'mc-backup');
+    await svc.start();
+    const release = c.holdOps();
+    const app = appWith('admin', svc as unknown as Record<string, unknown>);
+    const res = await request(app).post('/api/server/stop');
+    expect(res.status).toBe(202);
+    // stop() est toujours en attente : la réponse n'a pas attendu l'arrêt du conteneur.
+    expect(c.calls).toEqual(['stop:60']);
+    expect(c.opGate).not.toBeNull();
+    expect(svc.getStatus()).toBe('stopping');
+    expect(app.locals.prisma.auditLog.create).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ action: 'server.stop' }) }));
+    c.state = inspectFixture({ Status: 'exited', Running: false });
+    release();
+    await new Promise((r) => setTimeout(r, 10));
+    expect(svc.getStatus()).toBe('stopped');
+    svc.stop();
+  });
+  it('stop/restart answer 503 without auditing when the container is missing', async () => {
+    docker.hasServerContainer = vi.fn().mockResolvedValue(false);
+    const app = appWith('admin', docker);
+    expect((await request(app).post('/api/server/stop')).status).toBe(503);
+    expect((await request(app).post('/api/server/restart')).status).toBe(503);
+    expect(docker.stopServer).not.toHaveBeenCalled();
+    expect(app.locals.prisma.auditLog.create).not.toHaveBeenCalled();
+  });
+  it('a failed rcon command is still audited and answers the error status', async () => {
+    const app = appWith('admin', docker);
+    app.locals.rcon.send = vi.fn().mockRejectedValue(new AppError(504, 'RCON command timed out'));
+    const res = await request(app).post('/api/server/command').send({ command: 'say hi' });
+    expect(res.status).toBe(504);
+    expect(app.locals.prisma.auditLog.create).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ action: 'rcon.command', detail: 'say hi' }) }));
   });
 });

@@ -3,11 +3,19 @@ import type { ContainerInspect, ContainerLike, DockerEvent, DockerLike, DockerSt
 
 export class FakeContainer extends EventEmitter implements ContainerLike {
   calls: string[] = [];
+  /** Si défini, stop()/restart() attendent cette promesse (simule un arrêt long). */
+  opGate: Promise<void> | null = null;
   constructor(public state: ContainerInspect, public statsSample?: DockerStatsSample, public logsStream = new PassThrough(), public execStream = new PassThrough(), public execExit = 0) { super(); }
   async inspect() { return this.state; }
   async start() { this.calls.push('start'); }
-  async stop(opts: { t: number }) { this.calls.push(`stop:${opts.t}`); }
-  async restart(opts: { t: number }) { this.calls.push(`restart:${opts.t}`); }
+  async stop(opts: { t: number }) { this.calls.push(`stop:${opts.t}`); if (this.opGate) await this.opGate; }
+  async restart(opts: { t: number }) { this.calls.push(`restart:${opts.t}`); if (this.opGate) await this.opGate; }
+  /** Bloque stop()/restart() jusqu'à l'appel de la fonction renvoyée. */
+  holdOps(): () => void {
+    let release!: () => void;
+    this.opGate = new Promise<void>((r) => { release = r; });
+    return () => { this.opGate = null; release(); };
+  }
   async stats() { if (!this.statsSample) throw new Error('no stats'); return this.statsSample; }
   async logs() { return this.logsStream as unknown as Readable; }
   async exec(opts: { Cmd: string[] }) {

@@ -14,6 +14,7 @@ import { MetricsCollector } from './metrics/collector.js';
 import { BackupService } from './backups/backup-service.js';
 import { dirSize, diskFree } from './metrics/disk.js';
 import path from 'path';
+import { buildServerInfo } from './server-info.js';
 
 process.on('uncaughtException', (err) => logger.error({ err }, 'uncaught exception (kept alive)'));
 process.on('unhandledRejection', (reason) => logger.error({ reason }, 'unhandled rejection (kept alive)'));
@@ -33,28 +34,15 @@ async function main() {
   const wss = attachWebSocket(server, prisma);
   app.locals.wss = wss;
 
-  // Construit la réponse de GET /api/server. Les tâches 11 et 12 enrichissent
-  // players/mspt/tps/worldBytes/diskFree via app.locals.metrics.
-  app.locals.serverInfo = async (): Promise<ServerInfo> => {
-    const i = await docker.inspectServer().catch(() => null);
-    const stats = await docker.stats().catch(() => ({ cpuPercent: null, memUsed: null, memLimit: null }));
-    const startedAt = i?.startedAt ?? null;
-    const latest = app.locals.metrics?.latest?.() ?? {};
-    return {
-      status: i ? i.status : 'unavailable',
-      message: i ? undefined : `Container "${config.mc.container}" not found or Docker socket unreachable`,
-      containerName: config.mc.container,
-      startedAt,
-      uptimeSeconds: startedAt ? Math.floor((Date.now() - Date.parse(startedAt)) / 1000) : null,
-      version: latest.version ?? null,
-      players: latest.players ?? null,
-      mspt: latest.mspt ?? null,
-      tps: latest.tps ?? null,
-      stats,
-      worldBytes: latest.worldBytes ?? null,
-      diskFree: latest.diskFree ?? null,
-    };
-  };
+  // Construit la réponse de GET /api/server : l'état vient de docker.getStatus() (qui garde
+  // 'stopping' pendant un arrêt), inspect ne sert qu'à startedAt.
+  app.locals.serverInfo = (): Promise<ServerInfo> => buildServerInfo({
+    getStatus: () => docker.getStatus(),
+    inspectServer: () => docker.inspectServer(),
+    stats: () => docker.stats(),
+    latest: () => app.locals.metrics?.latest?.(),
+    containerName: config.mc.container,
+  });
 
   docker.on('status', () => {
     void app.locals.serverInfo().then((info: ServerInfo) => broadcast(wss, { type: 'server.status', info }));
