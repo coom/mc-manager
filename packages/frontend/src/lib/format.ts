@@ -11,3 +11,5 @@ export const toneClass: Record<Tone, string> = {
   error: 'bg-red-500/15 text-red-500 border-red-500/30',
   muted: 'bg-muted text-muted-foreground border-border',
 };
+export const formatPlayersValue = (v: number | null | undefined): string =>
+  v == null ? '—' : Number.isInteger(v) ? String(v) : v.toFixed(1);

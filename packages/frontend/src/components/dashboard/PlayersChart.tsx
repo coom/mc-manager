@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import type { MetricsRange } from '@mc/common';
 import { metricsApi } from '@/api/metrics.api';
+import { formatPlayersValue } from '@/lib/format';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
@@ -26,9 +27,9 @@ export function PlayersChart() {
             <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
             <XAxis dataKey="at" tickFormatter={fmt} minTickGap={40} stroke="hsl(var(--muted-foreground))" fontSize={11} />
             <YAxis allowDecimals={false} stroke="hsl(var(--muted-foreground))" fontSize={11} width={28} />
-            <Tooltip labelFormatter={(v) => fmt(String(v))} formatter={(v: number) => [v.toFixed(1), t('dashboard.players')]} contentStyle={{ background: 'hsl(var(--popover))', border: '1px solid hsl(var(--border))' }} />
-            <Area type="monotone" dataKey="players" stroke="hsl(var(--chart-1))" fill="hsl(var(--chart-1))" fillOpacity={0.2} isAnimationActive={false} />
-            {range !== '24h' && <Area type="step" dataKey="playersMax" stroke="hsl(var(--chart-2))" fill="none" isAnimationActive={false} />}
+            <Tooltip labelFormatter={(v) => fmt(String(v))} formatter={(v, name) => [formatPlayersValue(typeof v === 'number' ? v : null), String(name ?? '')]} contentStyle={{ background: 'hsl(var(--popover))', border: '1px solid hsl(var(--border))' }} />
+            <Area type="monotone" dataKey="players" name={t('dashboard.players')} stroke="hsl(var(--chart-1))" fill="hsl(var(--chart-1))" fillOpacity={0.2} isAnimationActive={false} />
+            {range !== '24h' && <Area type="step" dataKey="playersMax" name={t('dashboard.playersMax')} stroke="hsl(var(--chart-2))" fill="none" isAnimationActive={false} />}
           </AreaChart>
         </ResponsiveContainer>
       </CardContent>

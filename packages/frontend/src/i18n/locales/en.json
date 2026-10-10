@@ -263,6 +263,7 @@
     "diskFree": "Disk free",
     "onlinePlayers": "Online players",
     "noPlayers": "Nobody online",
-    "playersOverTime": "Players over time"
+    "playersOverTime": "Players over time",
+    "playersMax": "Peak players"
   }
 }

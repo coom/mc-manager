@@ -263,6 +263,7 @@
     "diskFree": "Disque libre",
     "onlinePlayers": "Joueurs en ligne",
     "noPlayers": "Personne en ligne",
-    "playersOverTime": "Fréquentation"
+    "playersOverTime": "Fréquentation",
+    "playersMax": "Pic de joueurs"
   }
 }
