@@ -12,7 +12,7 @@ MC Manager : interface web de suivi et de gestion d'un serveur Minecraft Java so
 | `packages/frontend` (`@mc/frontend`) | SPA React 18 / Vite / Tailwind / shadcn, TanStack Query, zustand, i18next (fr, en) |
 | `packages/common` (`@mc/common`) | Types et constantes partagés (messages WebSocket, DTO, rôles), pas de schémas zod |
 
-La spec est dans `docs/superpowers/specs/2026-10-10-mc-manager-lot1-design.md`. Le lot 2 (stats par joueur, journal d'événements, whitelist/ops/bans, restauration, éditeur de `server.properties`) n'est pas implémenté.
+La spec est dans `docs/superpowers/specs/2026-10-10-mc-manager-lot1-design.md`. Le lot 2a (joueurs, journaux) est implémenté ; le lot 2b (restauration, éditeur de `server.properties`) ne l'est pas.
 
 ## Commandes
 
@@ -40,6 +40,8 @@ node packages/frontend/scripts/merge-i18n.mjs   # fusionne dans fr/en et échoue
 ```
 
 La CI (`.github/workflows/ci.yml`) enchaîne : `pnpm install --frozen-lockfile`, `pnpm audit --audit-level high` (deux avis GHSA sans correctif amont sont ignorés via `pnpm.auditConfig.ignoreGhsas` dans `package.json` : `deepmerge-ts` tiré par la CLI Prisma et `braces` tiré par Tailwind, outils de build uniquement ; retirer l’exclusion dès qu’Ne version corrigée existe), `db:generate`, build de common, lint, typecheck, test, build, puis build des deux Dockerfiles (`Dockerfile.backend`, `Dockerfile.frontend`). Reproduire cet ordre en local avant de pousser.
+
+`geoip-lite` est épinglé en `2.0.2` (sans caret) : toutes les versions 2.x déclarent `engines.node >= 24` alors que CI et Docker tournent en Node 22 ; pnpm n'émet qu'un avertissement, et ts6-manager fait tourner cette même version en production sur `node:22-slim`. Ne pas élargir la plage sans passer la CI et l'image sur Node 24.
 
 Déploiement : `docker compose up -d --build` (WebApp seule, rejoint le réseau Docker du serveur Minecraft). `docker-compose.example.yml` est une stack Minecraft de référence qui crée les volumes `mc-data`, `mc-backups` et le réseau `mc-network`. Le déploiement n'a été validé que par `docker compose config`, pas encore par un test de bout en bout.
 
@@ -71,6 +73,8 @@ Les services sont exposés via `req.app.locals.{prisma, docker, rcon, logs, metr
 - **BackupService** : ne liste que les fichiers réguliers `*.tgz` et `*.tar.gz` de `MC_BACKUPS_DIR`. `runNow()` fait `docker exec <MC_BACKUP_CONTAINER> backup now`, diffuse `backup.progress` ligne par ligne puis `backup.done` ; un seul backup manuel à la fois (409 sinon).
 - **Téléchargement de backup** : `POST /api/backups/:name/link` (admin, audité `backup.download`) émet un jeton aléatoire en mémoire (`DownloadTokenStore`, 60 s, usage unique) ; `GET /api/backups/download/:token` est public (monté avant `authMiddleware`, le navigateur le suit sans en-tête Bearer) et streame le fichier avec `res.sendFile`.
 - **Audit** : toute action d'admin écrit une ligne `AuditLog` avant de répondre.
+- **Joueurs (lot 2a)** : `players/player-journal.ts` ouvre et ferme des `PlayerSession` à partir des lignes du `LogStreamer` (`parse-player-line.ts`), réconciliées par le `list` du collecteur (`onPlayers`) avec une grâce de 30 s ; les lignes Docker sont horodatées (`timestamps: true`, préfixe retiré par `splitTimestamp`) pour ignorer l'historique rejoué au démarrage. `players/player-admin.ts` envoie kick/ban/op/whitelist par RCON et interprète les réponses (409 déjà fait, 404 inconnu, 502 réponse inattendue). `players/data-files.ts` lit `whitelist.json`, `ops.json`, `banned-*.json`, `usercache.json` et `<level-name>/stats/<uuid>.json` en lecture seule. Journal web : `auth/web-login-journal.ts`, appelé en fire-and-forget dans `auth.routes.ts`. Rétention : `AppSetting` `journal.retentionDays`, purge quotidienne depuis `index.ts`.
+- **Messages WebSocket ajoutés** : `player.session` (join/leave, jamais d'IP) et `player.lists.changed`.
 
 ## Architecture frontend
 
@@ -89,6 +93,7 @@ Les services sont exposés via `req.app.locals.{prisma, docker, rcon, logs, metr
 - Le volume de données Minecraft est monté en lecture seule (`:ro`) ; le mot de passe RCON n'est jamais dupliqué dans l'environnement.
 - Le socket Docker donne un accès root à l'hôte : la WebApp ne doit être exposée que derrière l'authentification (voir README).
 - Le dashboard charge des avatars depuis `mc-heads.net` et les polices depuis Google Fonts : à garder documenté dans la section confidentialité du README.
+- Lot 2a : les IP des joueurs et des connexions web ne sortent que par les routes `rbac('admin')` (`/api/journal/*`, fiche admin) ; `player.session` n'en porte jamais. Noms (`^[A-Za-z0-9_]{3,16}$`), IP (`net.isIP`) et raisons (une ligne, 100 caractères) sont validés dans `player-admin.ts` avant tout envoi RCON. Rien n'écrit dans `/data`.
 
 ## Tests
 

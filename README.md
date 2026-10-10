@@ -15,6 +15,8 @@ Web interface to monitor and manage a Minecraft Java server running in Docker wi
 - Dashboard: online players, attendance chart (24 h / 7 d / 30 d), CPU, RAM, MSPT / TPS, world size, free disk space
 - Backups: list, download, delete, manual trigger with live output. A download asks the backend for a single-use link valid for 60 seconds (`POST /api/backups/:name/link`, admin, audited) that the browser then follows, so the archive streams straight to disk
 - Audit log of every admin action (RCON commands, backups, server control, users)
+- Players: online and known players, player pages with vanilla statistics (play time, deaths, kills, distance...), kick / ban / IP ban / op / deop actions, whitelist, operators and bans managed from the interface
+- Connection journal (admin): Minecraft connections with IP, country and duration, refused connections, successful or failed logins to MC Manager; configurable retention (90 days by default)
 - Dark and light themes, English and French
 
 ## Screenshots
@@ -100,8 +102,8 @@ The backend mounts `/var/run/docker.sock`. **Access to the Docker socket is equi
 
 | Role | Rights |
 |---|---|
-| `viewer` | Read-only: dashboard, console logs (no command field), backup list, audit log |
-| `admin` | Everything: start / stop / restart, RCON commands, manual backup, backup download and deletion, user management |
+| `viewer` | Read-only: dashboard, console logs (no command field), backup list, audit log, players, player pages without IP, whitelist, ops and bans (read-only) |
+| `admin` | Everything: start / stop / restart, RCON commands, manual backup, backup download and deletion, user management, player actions, whitelist, connection journal |
 
 Every admin action is written to the audit log.
 
@@ -130,11 +132,14 @@ i18n: write a fragment in `packages/frontend/scripts/i18n-fragments/*.json`, the
 
 The dashboard shows player avatars loaded from the third-party service [mc-heads.net](https://mc-heads.net): the browser of every user sends the names of the online players to that service. The interface fonts (Outfit, JetBrains Mono) are also loaded from Google Fonts (`fonts.googleapis.com`), which exposes the visitor IP address to Google. There is no other external call.
 
-## Roadmap (lot 2)
+IP geolocation uses the `geoip-lite` database embedded in the image: no external call, country only. IP addresses are visible to admins only, and the journal is purged according to the configured retention.
 
-- Per-player statistics
-- Game event journal
-- Whitelist, ops, bans and kick
+## Roadmap
+
+Lot 2a (players, journals) is delivered.
+
+### Lot 2b
+
 - Backup restoration
 - `server.properties` editor
 

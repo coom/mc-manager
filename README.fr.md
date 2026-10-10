@@ -15,6 +15,8 @@ Interface web de suivi et de gestion d'un serveur Minecraft Java hébergé dans 
 - Dashboard : joueurs en ligne, courbe de fréquentation (24 h / 7 j / 30 j), CPU, RAM, MSPT / TPS, taille du monde, espace disque restant
 - Backups : liste, téléchargement, suppression, déclenchement manuel avec sortie en direct. Un téléchargement demande au backend un lien à usage unique valable 60 secondes (`POST /api/backups/:name/link`, admin, audité) que le navigateur suit ensuite, l'archive est donc écrite directement sur le disque
 - Journal d'audit de toutes les actions d'admin (commandes RCON, backups, contrôle du serveur, utilisateurs)
+- Joueurs : joueurs en ligne et connus, fiches avec statistiques vanilla (temps de jeu, morts, kills, distance…), actions kick / ban / ban IP / op / deop, whitelist, opérateurs et bans gérés depuis l'interface
+- Journal de connexions (admin) : connexions Minecraft avec IP, pays et durée, refus de connexion, connexions à MC Manager réussies ou échouées ; rétention configurable (90 jours par défaut)
 - Thèmes sombre et clair, français et anglais
 
 ## Captures d'écran
@@ -100,8 +102,8 @@ Le backend monte `/var/run/docker.sock`. **L'accès au socket Docker équivaut �
 
 | Rôle | Droits |
 |---|---|
-| `viewer` | Lecture seule : dashboard, logs de la console (pas de champ de commande), liste des backups, audit |
-| `admin` | Tout : start / stop / restart, commandes RCON, backup manuel, téléchargement et suppression de backups, gestion des utilisateurs |
+| `viewer` | Lecture seule : dashboard, logs de la console (pas de champ de commande), liste des backups, audit, joueurs, fiches sans IP, whitelist, ops et bans en lecture seule |
+| `admin` | Tout : start / stop / restart, commandes RCON, backup manuel, téléchargement et suppression de backups, gestion des utilisateurs, actions sur les joueurs, whitelist, journal de connexions |
 
 Toute action d'admin est écrite dans le journal d'audit.
 
@@ -130,11 +132,14 @@ i18n : écrire un fragment dans `packages/frontend/scripts/i18n-fragments/*.json
 
 Le dashboard affiche des avatars de joueurs chargés depuis le service tiers [mc-heads.net](https://mc-heads.net) : le navigateur de chaque utilisateur lui transmet les noms des joueurs en ligne. Les polices de l'interface (Outfit, JetBrains Mono) sont aussi chargées depuis Google Fonts (`fonts.googleapis.com`), ce qui expose l'adresse IP du visiteur à Google. Il n'y a aucun autre appel externe.
 
-## Feuille de route (lot 2)
+La géolocalisation des IP utilise la base `geoip-lite` embarquée dans l'image : aucun appel externe, pays uniquement. Les IP ne sont visibles que des admins, et le journal est purgé selon la rétention configurée.
 
-- Statistiques par joueur
-- Journal d'événements de jeu
-- Whitelist, ops, bans et kick
+## Feuille de route
+
+Le lot 2a (joueurs, journaux) est livré.
+
+### Lot 2b
+
 - Restauration d'un backup
 - Éditeur de `server.properties`
 

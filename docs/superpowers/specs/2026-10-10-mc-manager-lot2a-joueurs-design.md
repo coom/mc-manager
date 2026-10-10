@@ -1,7 +1,7 @@
 # MC Manager — Lot 2a « Joueurs » : conception
 
 **Date :** 2026-10-10
-**Statut :** validé en conversation, en attente de relecture du document
+**Statut :** validé et implémenté (voir le plan 2026-10-10-mc-manager-lot2a-joueurs.md)
 **Dépend de :** lot 1 (`2026-10-10-mc-manager-lot1-design.md`), fusionné dans `master`
 
 ## 1. Objectif
@@ -294,3 +294,9 @@ Connexions Minecraft, refus, connexions MC Manager. Colonnes : date et heure, no
 ## 9. Documentation
 
 README (fr, en) : section « Joueurs et journal » (fonctions, rôles, rétention, confidentialité des IP et base `geoip-lite`), mise à jour de la feuille de route (2a livré, 2b à venir). CLAUDE.md : services `PlayerJournal`, `PlayerAdmin`, `data-files`, messages WebSocket ajoutés, règle « ne jamais écrire dans `/data` ».
+
+## 10. Écarts d'implémentation
+
+1. Le flux de logs Docker est ouvert avec `timestamps: true` ; `LogStreamer` retire le préfixe et passe la date à `PlayerJournal.handleLine(line, at)`, qui ignore les lignes antérieures à son démarrage. Le rejeu des 500 lignes d'historique ne crée donc aucune session fantôme (l'horodatage de la section 3.3 reste l'horloge du backend).
+2. Le ban IP d'un joueur en ligne passe par `POST /api/players/:name/ban-ip`, qui lit l'IP côté serveur (`journal.currentIp`) puisque le navigateur ne la reçoit jamais ; `POST /api/bans/ip` reste disponible pour bannir une adresse arbitraire.
+3. Les méthodes de `PlayerAdmin` sont asynchrones ; une fenêtre de grâce de réconciliation de 30 s protège les deux sens.
