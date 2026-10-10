@@ -7,8 +7,12 @@ interface Props { lines: string[]; running: boolean; mode?: 'backup' | 'restore'
 
 /** Sortie en direct d'une sauvegarde manuelle ou d'une restauration, puis le résultat. */
 export function BackupRunPanel({ lines, running, mode = 'backup', result = null, onRestoreSafety }: Props) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   if (!running && lines.length === 0 && !result) return null;
+  const showLine = (l: string) => {
+    const m = /^\[(\w+)\] (.*)$/.exec(l);
+    return m && i18n.exists(`backups.steps.${m[1]}`) ? `${t(`backups.steps.${m[1]}`)}: ${m[2]}` : l;
+  };
   const title = running ? t(mode === 'restore' ? 'backups.restoring' : 'backups.running')
     : mode === 'restore' && result ? t(result.ok ? 'backups.restoreDone' : 'backups.restoreFailed') : t('backups.finished');
   return (
@@ -17,7 +21,7 @@ export function BackupRunPanel({ lines, running, mode = 'backup', result = null,
         {running ? <Loader2 className="h-3 w-3 animate-spin" /> : result ? (result.ok ? <CheckCircle2 className="h-3 w-3 text-emerald-500" /> : <XCircle className="h-3 w-3 text-red-500" />) : null}
         {title}
       </div>
-      {lines.map((l, i) => <div key={i} className="whitespace-pre-wrap">{l}</div>)}
+      {lines.map((l, i) => <div key={i} className="whitespace-pre-wrap">{showLine(l)}</div>)}
       {!running && result && !result.ok && <div className="mt-1 text-red-400">{result.message}</div>}
       {!running && result && result.safetyBackup && (
         <div className="mt-2 flex items-center gap-2">

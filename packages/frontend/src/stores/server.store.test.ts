@@ -26,6 +26,17 @@ describe('serverStore', () => {
     expect(useServerStore.getState().backupRunning).toBe(false);
     expect(useServerStore.getState().backupOutput).toEqual(['a']);
   });
+
+  it('starting a manual backup after a restore clears the restore panel state', () => {
+    useServerStore.getState().reset();
+    useServerStore.getState().startRestoreOutput();
+    useServerStore.getState().apply({ type: 'restore.progress', step: 'stop', line: 'x' });
+    useServerStore.getState().apply({ type: 'restore.done', ok: true, message: 'ok', safetyBackup: 's.tgz' });
+    useServerStore.getState().startBackupOutput();
+    expect(useServerStore.getState().restoreResult).toBeNull();
+    expect(useServerStore.getState().restoreOutput).toEqual([]);
+    expect(useServerStore.getState().restoreRunning).toBe(false);
+  });
 });
 
 describe('restore messages', () => {

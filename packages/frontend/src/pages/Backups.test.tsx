@@ -85,11 +85,14 @@ describe('Backups page restore', () => {
     await waitFor(() => expect(backupsApi.restore).toHaveBeenCalledWith('w.tgz', { startAfter: false, confirmNoSafetyBackup: true }));
   });
 
-  it('viewer has no restore button; a running restore disables run and restore', async () => {
+  it('viewer has no restore button', async () => {
     useAuthStore.setState({ user: { id: 2, username: 'v', displayName: 'V', role: 'viewer' } });
     setup();
     await screen.findByText('w.tgz');
     expect(screen.queryByLabelText('restore')).not.toBeInTheDocument();
+    act(() => { useServerStore.getState().apply({ type: 'restore.done', ok: false, message: 'boom', safetyBackup: 'safe.tgz' }); });
+    expect(screen.getByText('Safety backup: safe.tgz')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Restore this one' })).not.toBeInTheDocument();
   });
 
   it('shows the progress panel, then the failure with the safety backup name', async () => {
@@ -99,6 +102,8 @@ describe('Backups page restore', () => {
     act(() => { useServerStore.getState().startRestoreOutput(); useServerStore.getState().apply({ type: 'restore.progress', step: 'stop', line: 'stopping the server' }); });
     expect(screen.getByText('Restore in progress…')).toBeInTheDocument();
     expect(screen.getByLabelText('restore')).toBeDisabled();
+    expect(screen.getByRole('button', { name: /Backup now/ })).toBeDisabled();
+    expect(screen.getByText('stopping: stopping the server')).toBeInTheDocument();
     act(() => { useServerStore.getState().apply({ type: 'restore.done', ok: false, message: 'partial restore: boom', safetyBackup: 'safe.tgz' }); });
     expect(screen.getByText('Restore failed')).toBeInTheDocument();
     expect(screen.getByText('Safety backup: safe.tgz')).toBeInTheDocument();

@@ -22,8 +22,8 @@ interface ServerStore {
 export const useServerStore = create<ServerStore>()((set) => ({
   info: null, logs: [], backupOutput: [], backupRunning: false, restoreOutput: [], restoreRunning: false, restoreResult: null, connected: false,
   setConnected: (connected) => set({ connected }),
-  startBackupOutput: () => set({ backupOutput: [], backupRunning: true }),
-  startRestoreOutput: () => set({ restoreOutput: [], restoreRunning: true, restoreResult: null }),
+  startBackupOutput: () => set({ backupOutput: [], backupRunning: true, restoreOutput: [], restoreRunning: false, restoreResult: null }),
+  startRestoreOutput: () => set({ restoreOutput: [], restoreRunning: true, restoreResult: null, backupOutput: [], backupRunning: false }),
   reset: () => set({ info: null, logs: [], backupOutput: [], backupRunning: false, restoreOutput: [], restoreRunning: false, restoreResult: null }),
   apply: (msg) => set((s) => {
     switch (msg.type) {

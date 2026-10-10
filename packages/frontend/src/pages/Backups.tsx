@@ -52,7 +52,7 @@ export default function Backups() {
         {isAdmin && <Button className="ml-auto" size="sm" disabled={busy || run.isPending} onClick={() => run.mutate()}><Archive className="mr-1 h-4 w-4" />{t('backups.runNow')}</Button>}
       </div>
       {(restoring || restoreOutput.length > 0 || restoreResult) ? (
-        <BackupRunPanel mode="restore" lines={restoreOutput} running={restoring} result={restoreResult} onRestoreSafety={(n) => { const e = data?.entries.find((x) => x.name === n); if (e) setToRestore(e); }} />
+        <BackupRunPanel mode="restore" lines={restoreOutput} running={restoring} result={restoreResult} onRestoreSafety={isAdmin && !busy ? (n) => setToRestore(data?.entries.find((x) => x.name === n) ?? { name: n, size: 0, modifiedAt: new Date().toISOString() }) : undefined} />
       ) : <BackupRunPanel lines={backupOutput} running={backupRunning || data?.running === true} />}
       <Card><CardContent className="p-4">
         {data && data.entries.length === 0 ? <EmptyState title={t('backups.empty')} /> :
