@@ -12,8 +12,7 @@ import { readServerProperties, rconSettings } from './utils/server-properties.js
 import { LogStreamer } from './logs/log-streamer.js';
 import { MetricsCollector } from './metrics/collector.js';
 import { BackupService } from './backups/backup-service.js';
-import { dirSize, diskFree } from './metrics/disk.js';
-import path from 'path';
+import { worldSize, diskFree } from './metrics/disk.js';
 import { buildServerInfo } from './server-info.js';
 
 process.on('uncaughtException', (err) => logger.error({ err }, 'uncaught exception (kept alive)'));
@@ -67,7 +66,8 @@ async function main() {
     status: () => docker.getStatus(),
     stats: () => docker.stats(),
     rcon: (cmd) => rcon.send(cmd),
-    worldSize: () => dirSize(path.join(config.mc.dataDir, 'world')),
+    // server.properties relu à chaque mesure (toutes les 5 min) pour suivre level-name.
+    worldSize: async () => worldSize(config.mc.dataDir, await readServerProperties(config.mc.dataDir).catch(() => ({}))),
     diskFree: () => diskFree(config.mc.dataDir),
     broadcast: (msg) => broadcast(wss, msg),
     serverInfo: () => app.locals.serverInfo(),
