@@ -49,7 +49,17 @@ export class BackupService extends EventEmitter {
   }
 
   async remove(name: string): Promise<void> {
-    await unlink(await this.resolve(name));
+    const full = await this.resolve(name);
+    try {
+      await unlink(full);
+    } catch (err) {
+      const code = (err as NodeJS.ErrnoException).code;
+      if (code === 'EACCES' || code === 'EPERM') {
+        logger.warn({ err, file: full }, 'cannot delete backup: directory not writable by the backend user');
+        throw new AppError(500, 'Cannot delete backup: the backups directory is not writable by the backend (UID 1000). Fix ownership on the host, see README "Volume ownership".');
+      }
+      throw err;
+    }
     this.emit('listChanged');
   }
 
