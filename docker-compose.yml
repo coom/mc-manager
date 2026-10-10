@@ -21,7 +21,8 @@ services:
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - backend-data:/app/packages/backend/data
-      - mc-data:/mc/data:ro
+      # Lecture-écriture depuis le lot 2b : restauration de backup et server.properties (sous verrou, admin, audité).
+      - mc-data:/mc/data
       - mc-backups:/mc/backups
     networks: [mc-network]
   frontend:

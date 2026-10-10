@@ -13,10 +13,11 @@ Web interface to monitor and manage a Minecraft Java server running in Docker wi
 - Server control: live state (`unavailable`, `stopped`, `starting`, `ready`, `unhealthy`, `stopping`), uptime, start / stop / restart
 - Console: live container logs (pause, text and level filters) and RCON commands with history
 - Dashboard: online players, attendance chart (24 h / 7 d / 30 d), CPU, RAM, MSPT / TPS, world size, free disk space
-- Backups: list, download, delete, manual trigger with live output. A download asks the backend for a single-use link valid for 60 seconds (`POST /api/backups/:name/link`, admin, audited) that the browser then follows, so the archive streams straight to disk
+- Backups: list, download, delete, manual trigger with live output, **restore** (safety backup, server stop, replacement of the archive's data, restart, live progress). A download asks the backend for a single-use link valid for 60 seconds (`POST /api/backups/:name/link`, admin, audited) that the browser then follows, so the archive streams straight to disk
 - Audit log of every admin action (RCON commands, backups, server control, users)
 - Players: online and known players, player pages with vanilla statistics (play time, deaths, kills, distance...), kick / ban / IP ban / op / deop actions, whitelist, operators and bans managed from the interface
 - Connection journal (admin): Minecraft connections with IP, country and duration, refused connections, successful or failed logins to MC Manager; configurable retention (90 days by default)
+- Configuration: `server.properties` editor (form for the common keys and raw file); keys enforced by the itzg container variables are shown locked; restart offered after saving
 - Dark and light themes, English and French
 
 ## Screenshots
@@ -75,7 +76,7 @@ A complete reference stack is provided in [`docker-compose.example.yml`](docker-
 | `FRONTEND_PORT` | `3000` | Published port of the web interface |
 | `MC_CONTAINER` | `mc` | Name of the Minecraft container |
 | `MC_BACKUP_CONTAINER` | `mc-backup` | Name of the mc-backup container |
-| `MC_DATA_DIR` | `/mc/data` | Mount point of the Minecraft data (read-only) |
+| `MC_DATA_DIR` | `/mc/data` | Mount point of the Minecraft data (read-write) |
 | `MC_BACKUPS_DIR` | `/mc/backups` | Mount point of the backups |
 | `MC_RCON_HOST` | `MC_CONTAINER` | RCON host |
 | `MC_RCON_PORT` | `25575` | RCON port |
@@ -88,15 +89,46 @@ The RCON password is **never** configured here: the backend reads it from `serve
 
 ### Volumes and network
 
-`docker-compose.yml` declares `mc-data` and `mc-backups` as **external** volumes whose real names come from `MC_DATA_VOLUME` and `MC_BACKUPS_VOLUME`; they must already exist (the reference stack creates them with these exact names). The Minecraft data is mounted read-only on `/mc/data`, the backups read-write on `/mc/backups`. If your data lives in a bind-mounted directory instead of a named volume, replace the `mc-data:/mc/data:ro` and `mc-backups:/mc/backups` entries by your host paths (and remove the two top-level volume declarations). The backend joins the external network `MC_NETWORK` to reach RCON.
+`docker-compose.yml` declares `mc-data` and `mc-backups` as **external** volumes whose real names come from `MC_DATA_VOLUME` and `MC_BACKUPS_VOLUME`; they must already exist (the reference stack creates them with these exact names). The Minecraft data is mounted read-write on `/mc/data` (needed by restore and the `server.properties` editor), the backups read-write on `/mc/backups`. If your data lives in a bind-mounted directory instead of a named volume, replace the `mc-data:/mc/data` and `mc-backups:/mc/backups` entries by your host paths (and remove the two top-level volume declarations). The backend joins the external network `MC_NETWORK` to reach RCON.
 
 ### Volume ownership
 
-The backend runs as the `node` user (UID 1000) and must be able to delete archives in `mc-backups`. `itzg/mc-backup` runs as root by default, which leaves a root-owned directory and archives that the backend cannot delete (EACCES). The reference stack therefore runs `mc-backup` with `user: "1000:1000"`; do the same in your own stack. To fix an existing root-owned volume: `docker run --rm -v mc-backups:/b alpine chown -R 1000:1000 /b` (or `chown -R 1000:1000` on the host path).
+The backend runs as the `node` user (UID 1000). It must be able to delete archives in `mc-backups`, and to write in the data volume (`/data` of the Minecraft container) for restore and the `server.properties` editor. `itzg/mc-backup` runs as root by default, which leaves a root-owned directory and archives that the backend cannot delete (EACCES). The reference stack therefore runs `mc-backup` with `user: "1000:1000"`; do the same in your own stack. To fix an existing root-owned volume: `docker run --rm -v mc-backups:/b alpine chown -R 1000:1000 /b` (or `chown -R 1000:1000` on the host path). Do the same for the data directory if the backend cannot write there: `chown -R 1000:1000 <data dir>`, contents included. Write failures are reported explicitly in the interface (`EACCES`, `EROFS`, `ENOSPC`).
+
+### Upgrading from lot 2a
+
+Three host-side changes are needed:
+
+- Remove `:ro` from the `/mc/data` mount in `docker-compose.yml`. The repository file is already updated, but if you adapted it to host paths you must do it by hand.
+- Make sure the data directory and its contents are owned by UID 1000: `chown -R 1000:1000 <data dir>`.
+- Decide on `OVERRIDE_SERVER_PROPERTIES` in the Minecraft stack (see "Server configuration").
 
 ### Docker socket warning
 
-The backend mounts `/var/run/docker.sock`. **Access to the Docker socket is equivalent to root access on the host.** Anyone who compromises the backend can take over the machine. Only expose MC Manager behind its authentication, preferably behind a reverse proxy with HTTPS, use strong secrets and enable MFA for admin accounts. Do not publish port 3000 to the open internet without these protections.
+The backend mounts `/var/run/docker.sock`. **Access to the Docker socket is equivalent to root access on the host.** Anyone who compromises the backend can take over the machine. Only expose MC Manager behind its authentication, preferably behind a reverse proxy with HTTPS, use strong secrets and enable MFA for admin accounts. Do not publish port 3000 to the open internet without these protections. Since lot 2b the backend also writes into the server data (restore, `server.properties`), which makes authentication and MFA for admin accounts all the more important.
+
+## Restore
+
+An admin restores a backup from the Backups page. The operation runs in six steps, with live progress:
+
+1. check: the archive is validated entry by entry before anything is written;
+2. safety: a new backup is taken first, so that the current state can be recovered;
+3. stop: the server is stopped (the operation waits until it is actually stopped);
+4. replace: the data to be replaced is removed;
+5. extract: the archive is extracted into the data directory;
+6. start: the server is started again.
+
+Only gzip archives (`.tgz`, `.tar.gz`) are accepted. The top-level entries of the archive (world folders, files) replace their counterparts in the data directory; everything the archive does not contain is kept.
+
+If the server is already stopped, no safety backup can be taken: an explicit confirmation ("no safety backup") is required. If the operation fails part way, the interface reports the name of the safety backup so that you can restore it. Only one operation at a time touches the data (manual backup, restore, `server.properties` edit): another request receives a 409.
+
+## Server configuration
+
+The Configuration page edits `server.properties`, either through a form of the common keys or as the raw file. Saving is atomic and the interface then offers to restart the server.
+
+- Keys governed by an environment variable of the itzg container are shown locked and cannot be changed here: the container rewrites them at each start. Setting `OVERRIDE_SERVER_PROPERTIES=false` in the Minecraft stack makes the file authoritative instead, which frees these keys.
+- The RCON keys (`enable-rcon`, `rcon.port`, `rcon.password`) are always locked and the RCON password is never shown.
+- Changes only take effect after a restart.
 
 ## Roles
 
@@ -136,12 +168,7 @@ IP geolocation uses the `geoip-lite` database embedded in the image (the one shi
 
 ## Roadmap
 
-Lot 2a (players, journals) is delivered.
-
-### Lot 2b
-
-- Backup restoration
-- `server.properties` editor
+Lots 2a (players, journals) and 2b (restore, `server.properties` editor) are delivered.
 
 Out of scope: editing the backup schedule, editing the container environment, managing several servers.
 

@@ -1,7 +1,7 @@
 # MC Manager — Lot 2b « Données du serveur » : conception
 
 **Date :** 2026-10-10
-**Statut :** validé en conversation, en attente de relecture du document
+**Statut :** validé et implémenté (voir le plan 2026-10-10-mc-manager-lot2b-donnees.md)
 **Dépend de :** lot 1 (socle) et lot 2a (joueurs), tous deux fusionnés dans `master`
 
 ## 1. Objectif
@@ -184,3 +184,11 @@ Après un enregistrement avec `restartRequired`, bandeau persistant « Redémarr
 README (fr, en) : section « Restauration » (déroulement, sauvegarde de sécurité, formats, état partiel), section « Configuration du serveur » (clés verrouillées par l'environnement, `OVERRIDE_SERVER_PROPERTIES=false` pour rendre le fichier maître, redémarrage), section « Propriétaire des volumes » étendue à `/data`, invariant de sécurité réécrit, feuille de route mise à jour (lot 2b livré). CLAUDE.md : `RestoreService`, `DataLock`, `archive-filter`, routes et messages WebSocket, nouvel invariant d'écriture, dépendance `tar`.
 
 **Modifications à faire sur l'hôte à la livraison** (à rappeler explicitement à l'utilisateur) : retirer `:ro` du montage `/mc/data` dans `docker-compose.yml` (déjà adapté aux chemins de l'hôte), vérifier que `/opt/minecraft/data` et son contenu appartiennent à l'UID 1000, décider de `OVERRIDE_SERVER_PROPERTIES` dans la stack Minecraft.
+
+## 8. Écarts d'implémentation
+
+- L'entrée racine `./` d'une archive est exemptée du filtre d'entrées.
+- La tentative de restauration est auditée avant la sauvegarde de sécurité (et toujours avant l'arrêt du serveur).
+- `done` est émis après la libération du verrou.
+- Dans le store frontend, `startBackupOutput` et `startRestoreOutput` effacent chacune l'état de l'autre.
+- `BackupRunPanel` localise le préfixe d'étape.

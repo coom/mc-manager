@@ -12,7 +12,7 @@ MC Manager : interface web de suivi et de gestion d'un serveur Minecraft Java so
 | `packages/frontend` (`@mc/frontend`) | SPA React 18 / Vite / Tailwind / shadcn, TanStack Query, zustand, i18next (fr, en) |
 | `packages/common` (`@mc/common`) | Types et constantes partagés (messages WebSocket, DTO, rôles), pas de schémas zod |
 
-La spec est dans `docs/superpowers/specs/2026-10-10-mc-manager-lot1-design.md`. Le lot 2a (joueurs, journaux) est implémenté ; le lot 2b (restauration, éditeur de `server.properties`) ne l'est pas.
+La spec est dans `docs/superpowers/specs/2026-10-10-mc-manager-lot1-design.md`. Les lots 1, 2a et 2b sont implémentés.
 
 ## Commandes
 
@@ -74,6 +74,8 @@ Les services sont exposés via `req.app.locals.{prisma, docker, rcon, logs, metr
 - **Téléchargement de backup** : `POST /api/backups/:name/link` (admin, audité `backup.download`) émet un jeton aléatoire en mémoire (`DownloadTokenStore`, 60 s, usage unique) ; `GET /api/backups/download/:token` est public (monté avant `authMiddleware`, le navigateur le suit sans en-tête Bearer) et streame le fichier avec `res.sendFile`.
 - **Audit** : toute action d'admin écrit une ligne `AuditLog` avant de répondre.
 - **Joueurs (lot 2a)** : `players/player-journal.ts` ouvre et ferme des `PlayerSession` à partir des lignes du `LogStreamer` (`parse-player-line.ts`), réconciliées par le `list` du collecteur (`onPlayers`) avec une grâce de 30 s ; les lignes Docker sont horodatées (`timestamps: true`, préfixe retiré par `splitTimestamp`) pour ignorer l'historique rejoué au démarrage. `players/player-admin.ts` envoie kick/ban/op/whitelist par RCON et interprète les réponses (409 déjà fait, 404 inconnu, 502 réponse inattendue). `players/data-files.ts` lit `whitelist.json`, `ops.json`, `banned-*.json`, `usercache.json` et `<level-name>/stats/<uuid>.json` en lecture seule. Journal web : `auth/web-login-journal.ts`, appelé en fire-and-forget dans `auth.routes.ts`. Rétention : `AppSetting` `journal.retentionDays`, purge quotidienne depuis `index.ts`.
+- **Restauration (lot 2b)** : `backups/restore-service.ts` enchaîne check → safety (`backups.runNow({ lockHeld: true })`) → stop (attente de `status === 'stopped'`, 90 s) → replace → extract (`backups/archive-filter.ts` : gzip seulement, entrées validées avant toute écriture, dossiers de premier niveau remplacés) → start, en diffusant `restore.progress` / `restore.done`. `data/data-lock.ts` sérialise sauvegarde manuelle, restauration et `server.properties` (409 sinon).
+- **server.properties** : `server-properties/properties-service.ts` lit (mot de passe RCON masqué), fusionne (`updateServerProperties`) ou remplace (mode brut validé) et écrit de façon atomique ; les clés gouvernées par `Config.Env` du conteneur (`server-properties/itzg-env.ts`) et les clés RCON sont refusées en 409. Routes `GET/PUT /api/server/properties` (admin, audit `server.properties`).
 - **Messages WebSocket ajoutés** : `player.session` (join/leave, jamais d'IP) et `player.lists.changed`.
 
 ## Architecture frontend
@@ -90,11 +92,11 @@ Les services sont exposés via `req.app.locals.{prisma, docker, rcon, logs, metr
 - JWT avec revendication `typ` (`access`, `mfa`, ...) vérifiée ; rôle rechargé en base à chaque requête dans `authMiddleware`.
 - RBAC : `rbac('admin')` (403) sur start/stop/restart, commandes RCON, backup manuel, téléchargement et suppression de backups, gestion des utilisateurs. `viewer` est en lecture seule.
 - Noms de backup : nom de fichier simple (pas de séparateur ni `..`) ET présent dans la liste réelle du dossier, sinon 404. Aucune traversée de chemin.
-- Le volume de données Minecraft est monté en lecture seule (`:ro`) ; le mot de passe RCON n'est jamais dupliqué dans l'environnement.
+- Le volume de données est monté en lecture-écriture depuis le lot 2b ; les seules écritures sont la restauration et `server.properties`, admin, auditées, sous `DataLock`, avec un filtre d'archive strict. Le mot de passe RCON n'est jamais renvoyé, modifiable ni dupliqué dans l'environnement.
 - Le socket Docker donne un accès root à l'hôte : la WebApp ne doit être exposée que derrière l'authentification (voir README).
 - Le dashboard charge des avatars depuis `mc-heads.net` et les polices depuis Google Fonts : à garder documenté dans la section confidentialité du README.
-- Lot 2a : les IP des joueurs et des connexions web ne sortent que par les routes `rbac('admin')` (`/api/journal/*`, fiche admin) ; `player.session` n'en porte jamais. Noms (`^[A-Za-z0-9_]{3,16}$`), IP (`net.isIP`) et raisons (une ligne, 100 caractères) sont validés dans `player-admin.ts` avant tout envoi RCON. Rien n'écrit dans `/data`.
+- Lot 2a : les IP des joueurs et des connexions web ne sortent que par les routes `rbac('admin')` (`/api/journal/*`, fiche admin) ; `player.session` n'en porte jamais. Noms (`^[A-Za-z0-9_]{3,16}$`), IP (`net.isIP`) et raisons (une ligne, 100 caractères) sont validés dans `player-admin.ts` avant tout envoi RCON. Le lot 2a lui-même n'écrit rien dans `/data` (les écritures sont celles du lot 2b).
 
 ## Tests
 
-vitest, backend et frontend. Pas de Docker ni de serveur RCON en test : tout passe par les fakes `DockerLike`/`RconLike`. Les tests qui ont besoin de la base utilisent `testPrisma()` (`src/test-db.ts`), qui crée une base SQLite temporaire. Les messages WebSocket, parseurs RCON (`parseList`, `parseTickQuery`, `parseTps`), `server.properties`, `BackupService` (dossier temporaire) et l'agrégation des métriques ont des tests unitaires.
+vitest, backend et frontend. Pas de Docker ni de serveur RCON en test : tout passe par les fakes `DockerLike`/`RconLike`. Les tests qui ont besoin de la base utilisent `testPrisma()` (`src/test-db.ts`), qui crée une base SQLite temporaire. Les messages WebSocket, parseurs RCON (`parseList`, `parseTickQuery`, `parseTps`), `server.properties`, `BackupService` (dossier temporaire) et l'agrégation des métriques ont des tests unitaires. `archive-filter` est testé sur de vraies archives dans un dossier temporaire, `restore-service` avec les fakes Docker (arrêt simulé par événement).
