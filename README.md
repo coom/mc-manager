@@ -11,7 +11,7 @@ Web interface to monitor and manage a Minecraft Java server running in Docker wi
 
 - Multi-account authentication: first-admin setup wizard, login, TOTP MFA with recovery codes, trusted devices, password policy, user management
 - Server control: live state (`unavailable`, `stopped`, `starting`, `ready`, `unhealthy`, `stopping`), uptime, start / stop / restart
-- Console: live container logs (pause, text and level filters) and RCON commands with history
+- Console: live container logs (pause, text and level filters) and RCON commands with history and Tab completion (vanilla commands, online players, items, blocks, entities, effects, enchantments; `node packages/frontend/scripts/gen-mc-registry.mjs <version>` regenerates the identifier list for another Minecraft version)
 - Dashboard: online players, attendance chart (24 h / 7 d / 30 d), CPU, RAM, MSPT / TPS, world size, free disk space
 - Backups: list, download, delete, manual trigger with live output, **restore** (safety backup, server stop, replacement of the archive's data, restart, live progress). A download asks the backend for a single-use link valid for 60 seconds (`POST /api/backups/:name/link`, admin, audited) that the browser then follows, so the archive streams straight to disk
 - Audit log of every admin action (RCON commands, backups, server control, users)

@@ -268,6 +268,9 @@ importers:
       jsdom:
         specifier: ^26.1.0
         version: 26.1.0
+      minecraft-data:
+        specifier: ^3.117.0
+        version: 3.117.0
       postcss:
         specifier: ^8.5.18
         version: 8.5.29
@@ -3055,6 +3058,9 @@ packages:
   min-indent@1.0.1:
     resolution: {integrity: sha512-I9jwMn07Sy/IwOj3zVkVik2JTvgpaykDZEigL6Rx6N9LbMywwUSMtxET+7lVoDLLd3O3IXwJwvuuns8UB/HeAg==}
     engines: {node: '>=4'}
+
+  minecraft-data@3.117.0:
+    resolution: {integrity: sha512-glKv0EEmVwKvJwdNAKAal2P7gi/nijU9rEMp8gJmqYYRVswS6hA0q9566lcGHH07Ocmpqw5bMRbARC25pR13gA==}
 
   minimatch@10.2.6:
     resolution: {integrity: sha512-vpLQEs+VLCr1nU0BXS07maYoFwlDAH0gngQuuttxIwutDFEMHq2blX+8vpgxDdK3J1PwjCJiep77OitTZ4Ll1A==}
@@ -6765,6 +6771,8 @@ snapshots:
   mime@2.6.0: {}
 
   min-indent@1.0.1: {}
+
+  minecraft-data@3.117.0: {}
 
   minimatch@10.2.6:
     dependencies:

@@ -11,7 +11,7 @@ Interface web de suivi et de gestion d'un serveur Minecraft Java hébergé dans 
 
 - Authentification multi-comptes : assistant de création du premier admin, connexion, MFA TOTP avec codes de secours, appareils de confiance, politique de mot de passe, gestion des utilisateurs
 - Contrôle du serveur : état en direct (`unavailable`, `stopped`, `starting`, `ready`, `unhealthy`, `stopping`), uptime, start / stop / restart
-- Console : logs du conteneur en direct (pause, filtres texte et niveau) et commandes RCON avec historique
+- Console : logs du conteneur en direct (pause, filtres texte et niveau) et commandes RCON avec historique et complétion par Tab (commandes vanilla, joueurs en ligne, objets, blocs, entités, effets, enchantements ; `node packages/frontend/scripts/gen-mc-registry.mjs <version>` régénère la liste des identifiants pour une autre version de Minecraft)
 - Dashboard : joueurs en ligne, courbe de fréquentation (24 h / 7 j / 30 j), CPU, RAM, MSPT / TPS, taille du monde, espace disque restant
 - Backups : liste, téléchargement, suppression, déclenchement manuel avec sortie en direct, **restauration** (sauvegarde de sécurité, arrêt du serveur, remplacement des données de l'archive, redémarrage, progression en direct). Un téléchargement demande au backend un lien à usage unique valable 60 secondes (`POST /api/backups/:name/link`, admin, audité) que le navigateur suit ensuite, l'archive est donc écrite directement sur le disque
 - Journal d'audit de toutes les actions d'admin (commandes RCON, backups, contrôle du serveur, utilisateurs)

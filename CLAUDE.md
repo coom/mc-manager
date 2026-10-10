@@ -37,6 +37,9 @@ pnpm --filter @mc/backend exec vitest run -t "nom du test"
 
 # i18n : après avoir écrit un fragment dans packages/frontend/scripts/i18n-fragments/*.json
 node packages/frontend/scripts/merge-i18n.mjs   # fusionne dans fr/en et échoue si les clés divergent de en.json
+
+# Complétion de la console : régénère src/components/console/registry.json depuis minecraft-data (devDependency)
+node packages/frontend/scripts/gen-mc-registry.mjs [version]   # sans argument : dernière version Java supportée
 ```
 
 La CI (`.github/workflows/ci.yml`) enchaîne : `pnpm install --frozen-lockfile`, `pnpm audit --audit-level high` (deux avis GHSA sans correctif amont sont ignorés via `pnpm.auditConfig.ignoreGhsas` dans `package.json` : `deepmerge-ts` tiré par la CLI Prisma et `braces` tiré par Tailwind, outils de build uniquement ; retirer l’exclusion dès qu’Ne version corrigée existe), `db:generate`, build de common, lint, typecheck, test, build, puis build des deux Dockerfiles (`Dockerfile.backend`, `Dockerfile.frontend`). Reproduire cet ordre en local avant de pousser.
@@ -88,6 +91,7 @@ Les services sont exposés via `req.app.locals.{prisma, docker, rcon, logs, metr
 - `hooks/use-websocket.ts` : connexion après authentification, reconnexion avec backoff, invalidation des queries `server`, `backups` et `metrics` à chaque reconnexion.
 - Pas de `refetchInterval` sur les données poussées par WebSocket ; seul `GET /api/metrics` (courbe de fréquentation) est rafraîchi toutes les 60 s.
 - i18n : `fr.json` et `en.json` ; ne pas éditer les locales à la main pour une nouvelle fonctionnalité, écrire un fragment dans `scripts/i18n-fragments/` puis lancer `merge-i18n.mjs`.
+- Complétion de la console (`components/console/completion.ts`) : tout est local, RCON n'offre pas de complétion. `GRAMMAR` décrit les positions des commandes vanilla (type `player`/`item`/`block`/`entity`/`effect`/`enchantment`/`coord`/`none`, liste de littéraux, ou embranchement sur un littéral) ; les identifiants viennent de `registry.json` (généré, committé, ~50 Ko), les joueurs en ligne du store (`info.players.names`). Une position non décrite propose les joueurs. `CommandInput` : Tab / Shift+Tab cyclent, Échap masque, toute frappe recalcule.
 - nginx (`Dockerfile.frontend`) proxifie `/api` et `/ws` vers `backend:3001` ; `/api/backups/download/` a un bloc dédié `^~` (pas de buffering, timeout de lecture 1 h) pour les téléchargements volumineux. Ne jamais élargir ce préfixe à `/api/backups/` : nginx répondrait à `GET /api/backups` par un 301 vers son port interne 8080 (`absolute_redirect off` limite les dégâts, mais la liste resterait redirigée).
 
 ## Invariants de sécurité (ne pas casser)

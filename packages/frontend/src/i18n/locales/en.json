@@ -225,10 +225,11 @@
     "levelAll": "All levels",
     "levelWarn": "Warnings and errors",
     "levelError": "Errors only",
-    "commandPlaceholder": "Type a server command and press Enter",
+    "commandPlaceholder": "Type a server command, Tab to complete, Enter to send",
     "send": "Send",
     "pause": "Pause",
-    "resume": "Resume"
+    "resume": "Resume",
+    "suggestions": "Suggestions"
   },
   "server": {
     "status": {

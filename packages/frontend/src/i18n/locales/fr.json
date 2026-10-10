@@ -225,10 +225,11 @@
     "levelAll": "Tous les niveaux",
     "levelWarn": "Avertissements et erreurs",
     "levelError": "Erreurs seulement",
-    "commandPlaceholder": "Tapez une commande serveur puis Entrée",
+    "commandPlaceholder": "Tapez une commande serveur, Tab pour compléter, Entrée pour envoyer",
     "send": "Envoyer",
     "pause": "Pause",
-    "resume": "Reprendre"
+    "resume": "Reprendre",
+    "suggestions": "Suggestions"
   },
   "server": {
     "status": {
