@@ -66,6 +66,14 @@ export default function Login() {
       .catch(() => { /* no trusted device */ });
   }, [isAuthenticated]);
 
+  // Fresh install: no user yet, hand over to the setup wizard.
+  useEffect(() => {
+    if (isAuthenticated) return;
+    authApi.setupStatus()
+      .then((res) => { if (res.needsSetup) navigate("/setup", { replace: true }); })
+      .catch(() => { /* backend unreachable: stay on the login form */ });
+  }, [isAuthenticated, navigate]);
+
   if (isAuthenticated) return <Navigate to="/dashboard" replace />;
 
   const handlePassword = async (e: React.FormEvent) => {

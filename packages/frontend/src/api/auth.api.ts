@@ -1,6 +1,10 @@
 import api from './client';
 
 export const authApi = {
+  // First-run wizard: true while no user exists
+  setupStatus: () =>
+    api.get("/setup/status").then((r) => r.data as { needsSetup: boolean }),
+
   login: (username: string, password: string, trustDevice = false) =>
     api.post('/auth/login', { username, password, trustDevice }, { withCredentials: true }).then((r) => r.data),
 
