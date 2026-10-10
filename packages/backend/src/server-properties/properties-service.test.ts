@@ -5,6 +5,7 @@ import path from 'path';
 import { PropertiesService } from './properties-service.js';
 import { DataLock } from '../data/data-lock.js';
 import { DockerService } from '../docker/docker-service.js';
+import { escapeValue, parseServerProperties } from '../utils/server-properties.js';
 import { FakeDocker, FakeContainer, inspectFixture } from '../docker/fake-docker.js';
 
 describe('PropertiesService', () => {
@@ -61,6 +62,27 @@ describe('PropertiesService', () => {
     expect(file).toBe('# new\nmotd=Hello\nmax-players=3\nrcon.password=secret\nenable-rcon=true\n');
     await expect(service().write({ raw: 'motd=Changed\n' })).rejects.toMatchObject({ statusCode: 409 });
     await expect(service().write({ raw: 'MOTD=x\n' })).rejects.toMatchObject({ statusCode: 400 });
+  });
+  it('keeps a real password containing $ patterns intact in raw mode', async () => {
+    const real = 'pa$$w&rd=x';
+    writeFileSync(path.join(dir, 'server.properties'), `motd=Hello\nrcon.password=${escapeValue(real)}\nenable-rcon=true\n`);
+    await service().write({ raw: 'motd=Hello\nmax-players=1\nrcon.password=********\nenable-rcon=true\n' });
+    const file = readFileSync(path.join(dir, 'server.properties'), 'utf8');
+    expect(file).toContain(`rcon.password=${escapeValue(real)}\n`);
+    expect(parseServerProperties(file)['rcon.password']).toBe(real);
+  });
+  it('writes a key named like an Object.prototype member as a normal key', async () => {
+    await expect(service().write({ values: { constructor: 'x' } })).resolves.toMatchObject({ changed: ['constructor'] });
+    expect(readFileSync(path.join(dir, 'server.properties'), 'utf8')).toContain('constructor=x');
+  });
+  it('refuses every attempt to change or drop the RCON password (409) and never returns it', async () => {
+    await expect(service().write({ raw: 'motd=Hello\nrcon.password=********\nrcon.password=********\nenable-rcon=true\n' })).rejects.toMatchObject({ statusCode: 409 });
+    await expect(service().write({ raw: 'motd=Hello\nenable-rcon=true\n' })).rejects.toMatchObject({ statusCode: 409 });
+    await expect(service().write({ raw: 'motd=Hello\nrcon.password=newpass\nenable-rcon=true\n' })).rejects.toMatchObject({ statusCode: 409 });
+    await expect(service().write({ values: { 'rcon.password': 'newpass' } })).rejects.toMatchObject({ statusCode: 409 });
+    expect(readFileSync(path.join(dir, 'server.properties'), 'utf8')).toBe(text);
+    const { view } = await service().write({ values: { 'max-players': '7' } });
+    expect(JSON.stringify(view)).not.toContain('secret');
   });
   it('is refused while the data lock is held', async () => {
     const release = lock.acquire('restore');

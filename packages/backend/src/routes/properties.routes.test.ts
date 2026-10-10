@@ -44,6 +44,7 @@ describe('properties routes', () => {
   it('rejects a body with neither values nor raw, and surfaces service errors', async () => {
     const app = appWith('admin');
     expect((await request(app).put('/api/server/properties').send({})).status).toBe(400);
+    expect((await request(app).put('/api/server/properties').send({ values: ['a'] })).status).toBe(400);
     app.locals.properties.write.mockRejectedValue(new AppError(409, 'Key motd is managed by MOTD'));
     const res = await request(app).put('/api/server/properties').send({ values: { motd: 'y' } });
     expect(res.status).toBe(409);

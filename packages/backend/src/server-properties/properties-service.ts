@@ -1,4 +1,4 @@
-import { readFile, writeFile, rename, rm } from 'fs/promises';
+import { readFile, writeFile, rename, rm, stat, chmod } from 'fs/promises';
 import path from 'path';
 import type { ServerPropertiesUpdate, ServerPropertiesView } from '@mc/common';
 import type { DockerService } from '../docker/docker-service.js';
@@ -57,12 +57,14 @@ export class PropertiesService {
         if (err) throw new AppError(400, err);
         // Le mot de passe masqué dans le brut est remplacé par la valeur réelle.
         const real = currentValues['rcon.password'];
-        next = real !== undefined ? update.raw.replace(/^(\s*rcon\.password\s*[=:]\s*)\*{8}$/m, `$1${escapeValue(real)}`) : update.raw;
+        next = real !== undefined ? update.raw.replace(/^(\s*rcon\.password\s*[=:]\s*)\*{8}$/m, (_m, p1: string) => p1 + escapeValue(real)) : update.raw;
         if (!next.endsWith('\n')) next += '\n';
         const nextValues = parseServerProperties(next);
-        for (const [k, v] of Object.entries(nextValues)) if (locked[k] && v !== (currentValues[k] ?? '')) throw new AppError(409, `Key ${k} is managed by ${locked[k]}`);
-        for (const k of Object.keys(currentValues)) if (locked[k] && !(k in nextValues)) throw new AppError(409, `Key ${k} is managed by ${locked[k]}`);
-        changed = [...new Set([...Object.keys(currentValues), ...Object.keys(nextValues)])].filter((k) => currentValues[k] !== nextValues[k]).sort();
+        const isLocked = (k: string) => Object.hasOwn(locked, k);
+        for (const [k, v] of Object.entries(nextValues)) if (isLocked(k) && v !== (Object.hasOwn(currentValues, k) ? currentValues[k] : '')) throw new AppError(409, `Key ${k} is managed by ${locked[k]}`);
+        for (const k of Object.keys(currentValues)) if (isLocked(k) && !Object.hasOwn(nextValues, k)) throw new AppError(409, `Key ${k} is managed by ${locked[k]}`);
+        changed = [...new Set([...Object.keys(currentValues), ...Object.keys(nextValues)])]
+          .filter((k) => (Object.hasOwn(currentValues, k) ? currentValues[k] : undefined) !== (Object.hasOwn(nextValues, k) ? nextValues[k] : undefined)).sort();
       } else {
         if (!update.values || typeof update.values !== 'object') throw new AppError(400, 'values must be an object');
         const values: Record<string, string> = {};
@@ -70,8 +72,9 @@ export class PropertiesService {
           if (!KEY_RE.test(k)) throw new AppError(400, `Invalid key ${k}`);
           if (typeof v !== 'string' || /[\r\n]/.test(v)) throw new AppError(400, `Invalid value for ${k}`);
           if (k === 'rcon.password' && v === MASK) continue;
-          if (locked[k]) { if (v !== (currentValues[k] ?? '')) throw new AppError(409, `Key ${k} is managed by ${locked[k]}`); continue; }
-          if (currentValues[k] !== v) values[k] = v;
+          const cur = Object.hasOwn(currentValues, k) ? currentValues[k] : undefined;
+          if (Object.hasOwn(locked, k)) { if (v !== (cur ?? '')) throw new AppError(409, `Key ${k} is managed by ${locked[k]}`); continue; }
+          if (cur !== v) values[k] = v;
         }
         changed = Object.keys(values).sort();
         next = changed.length ? updateServerProperties(current, values) : current;
@@ -89,10 +92,14 @@ export class PropertiesService {
     const tmp = path.join(this.deps.dataDir, `.server.properties.${process.pid}.tmp`);
     try {
       await writeFile(tmp, content, 'utf8');
+      // Conserve le mode du fichier d'origine (ignoré s'il n'existe pas ou sous Windows).
+      try { await chmod(tmp, (await stat(this.file)).mode & 0o777); } catch { /* sans effet */ }
       await rename(tmp, this.file);
     } catch (err) {
       await rm(tmp, { force: true }).catch(() => undefined);
       const code = (err as NodeJS.ErrnoException).code;
+      if (code === 'EROFS') throw new AppError(500, `Cannot write ${this.file}: the data volume is mounted read-only. Remove :ro from the data volume in docker-compose.yml.`);
+      if (code === 'ENOSPC') throw new AppError(500, `Cannot write ${this.file}: no space left on the data volume.`);
       if (code === 'EACCES' || code === 'EPERM') {
         logger.warn({ err, file: this.file }, 'cannot write server.properties');
         throw new AppError(500, `Cannot write ${this.file}: the data directory is not writable by the backend (UID 1000). Run chown -R 1000:1000 ${this.deps.dataDir} on the host.`);
