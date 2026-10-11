@@ -1,7 +1,11 @@
-import { access, readdir, rename, stat } from 'fs/promises';
-import type { Dirent, Stats } from 'fs';
+import { access, mkdir, readdir, rename, rm, stat } from 'fs/promises';
+import { createWriteStream, type Dirent, type Stats } from 'fs';
+import { pipeline } from 'stream/promises';
+import { Transform, type Readable } from 'stream';
+import { randomUUID } from 'crypto';
 import path from 'path';
-import type { ManualMod, ModsDir, ModsView, ModrinthMod, ModrinthSearchHit, ModsSearchResult, WsMessage } from '@mc/common';
+import { MAX_UPLOAD_BYTES, type JarMeta, type ManualMod, type ModsDir, type ModsView, type ModrinthMod, type ModrinthSearchHit, type ModsSearchResult, type WsMessage } from '@mc/common';
+import { inspectJar, pickLoader, JarError } from './jar-inspector.js';
 import type { PrismaClient } from '../../generated/prisma/index.js';
 import type { DockerService } from '../docker/docker-service.js';
 import type { DataLock } from '../data/data-lock.js';
@@ -15,6 +19,16 @@ import { ModrinthUnavailable, type ModrinthLike } from './modrinth-client.js';
 
 /** AppSetting : slugs actifs au dernier démarrage qui a appliqué le fichier de liste (JSON, trié). */
 const APPLIED_KEY = 'mods.appliedSlugs';
+
+export const UPLOAD_NAME_RE = /^[A-Za-z0-9._+ ()[\]-]{1,96}\.jar$/;
+const isUploadName = (n: string): boolean => UPLOAD_NAME_RE.test(n) && !n.includes('..') && path.basename(n) === n;
+
+class TooLarge extends Error { constructor() { super('too large'); this.name = 'TooLarge'; } }
+/** Compte les octets et coupe au-delà de `max` : Content-Length n'est qu'une déclaration. */
+function limited(max: number): Transform {
+  let seen = 0;
+  return new Transform({ transform(chunk: Buffer, _enc, cb) { seen += chunk.length; if (seen > max) cb(new TooLarge()); else cb(null, chunk); } });
+}
 
 export interface ModsDeps {
   dataDir: string;
@@ -40,8 +54,32 @@ export class ModsService {
   /** Promesse de la résolution en arrière-plan en cours (les tests l'attendent). */
   pendingResolution: Promise<void> | null = null;
   private attempted = new Map<string, number>();
+  /** Dossier des uploads en cours (`<uuid>.part`), dans le volume pour que le rename final soit atomique. */
+  readonly tmpDir: string;
+  private metaCache = new Map<string, { size: number; mtimeMs: number; meta: JarMeta | null }>();
 
-  constructor(protected deps: ModsDeps) { this.listingPath = path.join(deps.dataDir, LISTING_RELATIVE); }
+  constructor(protected deps: ModsDeps) {
+    this.listingPath = path.join(deps.dataDir, LISTING_RELATIVE);
+    this.tmpDir = path.join(deps.dataDir, 'mc-manager', 'tmp');
+  }
+
+  /** Au démarrage : supprime les .part laissés par un upload interrompu. */
+  async start(): Promise<void> {
+    let names: string[];
+    try { names = await readdir(this.tmpDir); } catch (err) { if ((err as NodeJS.ErrnoException).code === 'ENOENT') return; throw err; }
+    for (const n of names) if (n.endsWith('.part')) await rm(path.join(this.tmpDir, n), { force: true }).catch((err) => logger.warn({ err, n }, 'cannot remove orphan upload'));
+  }
+
+  /** Métadonnées d'un jar, mises en cache par taille et mtime ; null si illisible. */
+  private async jarMeta(file: string, size: number, mtimeMs: number, dir: ModsDir, loader: string): Promise<JarMeta | null> {
+    const hit = this.metaCache.get(file);
+    if (hit && hit.size === size && hit.mtimeMs === mtimeMs) return hit.meta;
+    let meta: JarMeta | null;
+    try { const info = await inspectJar(file); meta = (pickLoader(info, dir, loader) ?? info.found[0])?.meta ?? null; }
+    catch { meta = null; }
+    this.metaCache.set(file, { size, mtimeMs, meta });
+    return meta;
+  }
 
   protected async inspect() { return this.deps.docker.inspectServer().catch((err) => { logger.warn({ err }, 'docker inspect failed'); return null; }); }
 
@@ -65,7 +103,7 @@ export class ModsService {
       return { entry: l.entry, slug, enabled: l.kind === 'entry', installed: state.installed.has(slug), title: c?.title ?? null, description: c?.description ?? null, iconUrl: c?.iconUrl ?? null, projectId: c?.projectId ?? null };
     });
     const unmanagedLines = lines.filter((l) => l.kind === 'comment' || l.kind === 'invalid').map((l) => ({ raw: l.raw, invalid: l.kind === 'invalid' }));
-    const manual = server ? await this.listManual(server.dir, manifestFiles) : [];
+    const manual = server ? await this.listManual(server.dir, manifestFiles, server.loader) : [];
     // Tant que MODRINTH_PROJECTS ne pointe pas sur notre fichier, un redémarrage n'appliquerait pas la liste : pas de bandeau.
     const modrinthPending = source === 'file' && state.pending;
     const manualPending = !!inspect?.startedAt && this.lastFileWriteAt !== null && new Date(inspect.startedAt).getTime() < this.lastFileWriteAt.getTime();
@@ -111,12 +149,13 @@ export class ModsService {
   }
 
   /** Jars du dossier non gérés par Modrinth (ni le .jar ni son .jar.disabled n'est dans le manifeste). */
-  protected async listManual(dir: ModsDir, manifestFiles: Set<string>): Promise<ManualMod[]> {
+  protected async listManual(dir: ModsDir, manifestFiles: Set<string>, loader: string): Promise<ManualMod[]> {
     const abs = path.join(this.deps.dataDir, dir);
     let entries: Dirent[];
     try { entries = await readdir(abs, { withFileTypes: true }); }
     catch (err) { if ((err as NodeJS.ErrnoException).code === 'ENOENT') return []; throw err; }
-    const byBase = new Map<string, { enabled?: { size: number; mtime: Date }; disabled?: { size: number; mtime: Date } }>();
+    type Form = { size: number; mtime: Date; mtimeMs: number; path: string };
+    const byBase = new Map<string, { enabled?: Form; disabled?: Form }>();
     for (const d of entries) {
       if (!d.isFile()) continue;
       const n = d.name;
@@ -129,13 +168,15 @@ export class ModsService {
       try { st = await stat(path.join(abs, n)); }
       catch (err) { if ((err as NodeJS.ErrnoException).code === 'ENOENT') continue; throw err; }
       const rec = byBase.get(base) ?? {};
-      rec[on ? 'enabled' : 'disabled'] = { size: st.size, mtime: st.mtime };
+      rec[on ? 'enabled' : 'disabled'] = { size: st.size, mtime: st.mtime, mtimeMs: st.mtimeMs, path: path.join(abs, n) };
       byBase.set(base, rec);
     }
-    return [...byBase.entries()].sort(([a], [b]) => a.localeCompare(b)).map(([file, r]) => {
+    const out: ManualMod[] = [];
+    for (const [file, r] of [...byBase.entries()].sort(([a], [b]) => a.localeCompare(b))) {
       const info = r.enabled ?? r.disabled!;
-      return { file, enabled: !!r.enabled, size: info.size, mtime: info.mtime.toISOString(), conflict: !!r.enabled && !!r.disabled, meta: null };
-    });
+      out.push({ file, enabled: !!r.enabled, size: info.size, mtime: info.mtime.toISOString(), conflict: !!r.enabled && !!r.disabled, meta: await this.jarMeta(info.path, info.size, info.mtimeMs, dir, loader) });
+    }
+    return out;
   }
 
   /** Résout en arrière-plan les slugs sans cache, au plus une tentative par slug et par heure, un passage à la fois. */
@@ -287,7 +328,7 @@ export class ModsService {
     const server = await this.requireServer();
     await this.withLock(async () => {
       const manifest = await readManifest(this.deps.dataDir);
-      const manual = await this.listManual(server.dir, new Set(manifest?.files ?? []));
+      const manual = await this.listManual(server.dir, new Set(manifest?.files ?? []), server.loader);
       const m = manual.find((x) => x.file === file);
       if (!m) this.fail(404, 'not_found', 'Unknown file');
       if (m.conflict) this.fail(409, 'conflict', `${file} and ${file}.disabled both exist: remove one on the host`);
@@ -297,6 +338,70 @@ export class ModsService {
       const to = path.join(dir, enabled ? file : `${file}.disabled`);
       if (await access(to).then(() => true, () => false)) this.fail(409, 'conflict', `${path.basename(to)} already exists`);
       try { await rename(from, to); } catch (err) { throw mapWriteError(err, from, dir); }
+      this.lastFileWriteAt = new Date();
+      return { changed: true, result: undefined };
+    });
+  }
+
+  /**
+   * Dépôt d'un jar : corps streamé dans mc-manager/tmp (limite stricte, hors verrou), inspection du
+   * descripteur, puis déplacement atomique dans le dossier des mods sous verrou. Jamais d'écrasement
+   * d'un jar géré par Modrinth ; le temporaire est toujours supprimé.
+   */
+  async upload(opts: { name: string; replace: boolean; declaredSize: number; body: Readable }): Promise<void> {
+    const { name } = opts;
+    if (!isUploadName(name)) this.fail(400, 'invalid_name', 'Invalid jar file name');
+    const server = await this.requireServer();
+    if (!Number.isInteger(opts.declaredSize) || opts.declaredSize < 1 || opts.declaredSize > MAX_UPLOAD_BYTES) this.fail(413, 'too_large', `Jar files are limited to ${MAX_UPLOAD_BYTES} bytes`);
+    await mkdir(this.tmpDir, { recursive: true }).catch((err) => { throw mapWriteError(err, this.tmpDir, this.deps.dataDir); });
+    const tmp = path.join(this.tmpDir, `${randomUUID()}.part`);
+    try {
+      try { await pipeline(opts.body, limited(MAX_UPLOAD_BYTES), createWriteStream(tmp)); }
+      catch (err) {
+        if (err instanceof TooLarge) this.fail(413, 'too_large', `Jar files are limited to ${MAX_UPLOAD_BYTES} bytes`);
+        this.fail(400, 'upload_aborted', `Upload interrupted: ${(err as Error).message}`);
+      }
+      let info;
+      try { info = await inspectJar(tmp); }
+      catch (err) { if (err instanceof JarError) this.fail(422, 'not_a_jar', 'The file is not a valid jar archive'); throw err; }
+      const picked = pickLoader(info, server.dir, server.loader);
+      if (!picked) throw new AppError(422, `This jar is not a ${server.loader} ${server.dir === 'plugins' ? 'plugin' : 'mod'}`, info.found[0]?.loader ?? 'none', 'wrong_loader');
+      await this.withLock(async () => {
+        const manifest = await readManifest(this.deps.dataDir);
+        const files = new Set(manifest?.files ?? []);
+        if (files.has(`${server.dir}/${name}`)) this.fail(409, 'managed', `${name} is managed by Modrinth: remove it from the list instead`);
+        const manual = await this.listManual(server.dir, files, server.loader);
+        const existing = manual.find((m) => m.file === name);
+        if (existing && !opts.replace) this.fail(409, 'exists', `${name} already exists`);
+        const id = picked.meta?.id;
+        const other = id ? manual.find((m) => m.file !== name && m.meta?.id === id) : undefined;
+        if (other) throw new AppError(409, `Mod ${id} is already provided by ${other.file}`, other.file, 'duplicate_mod');
+        const dir = path.join(this.deps.dataDir, server.dir);
+        try {
+          await mkdir(dir, { recursive: true });
+          // rename écrase la destination (c'est le remplacement) ; la forme .disabled est retirée pour ne pas laisser de doublon.
+          if (opts.replace) await rm(path.join(dir, `${name}.disabled`), { force: true });
+          await rename(tmp, path.join(dir, name));
+        } catch (err) { throw mapWriteError(err, path.join(dir, name), dir); }
+        this.metaCache.delete(path.join(dir, name));
+        this.lastFileWriteAt = new Date();
+        return { changed: true, result: undefined };
+      });
+    } finally { await rm(tmp, { force: true }).catch(() => undefined); }
+  }
+
+  /** Supprime définitivement un jar manuel (ses deux formes si présentes) ; jamais un jar géré par Modrinth. */
+  async deleteFile(file: string): Promise<void> {
+    if (!/^[^/\\]+\.jar$/.test(file) || file.includes('..') || path.basename(file) !== file) this.fail(404, 'not_found', 'Unknown file');
+    const server = await this.requireServer();
+    await this.withLock(async () => {
+      const manifest = await readManifest(this.deps.dataDir);
+      const manual = await this.listManual(server.dir, new Set(manifest?.files ?? []), server.loader);
+      if (!manual.some((m) => m.file === file)) this.fail(404, 'not_found', 'Unknown file');
+      const dir = path.join(this.deps.dataDir, server.dir);
+      try { await rm(path.join(dir, file), { force: true }); await rm(path.join(dir, `${file}.disabled`), { force: true }); }
+      catch (err) { throw mapWriteError(err, path.join(dir, file), dir); }
+      this.metaCache.delete(path.join(dir, file)); this.metaCache.delete(path.join(dir, `${file}.disabled`));
       this.lastFileWriteAt = new Date();
       return { changed: true, result: undefined };
     });

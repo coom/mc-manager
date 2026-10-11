@@ -13,6 +13,9 @@ import { FakeModrinth } from './fake-modrinth.js';
 import { ModsService } from './mods-service.js';
 import { MANIFEST_FILE } from './manifest.js';
 import { AppError } from '../middleware/error-handler.js';
+import { Readable } from 'stream';
+import { MAX_UPLOAD_BYTES } from '@mc/common';
+import { writeZip } from './test-zip.js';
 
 // Au niveau du module comme les autres tests du dépôt : le db push de la base temporaire dépasse parfois le timeout d'un hook sous charge.
 const prisma: PrismaClient = testPrisma();
@@ -253,6 +256,104 @@ describe('ModsService writes', () => {
     const { svc } = await setup({ listing: '', startedAt: null, mods: { 'custom.jar': 'a' } });
     await svc.setFileEnabled('custom.jar', false);
     expect((await svc.view()).restartRequired).toBe(false);
+  });
+});
+
+async function fabricJar(id = 'xaeros', name = "Xaero's", version = '24.2'): Promise<Buffer> {
+  const dir = await mkdtemp(path.join(tmpdir(), 'mc-up-'));
+  const f = path.join(dir, 'x.jar');
+  await writeZip(f, { 'fabric.mod.json': JSON.stringify({ id, name, version }), 'a/B.class': 'x' });
+  return readFile(f);
+}
+const up = (svc: ModsService, buf: Buffer, name = 'xaeros.jar', replace = false, declaredSize = buf.length) => svc.upload({ name, replace, declaredSize, body: Readable.from(buf) });
+const parts = (dataDir: string) => readdir(path.join(dataDir, 'mc-manager', 'tmp')).catch(() => [] as string[]);
+
+describe('ModsService.upload / deleteFile', () => {
+  it('stores a verified Fabric jar, exposes its metadata and asks for a restart', async () => {
+    const { svc, dataDir, modsDir, sent } = await setup({ listing: '' });
+    await up(svc, await fabricJar());
+    expect(await modsDir()).toEqual(['xaeros.jar']);
+    expect(await parts(dataDir)).toEqual([]);
+    expect(sent).toEqual([{ type: 'mods.changed' }]);
+    const v = await svc.view();
+    expect(v.manual).toEqual([expect.objectContaining({ file: 'xaeros.jar', enabled: true, meta: { id: 'xaeros', name: "Xaero's", version: '24.2' } })]);
+    expect(v.restartRequired).toBe(true);
+  });
+  it('rejects bad names, oversized declarations, non-jars and jars for another loader, leaving no temp file', async () => {
+    const { svc, dataDir, modsDir } = await setup({ listing: '' });
+    const jar = await fabricJar();
+    expect(await codeOf(up(svc, jar, '../x.jar'))).toEqual([400, 'invalid_name']);
+    expect(await codeOf(up(svc, jar, 'x.txt'))).toEqual([400, 'invalid_name']);
+    expect(await codeOf(up(svc, jar, 'ok.jar', false, MAX_UPLOAD_BYTES + 1))).toEqual([413, 'too_large']);
+    expect(await codeOf(up(svc, Buffer.from('not a zip'), 'bad.jar'))).toEqual([422, 'not_a_jar']);
+    const d = await mkdtemp(path.join(tmpdir(), 'mc-up-')); const f = path.join(d, 'p.jar');
+    await writeZip(f, { 'plugin.yml': 'name: Essentials\nversion: 1\n' });
+    const res = await up(svc, await readFile(f), 'ess.jar').then(() => null, (e: AppError) => e);
+    expect([res?.statusCode, res?.code, res?.details]).toEqual([422, 'wrong_loader', 'paper']);
+    await writeZip(f, { 'a/B.class': 'x' });
+    expect((await up(svc, await readFile(f), 'lib.jar').then(() => null, (e: AppError) => e))?.details).toBe('none');
+    expect(await modsDir().catch(() => [])).toEqual([]);
+    expect(await parts(dataDir)).toEqual([]);
+  });
+  it('stops a body that exceeds the limit regardless of Content-Length', async () => {
+    const { svc, dataDir } = await setup({ listing: '' });
+    const big = Readable.from((async function* () { for (let i = 0; i < 110; i++) yield Buffer.alloc(1024 * 1024, 1); })());
+    const r = await svc.upload({ name: 'big.jar', replace: false, declaredSize: 10, body: big }).then(() => null, (e: AppError) => e);
+    expect([r?.statusCode, r?.code]).toEqual([413, 'too_large']);
+    expect(await parts(dataDir)).toEqual([]);
+  });
+  it('refuses duplicates by name unless replace, and by mod id', async () => {
+    const { svc, modsDir } = await setup({ listing: '' });
+    await up(svc, await fabricJar('xaeros', 'X', '1'));
+    expect(await codeOf(up(svc, await fabricJar('xaeros', 'X', '2')))).toEqual([409, 'exists']);
+    const dup = await up(svc, await fabricJar('xaeros', 'X', '2'), 'xaeros-v2.jar').then(() => null, (e: AppError) => e);
+    expect([dup?.statusCode, dup?.code, dup?.details]).toEqual([409, 'duplicate_mod', 'xaeros.jar']);
+    await up(svc, await fabricJar('xaeros', 'X', '2'), 'xaeros.jar', true);
+    expect((await svc.view()).manual[0].meta?.version).toBe('2');
+    await svc.setFileEnabled('xaeros.jar', false);
+    expect(await codeOf(up(svc, await fabricJar('xaeros', 'X', '3')))).toEqual([409, 'exists']);
+    await up(svc, await fabricJar('xaeros', 'X', '3'), 'xaeros.jar', true); // remplace la forme .disabled : une seule forme reste, active
+    expect(await modsDir()).toEqual(['xaeros.jar']);
+  });
+  it('refuses to overwrite a Modrinth-managed jar even with replace', async () => {
+    const { svc, modsDir, dataDir } = await setup({ listing: 'lithium\n', manifest: { files: ['mods/lithium.jar'], projects: ['lithium'] }, mods: { 'lithium.jar': 'managed' } });
+    expect(await codeOf(up(svc, await fabricJar('lithium'), 'lithium.jar', true))).toEqual([409, 'managed']);
+    expect(await readFile(path.join(dataDir, 'mods', 'lithium.jar'), 'utf8')).toBe('managed');
+    expect(await modsDir()).toEqual(['lithium.jar']);
+  });
+  it('leaves no temp file when the data lock is busy', async () => {
+    const { svc, lock, dataDir } = await setup({ listing: '' });
+    const release = lock.acquire('restore');
+    expect(await codeOf(up(svc, await fabricJar()))).toEqual([409, 'busy']);
+    release();
+    expect(await parts(dataDir)).toEqual([]);
+  });
+  it('deletes a manual jar (both forms), never a managed one', async () => {
+    const { svc, modsDir, sent } = await setup({ listing: '', manifest: { files: ['mods/lithium.jar'], projects: [] }, mods: { 'lithium.jar': 'm', 'x.jar': 'a', 'x.jar.disabled': 'b', 'y.jar': 'c' } });
+    await svc.deleteFile('x.jar');
+    await svc.deleteFile('y.jar');
+    expect((await modsDir()).sort()).toEqual(['lithium.jar']);
+    expect(sent.length).toBe(2);
+    expect(await codeOf(svc.deleteFile('lithium.jar'))).toEqual([404, 'not_found']);
+    expect(await codeOf(svc.deleteFile('../x.jar'))).toEqual([404, 'not_found']);
+    expect((await svc.view()).restartRequired).toBe(true);
+  });
+  it('start() purges orphan .part files and nothing else', async () => {
+    const { svc, dataDir } = await setup({ listing: '' });
+    await mkdir(path.join(dataDir, 'mc-manager', 'tmp'), { recursive: true });
+    await writeFile(path.join(dataDir, 'mc-manager', 'tmp', 'old.part'), 'x');
+    await writeFile(path.join(dataDir, 'mc-manager', 'tmp', 'keep.txt'), 'x');
+    await svc.start();
+    expect(await parts(dataDir)).toEqual(['keep.txt']);
+    const { svc: fresh } = await setup({});
+    await expect(fresh.start()).resolves.toBeUndefined(); // dossier absent : rien à faire
+  });
+  it('caches jar metadata by size and mtime', async () => {
+    const { svc, dataDir } = await setup({ listing: '' });
+    await up(svc, await fabricJar('a', 'A', '1'), 'a.jar');
+    expect((await svc.view()).manual[0].meta?.version).toBe('1');
+    await writeFile(path.join(dataDir, 'mods', 'a.jar'), 'garbage'); // taille différente : ré-inspecté, illisible → null
+    expect((await svc.view()).manual[0].meta).toBeNull();
   });
 });
 
