@@ -17,6 +17,7 @@ import { BackupService } from './backups/backup-service.js';
 import { RestoreService } from './backups/restore-service.js';
 import { PropertiesService } from './server-properties/properties-service.js';
 import { ModsService } from './mods/mods-service.js';
+import { WorldService } from './world/world-service.js';
 import { realModrinth } from './mods/modrinth-client.js';
 import { worldSize, diskFree } from './metrics/disk.js';
 import { buildServerInfo } from './server-info.js';
@@ -109,6 +110,8 @@ async function main() {
   restore.on('progress', (e) => broadcast(wss, { type: 'restore.progress', ...e }));
   restore.on('done', (e) => { broadcast(wss, { type: 'restore.done', ...e }); broadcast(wss, { type: 'backup.list.changed' }); });
   app.locals.properties = new PropertiesService({ dataDir: config.mc.dataDir, docker, lock: backups.dataLock });
+  // Monde (lot 5) : réglages appliqués à chaud par RCON, rien d'écrit dans /data.
+  app.locals.world = new WorldService({ rcon, docker, properties: app.locals.properties });
   // Mods (lot 3) : liste Modrinth gérée dans /data/mc-manager, jars manuels renommés dans mods/ ; écritures sous le même verrou.
   app.locals.mods = new ModsService({ dataDir: config.mc.dataDir, docker, modrinth: realModrinth(), prisma, lock: backups.dataLock, broadcast: (msg) => broadcast(wss, msg), gameVersion: () => metrics.latest().version });
   // Purge des uploads de jars interrompus (mc-manager/tmp/*.part).

@@ -18,6 +18,7 @@ import { auditRoutes } from './routes/audit.routes.js';
 import { playersRoutes, bansRoutes, listsRoutes, whitelistRoutes } from './routes/players.routes.js';
 import { journalRoutes } from './routes/journal.routes.js';
 import { modsRoutes } from './routes/mods.routes.js';
+import { worldRoutes } from './routes/world.routes.js';
 
 export function createApp(): Express {
   const app = express();
@@ -56,6 +57,7 @@ export function createApp(): Express {
   app.use('/api/whitelist', whitelistRoutes);
   app.use('/api/journal', journalRoutes);
   app.use('/api/mods', modsRoutes);
+  app.use('/api/world', worldRoutes);
 
   app.use(errorHandler);
   return app;
