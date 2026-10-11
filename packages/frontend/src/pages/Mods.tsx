@@ -1,10 +1,10 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
+import { AlertTriangle } from 'lucide-react';
 import type { ModsView } from '@mc/common';
 import { modsApi } from '@/api/mods.api';
 import { useAuthStore } from '@/stores/auth.store';
-import { EmptyState } from '@/components/shared/EmptyState';
 import { PageLoader } from '@/components/shared/LoadingSpinner';
 import { RestartBanner } from '@/components/shared/RestartBanner';
 import { SourceBanner } from '@/components/mods/SourceBanner';
@@ -27,22 +27,30 @@ export default function Mods() {
   if (isLoading || !data) return <PageLoader />;
   const pending = importMut.isPending || add.isPending || toggle.isPending || remove.isPending || toggleFile.isPending;
   const canAct = isAdmin && data.server !== null;
+  // Conteneur introuvable ou type non supporté : message dédié, listes en lecture seule, pas de bandeau compose ni de redémarrage.
+  const issue = data.server === null ? (data.serverIssue ?? 'unsupported') : null;
   return (
     <div className="space-y-5">
       <h1 className="text-xl font-semibold">{t('mods.title')}</h1>
-      {data.server === null ? (
-        <EmptyState title={t('mods.unsupported.title')} description={t('mods.unsupported.description')} />
+      {issue ? (
+        <div className="flex items-start gap-3 rounded-md border border-amber-500/40 bg-amber-500/10 p-3 text-sm">
+          <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-500" />
+          <div>
+            <p className="font-medium">{t(`mods.${issue}.title`)}</p>
+            <p className="text-muted-foreground">{t(`mods.${issue}.description`)}</p>
+          </div>
+        </div>
       ) : (
         <>
           <SourceBanner view={data} canAct={isAdmin} onImport={() => importMut.mutate()} importing={importMut.isPending} />
           {data.restartRequired && <RestartBanner message={t('mods.restartRequired')} />}
-          <ModrinthList view={data} canAct={canAct} pending={pending}
-            onAdd={(entry, reset) => add.mutate(entry, { onSuccess: reset })}
-            onToggle={(entry, enabled) => toggle.mutate({ entry, enabled })}
-            onRemove={(entry) => remove.mutate(entry)} />
-          <ManualList mods={data.manual} canAct={canAct} pending={pending} onToggle={(file, enabled) => toggleFile.mutate({ file, enabled })} />
         </>
       )}
+      <ModrinthList view={data} canAct={canAct} pending={pending}
+        onAdd={(entry, reset) => add.mutate(entry, { onSuccess: reset })}
+        onToggle={(entry, enabled) => toggle.mutate({ entry, enabled })}
+        onRemove={(entry) => remove.mutate(entry)} />
+      {data.server !== null && <ManualList mods={data.manual} canAct={canAct} pending={pending} onToggle={(file, enabled) => toggleFile.mutate({ file, enabled })} />}
     </div>
   );
 }

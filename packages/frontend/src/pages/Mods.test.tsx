@@ -13,7 +13,7 @@ vi.mock('@/api/mods.api', () => ({ modsApi: { get: vi.fn(), import: vi.fn(), add
 vi.mock('@/api/server.api', () => ({ serverApi: { restart: vi.fn().mockResolvedValue({}) } }));
 
 const base: ModsView = {
-  server: { loader: 'fabric', dir: 'mods' }, source: 'file', inlineEntries: [], listingExists: true,
+  server: { loader: 'fabric', dir: 'mods' }, serverIssue: null, source: 'file', inlineEntries: [], listingExists: true,
   composeLine: 'MODRINTH_PROJECTS: "@/data/mc-manager/modrinth-projects.txt"', restartRequired: false,
   modrinth: [
     { entry: 'fabric-api', slug: 'fabric-api', enabled: true, installed: true, title: 'Fabric API', iconUrl: null, projectId: 'P7dR8mSH' },
@@ -105,9 +105,20 @@ describe('Mods page', () => {
     expect(screen.queryByRole('button', { name: 'Remove' })).not.toBeInTheDocument();
   });
 
-  it('explains unsupported servers', async () => {
-    setup('admin', { ...base, server: null, source: 'none', modrinth: [], manual: [] });
+  it('explains unsupported servers and keeps the list read-only', async () => {
+    setup('admin', { ...base, server: null, serverIssue: 'unsupported', source: 'none', manual: [] });
     expect(await screen.findByText('Mods are not managed for this server')).toBeInTheDocument();
+    expect(screen.getByText('Fabric API')).toBeInTheDocument();
     expect(screen.queryByPlaceholderText(/Project slug/)).not.toBeInTheDocument();
+    expect(screen.queryByRole('switch')).not.toBeInTheDocument();
+    expect(screen.queryByText(/Restart required/)).not.toBeInTheDocument();
+    expect(screen.queryByText(base.composeLine)).not.toBeInTheDocument();
+  });
+
+  it('distinguishes a missing container from an unsupported server', async () => {
+    setup('admin', { ...base, server: null, serverIssue: 'unavailable', source: 'none', manual: [] });
+    expect(await screen.findByText('The Minecraft container cannot be reached')).toBeInTheDocument();
+    expect(screen.queryByText('Mods are not managed for this server')).not.toBeInTheDocument();
+    expect(screen.getByText('Fabric API')).toBeInTheDocument();
   });
 });

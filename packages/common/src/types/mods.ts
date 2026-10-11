@@ -31,8 +31,10 @@ export interface ManualMod {
 }
 
 export interface ModsView {
-  /** null : type de serveur non supporté (vanilla, inconnu) ou conteneur introuvable. */
+  /** null : type de serveur non supporté (vanilla, inconnu) ou conteneur introuvable ; voir serverIssue. */
   server: { loader: string; dir: ModsDir } | null;
+  /** Pourquoi `server` est null : conteneur introuvable ou Docker injoignable, ou TYPE non supporté. */
+  serverIssue: 'unavailable' | 'unsupported' | null;
   source: ModsSource;
   /** Entrées de la variable MODRINTH_PROJECTS quand source = 'inline' (pour l'import). */
   inlineEntries: string[];

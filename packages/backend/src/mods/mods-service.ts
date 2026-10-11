@@ -1,5 +1,5 @@
 import { access, readdir, rename, stat } from 'fs/promises';
-import type { Dirent } from 'fs';
+import type { Dirent, Stats } from 'fs';
 import path from 'path';
 import type { ManualMod, ModsDir, ModsView, ModrinthMod, WsMessage } from '@mc/common';
 import type { PrismaClient } from '../../generated/prisma/index.js';
@@ -57,10 +57,12 @@ export class ModsService {
     const unmanagedLines = lines.filter((l) => l.kind === 'comment' || l.kind === 'invalid').map((l) => ({ raw: l.raw, invalid: l.kind === 'invalid' }));
     const manual = server ? await this.listManual(server.dir, manifestFiles) : [];
     const active = new Set(modrinth.filter((m) => m.enabled).map((m) => m.slug));
-    const modrinthPending = active.size !== manifestSlugs.size || [...active].some((s) => !manifestSlugs.has(s));
+    // Tant que MODRINTH_PROJECTS ne pointe pas sur notre fichier, un redémarrage n'appliquerait pas la liste : pas de bandeau.
+    const modrinthPending = source === 'file' && (active.size !== manifestSlugs.size || [...active].some((s) => !manifestSlugs.has(s)));
     const manualPending = !!inspect?.startedAt && this.lastFileWriteAt !== null && new Date(inspect.startedAt).getTime() < this.lastFileWriteAt.getTime();
+    const serverIssue = server ? null : inspect ? 'unsupported' : 'unavailable';
     this.scheduleResolution(slugs.filter((s) => !bySlug.has(s)));
-    return { server, source, inlineEntries, listingExists: exists, composeLine: COMPOSE_LINE, restartRequired: modrinthPending || manualPending, modrinth, unmanagedLines, manual };
+    return { server, serverIssue, source, inlineEntries, listingExists: exists, composeLine: COMPOSE_LINE, restartRequired: modrinthPending || manualPending, modrinth, unmanagedLines, manual };
   }
 
   /** Jars du dossier non gérés par Modrinth (ni le .jar ni son .jar.disabled n'est dans le manifeste). */
@@ -77,7 +79,10 @@ export class ModsService {
       if (!on && !n.endsWith('.jar.disabled')) continue;
       const base = on ? n : n.slice(0, -'.disabled'.length);
       if (manifestFiles.has(`${dir}/${base}`)) continue;
-      const st = await stat(path.join(abs, n));
+      let st: Stats;
+      // Un jar peut disparaître entre readdir et stat : l'image supprime et retélécharge au démarrage du conteneur.
+      try { st = await stat(path.join(abs, n)); }
+      catch (err) { if ((err as NodeJS.ErrnoException).code === 'ENOENT') continue; throw err; }
       const rec = byBase.get(base) ?? {};
       rec[on ? 'enabled' : 'disabled'] = { size: st.size, mtime: st.mtime };
       byBase.set(base, rec);

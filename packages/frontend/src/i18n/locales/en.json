@@ -536,7 +536,7 @@
     "title": "Mods",
     "unsupported": {
       "title": "Mods are not managed for this server",
-      "description": "The Minecraft container must run a modded or plugin server (TYPE=FABRIC, QUILT, FORGE, NEOFORGE, PAPER, ...). Vanilla servers have no mods folder."
+      "description": "The Minecraft container must run a modded or plugin server (TYPE=FABRIC, QUILT, FORGE, NEOFORGE, PAPER, ...). Vanilla servers have no mods folder. The list below is read-only."
     },
     "source": {
       "inline": {
@@ -598,6 +598,10 @@
       "busy": "Another data operation is running (backup, restore or configuration). Try again in a moment.",
       "conflict": "Conflicting state on disk: check the mods folder on the host.",
       "not_found": "This mod is no longer listed."
+    },
+    "unavailable": {
+      "title": "The Minecraft container cannot be reached",
+      "description": "Docker or the container is unavailable, so the server type is unknown. The list below is read-only until the container is back."
     }
   }
 }

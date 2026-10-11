@@ -1,5 +1,8 @@
 import { describe, it, expect, afterAll, vi } from 'vitest';
-import { mkdtemp, mkdir, writeFile, readFile, readdir } from 'fs/promises';
+import { mkdtemp, mkdir, writeFile, readFile, readdir, stat } from 'fs/promises';
+
+// stat est espionné pour simuler un jar supprimé entre readdir et stat (l'image retélécharge au démarrage).
+vi.mock('fs/promises', async (importOriginal) => { const m = await importOriginal<typeof import('fs/promises')>(); return { ...m, stat: vi.fn(m.stat) }; });
 import { tmpdir } from 'os';
 import path from 'path';
 import type { WsMessage } from '@mc/common';
@@ -37,6 +40,7 @@ describe('ModsService.view', () => {
     const { svc } = await setup({ noContainer: true });
     const v = await svc.view();
     expect(v.server).toBeNull();
+    expect(v.serverIssue).toBe('unavailable');
     expect(v.source).toBe('none');
     expect(v.modrinth).toEqual([]);
     expect(v.manual).toEqual([]);
@@ -46,7 +50,16 @@ describe('ModsService.view', () => {
     const { svc } = await setup({ env: ['TYPE=VANILLA'], listing: 'lithium\n' });
     const v = await svc.view();
     expect(v.server).toBeNull();
+    expect(v.serverIssue).toBe('unsupported');
     expect(v.modrinth.map((m) => m.entry)).toEqual(['lithium']);
+    const { svc: ok } = await setup({ listing: 'lithium\n' });
+    expect((await ok.view()).serverIssue).toBeNull();
+  });
+  it('skips a jar removed between readdir and stat instead of failing the view', async () => {
+    const { svc } = await setup({ listing: '', mods: { 'a.jar': 'a', 'b.jar': 'b' } });
+    vi.mocked(stat).mockRejectedValueOnce(Object.assign(new Error('gone'), { code: 'ENOENT' }));
+    const v = await svc.view();
+    expect(v.manual.map((m) => m.file)).toEqual(['b.jar']);
   });
   it('aggregates listing, manifest, cache and the mods folder', async () => {
     await prisma.modrinthProject.create({ data: { slug: 'lithium', projectId: 'gvQqBUqZ', title: 'Lithium', iconUrl: 'https://cdn.modrinth.com/l.png', fetchedAt: new Date() } });
@@ -87,6 +100,9 @@ describe('ModsService.view', () => {
     expect((await svc3.view()).restartRequired).toBe(true);
     const { svc: svc4 } = await setup({ listing: '# lithium\n' });
     expect((await svc4.view()).restartRequired).toBe(false);
+    // Tant que MODRINTH_PROJECTS ne pointe pas sur notre fichier, un redémarrage n'appliquerait rien : pas de bandeau.
+    const { svc: svc5 } = await setup({ env: ['TYPE=FABRIC', 'MODRINTH_PROJECTS=fabric-api'], listing: 'lithium\n' });
+    expect((await svc5.view()).restartRequired).toBe(false);
   });
   it('hides both forms of a Modrinth-managed jar and flags a manual conflict', async () => {
     const { svc } = await setup({ manifest: { files: ['mods/lithium.jar'], projects: ['lithium'] }, listing: 'lithium\n', mods: { 'lithium.jar': 'a', 'lithium.jar.disabled': 'b', 'x.jar': 'c', 'x.jar.disabled': 'd' } });

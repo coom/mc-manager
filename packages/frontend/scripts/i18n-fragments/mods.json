@@ -1,7 +1,8 @@
 { "namespace": "mods", "keys": {
   "en": {
     "title": "Mods",
-    "unsupported": { "title": "Mods are not managed for this server", "description": "The Minecraft container must run a modded or plugin server (TYPE=FABRIC, QUILT, FORGE, NEOFORGE, PAPER, ...). Vanilla servers have no mods folder." },
+    "unsupported": { "title": "Mods are not managed for this server", "description": "The Minecraft container must run a modded or plugin server (TYPE=FABRIC, QUILT, FORGE, NEOFORGE, PAPER, ...). Vanilla servers have no mods folder. The list below is read-only." },
+    "unavailable": { "title": "The Minecraft container cannot be reached", "description": "Docker or the container is unavailable, so the server type is unknown. The list below is read-only until the container is back." },
     "source": {
       "inline": { "title": "The mod list still lives in your compose file", "description": "Import it once, then point MODRINTH_PROJECTS to the file managed by MC Manager so that your changes apply at the next restart." },
       "other": { "title": "MODRINTH_PROJECTS points to another listing file", "description": "MC Manager only manages its own file. Point the variable to it so that your changes apply at the next restart." },
@@ -32,7 +33,8 @@
   },
   "fr": {
     "title": "Mods",
-    "unsupported": { "title": "Les mods ne sont pas gérés pour ce serveur", "description": "Le conteneur Minecraft doit être un serveur moddé ou à plugins (TYPE=FABRIC, QUILT, FORGE, NEOFORGE, PAPER, ...). Un serveur vanilla n'a pas de dossier de mods." },
+    "unsupported": { "title": "Les mods ne sont pas gérés pour ce serveur", "description": "Le conteneur Minecraft doit être un serveur moddé ou à plugins (TYPE=FABRIC, QUILT, FORGE, NEOFORGE, PAPER, ...). Un serveur vanilla n'a pas de dossier de mods. La liste ci-dessous est en lecture seule." },
+    "unavailable": { "title": "Le conteneur Minecraft est injoignable", "description": "Docker ou le conteneur est indisponible, le type de serveur est donc inconnu. La liste ci-dessous est en lecture seule tant que le conteneur n'est pas revenu." },
     "source": {
       "inline": { "title": "La liste des mods est encore dans votre compose", "description": "Importez-la une fois, puis faites pointer MODRINTH_PROJECTS vers le fichier géré par MC Manager pour que vos changements s'appliquent au prochain redémarrage." },
       "other": { "title": "MODRINTH_PROJECTS pointe vers un autre fichier de liste", "description": "MC Manager ne gère que son propre fichier. Faites pointer la variable dessus pour que vos changements s'appliquent au prochain redémarrage." },
