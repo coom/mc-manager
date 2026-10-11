@@ -17,6 +17,7 @@ import { DownloadTokenStore } from './backups/download-tokens.js';
 import { auditRoutes } from './routes/audit.routes.js';
 import { playersRoutes, bansRoutes, listsRoutes, whitelistRoutes } from './routes/players.routes.js';
 import { journalRoutes } from './routes/journal.routes.js';
+import { modsRoutes } from './routes/mods.routes.js';
 
 export function createApp(): Express {
   const app = express();
@@ -54,6 +55,7 @@ export function createApp(): Express {
   app.use('/api/lists', listsRoutes);
   app.use('/api/whitelist', whitelistRoutes);
   app.use('/api/journal', journalRoutes);
+  app.use('/api/mods', modsRoutes);
 
   app.use(errorHandler);
   return app;
