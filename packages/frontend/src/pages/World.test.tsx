@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import i18n from '@/i18n';
@@ -46,5 +46,65 @@ describe('World page', () => {
     expect(await screen.findByRole('heading', { level: 1, name: 'World' })).toBeInTheDocument();
     useServerStore.setState({ info: { status: 'stopped', containerName: 'mc', startedAt: null } as never });
     expect(await screen.findByText('The server must be running to adjust the world.')).toBeInTheDocument();
+  });
+});
+
+describe('World cards', () => {
+  beforeAll(async () => { await i18n.changeLanguage('en'); });
+  beforeEach(() => { vi.clearAllMocks(); });
+
+  it('shows the clock and applies a time preset, replacing the cached state', async () => {
+    setup();
+    expect(await screen.findByText('12:00')).toBeInTheDocument();
+    expect(screen.getByText('Day 12')).toBeInTheDocument();
+    vi.mocked(worldApi.setTime).mockResolvedValue({ ...worldState, time: { daytime: 13000, day: 12 } });
+    fireEvent.click(screen.getByRole('button', { name: 'Night' }));
+    await waitFor(() => expect(worldApi.setTime).toHaveBeenCalledWith('night'));
+    expect(await screen.findByText('19:00')).toBeInTheDocument();
+  });
+  it('freezing the daylight cycle sets doDaylightCycle to false', async () => {
+    setup();
+    const sw = await screen.findByRole('switch', { name: 'Freeze the day-night cycle' });
+    expect(sw).toHaveAttribute('aria-checked', 'false');
+    vi.mocked(worldApi.setGamerule).mockResolvedValue({ ...worldState, gamerules: { ...worldState.gamerules, doDaylightCycle: false } });
+    fireEvent.click(sw);
+    await waitFor(() => expect(worldApi.setGamerule).toHaveBeenCalledWith('doDaylightCycle', false));
+    await waitFor(() => expect(sw).toHaveAttribute('aria-checked', 'true'));
+  });
+  it('sends the weather and the tick rate', async () => {
+    setup();
+    vi.mocked(worldApi.setWeather).mockResolvedValue(worldState);
+    vi.mocked(worldApi.setTick).mockResolvedValue({ ...worldState, tick: { ...worldState.tick, targetRate: 40 } });
+    fireEvent.click(await screen.findByRole('button', { name: 'Rain' }));
+    await waitFor(() => expect(worldApi.setWeather).toHaveBeenCalledWith('rain'));
+    fireEvent.change(screen.getByLabelText('Tick rate'), { target: { value: '40' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Apply', exact: true }));
+    await waitFor(() => expect(worldApi.setTick).toHaveBeenCalledWith({ rate: 40 }));
+  });
+  it('sprint converts seconds to ticks', async () => {
+    setup();
+    vi.mocked(worldApi.setTick).mockResolvedValue(worldState);
+    fireEvent.change(await screen.findByLabelText('Seconds to sprint'), { target: { value: '60' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Sprint' }));
+    await waitFor(() => expect(worldApi.setTick).toHaveBeenCalledWith({ sprint: 1200 }));
+  });
+  it('disables the tick card when unsupported', async () => {
+    setup('admin', 'ready', { ...worldState, tick: { supported: false, targetRate: null, frozen: false, sprinting: false } });
+    expect(await screen.findByText('Requires Minecraft 1.20.3 or later.')).toBeInTheDocument();
+    expect(screen.getByLabelText('Tick rate')).toBeDisabled();
+  });
+  it('shows the reset-at-restart hint for difficulty', async () => {
+    setup('admin', 'ready', { ...worldState, resetOnRestart: { difficulty: 'DIFFICULTY' } });
+    expect(await screen.findByText(/Reset at restart by DIFFICULTY/)).toBeInTheDocument();
+  });
+  it('applies an integer gamerule and shows unknown values', async () => {
+    setup('admin', 'ready', { ...worldState, gamerules: { ...worldState.gamerules, randomTickSpeed: null } });
+    const input = await screen.findByLabelText('Random tick speed (crop growth)');
+    expect(input).toHaveValue(null);
+    expect(screen.getAllByText('unknown').length).toBeGreaterThan(0);
+    vi.mocked(worldApi.setGamerule).mockResolvedValue({ ...worldState, gamerules: { ...worldState.gamerules, randomTickSpeed: 10 } });
+    fireEvent.change(input, { target: { value: '10' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Apply randomTickSpeed' }));
+    await waitFor(() => expect(worldApi.setGamerule).toHaveBeenCalledWith('randomTickSpeed', 10));
   });
 });

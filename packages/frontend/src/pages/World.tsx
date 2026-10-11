@@ -9,7 +9,10 @@ import { useAuthStore } from '@/stores/auth.store';
 import { useServerStore } from '@/stores/server.store';
 import { EmptyState } from '@/components/shared/EmptyState';
 import { PageLoader } from '@/components/shared/LoadingSpinner';
-import type { WorldCardProps } from '@/components/world/types';
+import { TimeWeatherCard } from '@/components/world/TimeWeatherCard';
+import { TickCard } from '@/components/world/TickCard';
+import { RulesCard } from '@/components/world/RulesCard';
+import { GamerulesCard } from '@/components/world/GamerulesCard';
 
 type ApiError = { response?: { data?: { error?: string; code?: string } } };
 
@@ -35,12 +38,12 @@ export default function World() {
       <h1 className="text-xl font-semibold">{t('world.title')}</h1>
       {!online ? <EmptyState title={t('world.offline')} /> : isLoading || !data ? <PageLoader /> : (
         <div className="grid gap-4 lg:grid-cols-2">
-          {/* Les cartes sont ajoutées par la tâche suivante ; `run` et `pending` leur sont transmis. */}
-          <WorldCards state={data} pending={pending} run={run} />
+          <TimeWeatherCard state={data} pending={pending} run={run} />
+          <TickCard state={data} pending={pending} run={run} />
+          <RulesCard state={data} pending={pending} run={run} />
+          <GamerulesCard state={data} pending={pending} run={run} />
         </div>
       )}
     </div>
   );
 }
-
-function WorldCards(props: WorldCardProps) { void props; return null; }
