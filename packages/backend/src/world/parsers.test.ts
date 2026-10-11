@@ -35,6 +35,11 @@ describe('world parsers', () => {
       .toEqual({ targetRate: 40, frozen: true, sprinting: false });
     expect(parseTickStatus('The game is sprinting\nTarget tick rate: 20.0 per second.'))
       .toEqual({ targetRate: 20, frozen: false, sprinting: true });
+    // RCON vanilla colle les deux messages sans séparateur (MC-7569) : pas de limite de mot entre « frozen » et « Target ».
+    expect(parseTickStatus('The game is frozenTarget tick rate: 20.0 per second.\nAverage time per tick: 0.1ms'))
+      .toEqual({ targetRate: 20, frozen: true, sprinting: false });
+    expect(parseTickStatus('The game is sprintingTarget tick rate: 20.0 per second.'))
+      .toEqual({ targetRate: 20, frozen: false, sprinting: true });
     // Ligne de taux absente : l'état est quand même rendu.
     expect(parseTickStatus('The game is frozen')).toEqual({ targetRate: null, frozen: true, sprinting: false });
     expect(parseTickStatus('§aTarget tick rate: §f12.5§a per second.')?.targetRate).toBe(12.5);

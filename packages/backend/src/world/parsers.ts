@@ -30,13 +30,14 @@ export function parseDifficulty(raw: string): Difficulty | null {
 
 /**
  * `tick query` : ligne « Target tick rate: 20.0 per second. » et, selon l'état, une ligne contenant
- * « frozen » ou « sprinting ». Tolérant : l'absence de la ligne de taux ne masque pas l'état.
+ * « frozen » ou « sprinting ». Tolérant : l'absence de la ligne de taux ne masque pas l'état. RCON vanilla colle
+ * les deux messages sans séparateur (MC-7569), donc aucune limite de mot n'est exigée après l'état.
  */
 export function parseTickStatus(raw: string): { targetRate: number | null; frozen: boolean; sprinting: boolean } | null {
   const s = stripColors(raw);
   const rate = /Target tick rate:\s*([\d.]+)/i.exec(s);
-  const frozen = /\bfrozen\b/i.test(s);
-  const sprinting = /\bsprint/i.test(s);
+  const frozen = /frozen/i.test(s);
+  const sprinting = /sprinting/i.test(s);
   if (!rate && !frozen && !sprinting) return null;
   return { targetRate: rate ? parseFloat(rate[1]) : null, frozen, sprinting };
 }
