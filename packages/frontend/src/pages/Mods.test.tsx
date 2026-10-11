@@ -21,7 +21,7 @@ const base: ModsView = {
     { entry: 'spark', slug: 'spark', enabled: false, installed: false, title: null, description: null, iconUrl: null, projectId: null },
   ],
   unmanagedLines: [{ raw: 'bad entry', invalid: true }],
-  manual: [{ file: 'custom.jar', enabled: true, size: 2048, mtime: '2026-10-11T10:00:00Z', conflict: false }],
+  manual: [{ file: 'custom.jar', enabled: true, size: 2048, mtime: '2026-10-11T10:00:00Z', conflict: false, meta: null }],
 };
 
 function setup(role: 'admin' | 'viewer' = 'admin', view: ModsView = base) {

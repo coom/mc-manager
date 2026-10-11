@@ -89,6 +89,9 @@ importers:
       ws:
         specifier: ^8.21.0
         version: 8.22.0
+      yauzl:
+        specifier: ^3.2.0
+        version: 3.4.0
       zod:
         specifier: ^3.25.76
         version: 3.25.76
@@ -126,6 +129,9 @@ importers:
       '@types/ws':
         specifier: ^8.18.1
         version: 8.18.2
+      '@types/yauzl':
+        specifier: ^2.10.3
+        version: 2.10.3
       prisma:
         specifier: ^6.19.3
         version: 6.19.3(typescript@5.9.3)
@@ -1808,6 +1814,9 @@ packages:
 
   '@types/ws@8.18.2':
     resolution: {integrity: sha512-67MQl+fpWKVTT1NYdnmo3U4sc/xPo/zQBncVnI74qmQa0z/b+1g6iYqNmGCPbxO+zz2aklb08a0oHfegiVd0/w==}
+
+  '@types/yauzl@2.10.3':
+    resolution: {integrity: sha512-oJoftv0LSuaDZE3Le4DbKX+KS9G36NzOeSap90UIK0yMA/NhKJhqlSGtNDORNRaIbQfzjXDrQa0ytJ6mNRGz/Q==}
 
   '@typescript-eslint/eslint-plugin@8.71.1':
     resolution: {integrity: sha512-nNlBf6HuotqMgZvSkWD5hNdemiBIxQ2NmrlgfcUIeZRs+BbakjscCQRq/Hb74EFVnFiSWWdL12JruqwBy3ERDw==}
@@ -5446,6 +5455,10 @@ snapshots:
       '@types/superagent': 8.1.11
 
   '@types/ws@8.18.2':
+    dependencies:
+      '@types/node': 22.20.5
+
+  '@types/yauzl@2.10.3':
     dependencies:
       '@types/node': 22.20.5
 

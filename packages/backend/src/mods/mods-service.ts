@@ -128,7 +128,7 @@ export class ModsService {
     }
     return [...byBase.entries()].sort(([a], [b]) => a.localeCompare(b)).map(([file, r]) => {
       const info = r.enabled ?? r.disabled!;
-      return { file, enabled: !!r.enabled, size: info.size, mtime: info.mtime.toISOString(), conflict: !!r.enabled && !!r.disabled };
+      return { file, enabled: !!r.enabled, size: info.size, mtime: info.mtime.toISOString(), conflict: !!r.enabled && !!r.disabled, meta: null };
     });
   }
 

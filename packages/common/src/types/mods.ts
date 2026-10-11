@@ -1,8 +1,15 @@
+/** Grammaire d'une entrée MODRINTH_PROJECTS (partagée backend/frontend) : préfixe loader, projet, version, `?` optionnel. */
+export const MODRINTH_ENTRY_RE = /^((datapack|fabric|forge|paper):)?[A-Za-z0-9_-]{3,64}(:[A-Za-z0-9._+-]{1,64})?\??$/i;
+/** Taille maximale d'un jar déposé depuis la WebUI (nginx et backend appliquent la même limite). */
+export const MAX_UPLOAD_BYTES = 100 * 1024 * 1024;
+
 export type ModsSource = 'file' | 'inline' | 'other' | 'none';
 export type ModsDir = 'mods' | 'plugins';
 export type ModsErrorCode =
   | 'invalid_entry' | 'duplicate' | 'unknown_project' | 'wrong_type' | 'loader_mismatch'
-  | 'modrinth_unavailable' | 'unsupported_server' | 'busy' | 'conflict' | 'not_found';
+  | 'modrinth_unavailable' | 'unsupported_server' | 'busy' | 'conflict' | 'not_found'
+  | 'invalid_query' | 'invalid_name' | 'too_large' | 'upload_aborted' | 'not_a_jar' | 'wrong_loader'
+  | 'exists' | 'managed' | 'duplicate_mod';
 
 /** Une entrée du fichier de liste Modrinth géré par MC Manager. */
 export interface ModrinthMod {
@@ -21,6 +28,9 @@ export interface ModrinthMod {
   projectId: string | null;
 }
 
+/** Métadonnées lues dans le descripteur du jar (fabric.mod.json, mods.toml, plugin.yml). */
+export interface JarMeta { id: string | null; name: string | null; version: string | null }
+
 /** Un jar du dossier mods/ (ou plugins/) qui n'est pas géré par Modrinth. */
 export interface ManualMod {
   /** Nom du fichier sans suffixe `.disabled` (identifiant pour les routes). */
@@ -30,6 +40,8 @@ export interface ManualMod {
   mtime: string;
   /** `file` et `file.disabled` existent tous les deux : aucune action possible. */
   conflict: boolean;
+  /** null si le jar n'a pas de descripteur lisible. */
+  meta: JarMeta | null;
 }
 
 export interface ModsView {
@@ -48,4 +60,26 @@ export interface ModsView {
   /** Lignes du fichier conservées telles quelles : commentaires libres et lignes invalides. */
   unmanagedLines: { raw: string; invalid: boolean }[];
   manual: ManualMod[];
+}
+
+/** Un résultat de recherche Modrinth, relayé par le backend. */
+export interface ModrinthSearchHit {
+  slug: string;
+  projectId: string;
+  title: string;
+  description: string | null;
+  iconUrl: string | null;
+  author: string | null;
+  downloads: number;
+  follows: number;
+  latestVersion: string | null;
+  /** Déjà dans le fichier de liste (actif ou désactivé). */
+  alreadyListed: boolean;
+}
+
+export interface ModsSearchResult {
+  loader: string;
+  /** Version Minecraft utilisée comme filtre ; null = inconnue, filtre sur le loader seul. */
+  gameVersion: string | null;
+  hits: ModrinthSearchHit[];
 }

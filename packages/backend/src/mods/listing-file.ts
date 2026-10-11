@@ -1,7 +1,9 @@
 import { readFile } from 'fs/promises';
+import { MODRINTH_ENTRY_RE } from '@mc/common';
 import { atomicWriteFile } from '../utils/atomic-write.js';
 
-export const ENTRY_RE = /^((datapack|fabric|forge|paper):)?[A-Za-z0-9_-]{3,64}(:[A-Za-z0-9._+-]{1,64})?\??$/i;
+/** Grammaire partagée avec le frontend (`@mc/common`). */
+export const ENTRY_RE = MODRINTH_ENTRY_RE;
 const PREFIXES = new Set(['datapack', 'fabric', 'forge', 'paper']);
 
 export const isValidEntry = (s: string): boolean => typeof s === 'string' && ENTRY_RE.test(s);
