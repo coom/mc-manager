@@ -7,7 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog';
-import { AddModForm } from './AddModForm';
+import { ModSearchBox } from './ModSearchBox';
 
 interface Props {
   view: ModsView; canAct: boolean; pending: boolean;
@@ -23,7 +23,7 @@ export function ModrinthList({ view, canAct, pending, onAdd, onToggle, onRemove 
     <Card>
       <CardHeader className="space-y-3">
         <CardTitle className="text-base">{t('mods.modrinth.title')}</CardTitle>
-        {canAct && <AddModForm onAdd={onAdd} pending={pending} />}
+        {canAct && <ModSearchBox onAdd={onAdd} pending={pending} />}
       </CardHeader>
       <CardContent className="space-y-2">
         {view.modrinth.length === 0 && <p className="text-sm text-muted-foreground">{t('mods.modrinth.empty')}</p>}

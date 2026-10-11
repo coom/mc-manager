@@ -9,7 +9,7 @@ import { toast } from 'sonner';
 import type { ModsView } from '@mc/common';
 
 vi.mock('sonner', () => ({ toast: { error: vi.fn(), success: vi.fn() } }));
-vi.mock('@/api/mods.api', () => ({ modsApi: { get: vi.fn(), import: vi.fn(), add: vi.fn(), toggle: vi.fn(), remove: vi.fn(), toggleFile: vi.fn() } }));
+vi.mock('@/api/mods.api', () => ({ modsApi: { get: vi.fn(), import: vi.fn(), add: vi.fn(), toggle: vi.fn(), remove: vi.fn(), toggleFile: vi.fn(), search: vi.fn(), upload: vi.fn(), deleteFile: vi.fn() } }));
 vi.mock('@/api/server.api', () => ({ serverApi: { restart: vi.fn().mockResolvedValue({}) } }));
 
 const base: ModsView = {
@@ -72,18 +72,40 @@ describe('Mods page', () => {
     await waitFor(() => expect(modsApi.toggleFile).toHaveBeenCalledWith('custom.jar', false));
   });
 
-  it('adds a mod and shows the translated error code on failure', async () => {
+  it('searches Modrinth after a short pause, adds from a result and marks listed ones', async () => {
     setup();
-    await screen.findByText('Fabric API');
-    const input = screen.getByPlaceholderText(/Project slug/);
+    vi.mocked(modsApi.search).mockResolvedValue({ loader: 'fabric', gameVersion: '1.21.1', hits: [
+      { slug: 'xaeros-minimap', projectId: '1', title: "Xaero's Minimap", description: 'A minimap.', iconUrl: null, author: 'xaero96', downloads: 12345678, follows: 1, latestVersion: '24.2', alreadyListed: false },
+      { slug: 'fabric-api', projectId: '2', title: 'Fabric API', description: null, iconUrl: null, author: null, downloads: 0, follows: 0, latestVersion: null, alreadyListed: true },
+    ] });
+    vi.mocked(modsApi.add).mockResolvedValue(base);
+    await screen.findByText('custom.jar');
+    const input = screen.getByPlaceholderText(/Search Modrinth/);
+    fireEvent.change(input, { target: { value: 'xa' } });
+    expect(modsApi.search).not.toHaveBeenCalled();
+    await waitFor(() => expect(modsApi.search).toHaveBeenCalledWith('xa', expect.anything()), { timeout: 1500 });
+    expect(await screen.findByText("Xaero's Minimap")).toBeInTheDocument();
+    expect(screen.getByText('fabric · 1.21.1')).toBeInTheDocument();
+    expect(screen.getByText('12.3M downloads')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Already listed' })).toBeDisabled();
+    fireEvent.click(screen.getAllByRole('button', { name: 'Add' })[1]); // [0] = bouton du formulaire, [1] = premier résultat
+    await waitFor(() => expect(modsApi.add).toHaveBeenCalledWith('xaeros-minimap'));
+    await waitFor(() => expect(toast.success).toHaveBeenCalledWith('Mod added'));
+    await waitFor(() => expect(screen.queryByText("Xaero's Minimap")).not.toBeInTheDocument()); // panneau fermé
+  });
+
+  it('adds a typed slug directly on Enter and shows translated errors', async () => {
+    setup();
+    await screen.findByText('custom.jar');
+    const input = screen.getByPlaceholderText(/Search Modrinth/);
     vi.mocked(modsApi.add).mockRejectedValueOnce({ response: { data: { error: 'x', code: 'loader_mismatch' } } });
     fireEvent.change(input, { target: { value: 'plugin' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Add' }));
+    fireEvent.submit(input.closest('form')!);
+    await waitFor(() => expect(modsApi.add).toHaveBeenCalledWith('plugin'));
     await waitFor(() => expect(toast.error).toHaveBeenCalledWith('This project has no version for the server loader.'));
     vi.mocked(modsApi.add).mockResolvedValueOnce(base);
     fireEvent.change(input, { target: { value: 'spark' } });
     fireEvent.submit(input.closest('form')!);
-    await waitFor(() => expect(modsApi.add).toHaveBeenCalledWith('spark'));
     await waitFor(() => expect(toast.success).toHaveBeenCalledWith('Mod added'));
     expect((input as HTMLInputElement).value).toBe('');
   });
@@ -114,6 +136,7 @@ describe('Mods page', () => {
     await screen.findByText('Fabric API');
     expect(screen.queryByRole('switch')).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Add' })).not.toBeInTheDocument();
+    expect(screen.queryByPlaceholderText(/Search Modrinth/)).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Remove' })).not.toBeInTheDocument();
   });
 

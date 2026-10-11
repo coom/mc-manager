@@ -586,7 +586,11 @@
       "title": "Manual jars",
       "description": "Files dropped by hand in the mods folder; disabled ones are renamed .jar.disabled.",
       "empty": "No jar dropped by hand.",
-      "conflict": "Both .jar and .jar.disabled exist: remove one on the host."
+      "conflict": "Both .jar and .jar.disabled exist: remove one on the host.",
+      "delete": "Delete",
+      "deleteTitle": "Delete {{file}} from the server?",
+      "deleteDescription": "The file is removed permanently; nothing is kept.",
+      "deleteConflictDescription": "Both the .jar and the .jar.disabled copies are removed."
     },
     "errors": {
       "invalid_entry": "Invalid entry: use a Modrinth slug, optionally with :version, a loader prefix or a trailing ?.",
@@ -598,11 +602,40 @@
       "unsupported_server": "Mods are not managed for this server type.",
       "busy": "Another data operation is running (backup, restore or configuration). Try again in a moment.",
       "conflict": "Conflicting state on disk: check the mods folder on the host.",
-      "not_found": "This mod is no longer listed."
+      "not_found": "This mod is no longer listed.",
+      "invalid_query": "Type at least 2 characters.",
+      "invalid_name": "File name not accepted: letters, digits, dots, dashes, spaces and .jar extension only.",
+      "too_large": "Jar files are limited to 100 MB.",
+      "upload_aborted": "The upload was interrupted.",
+      "not_a_jar": "This file is not a valid jar archive.",
+      "wrong_loader": "This jar is not a mod for the server loader (detected: {{detected}}).",
+      "exists": "A file with this name already exists.",
+      "managed": "This file is managed by Modrinth: remove it from the list instead.",
+      "duplicate_mod": "This mod is already provided by {{other}}."
     },
     "unavailable": {
       "title": "The Minecraft container cannot be reached",
       "description": "Docker or the container is unavailable, so the server type is unknown. The list below is read-only until the container is back."
+    },
+    "search": {
+      "placeholder": "Search Modrinth, or type a slug (lithium, lithium:0.14.0)",
+      "filter": "{{loader}} · {{version}}",
+      "unknownVersion": "unknown version, compatibility not checked",
+      "searching": "Searching…",
+      "none": "No mod found.",
+      "add": "Add",
+      "listed": "Already listed",
+      "downloads": "{{n}} downloads",
+      "hint": "Press Enter to add a slug directly."
+    },
+    "upload": {
+      "drop": "Drop a .jar file here or click to choose",
+      "uploading": "Uploading…",
+      "cancel": "Cancel",
+      "done": "Mod uploaded",
+      "replace": "Replace",
+      "replaceTitle": "Replace {{file}}?",
+      "replaceDescription": "The existing file is overwritten; the server loads the new one at the next restart."
     }
   }
 }

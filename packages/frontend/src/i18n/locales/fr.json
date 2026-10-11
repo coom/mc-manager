@@ -586,7 +586,11 @@
       "title": "Jars manuels",
       "description": "Fichiers déposés à la main dans le dossier des mods ; les désactivés sont renommés en .jar.disabled.",
       "empty": "Aucun jar déposé à la main.",
-      "conflict": ".jar et .jar.disabled existent tous les deux : supprimez l'un des deux sur l'hôte."
+      "conflict": ".jar et .jar.disabled existent tous les deux : supprimez l'un des deux sur l'hôte.",
+      "delete": "Supprimer",
+      "deleteTitle": "Supprimer {{file}} du serveur ?",
+      "deleteDescription": "Le fichier est supprimé définitivement, rien n'est conservé.",
+      "deleteConflictDescription": "Les deux formes .jar et .jar.disabled sont supprimées."
     },
     "errors": {
       "invalid_entry": "Entrée invalide : un slug Modrinth, éventuellement suivi de :version, précédé d'un loader ou suivi de ?.",
@@ -598,11 +602,40 @@
       "unsupported_server": "Les mods ne sont pas gérés pour ce type de serveur.",
       "busy": "Une autre opération sur les données est en cours (sauvegarde, restauration ou configuration). Réessayez dans un instant.",
       "conflict": "État incohérent sur le disque : vérifiez le dossier des mods sur l'hôte.",
-      "not_found": "Ce mod n'est plus dans la liste."
+      "not_found": "Ce mod n'est plus dans la liste.",
+      "invalid_query": "Tapez au moins 2 caractères.",
+      "invalid_name": "Nom de fichier refusé : lettres, chiffres, points, tirets, espaces et extension .jar seulement.",
+      "too_large": "Les jars sont limités à 100 Mo.",
+      "upload_aborted": "L'envoi a été interrompu.",
+      "not_a_jar": "Ce fichier n'est pas une archive jar valide.",
+      "wrong_loader": "Ce jar n'est pas un mod pour le loader du serveur (détecté : {{detected}}).",
+      "exists": "Un fichier de ce nom existe déjà.",
+      "managed": "Ce fichier est géré par Modrinth : retirez-le de la liste à la place.",
+      "duplicate_mod": "Ce mod est déjà fourni par {{other}}."
     },
     "unavailable": {
       "title": "Le conteneur Minecraft est injoignable",
       "description": "Docker ou le conteneur est indisponible, le type de serveur est donc inconnu. La liste ci-dessous est en lecture seule tant que le conteneur n'est pas revenu."
+    },
+    "search": {
+      "placeholder": "Rechercher sur Modrinth, ou taper un slug (lithium, lithium:0.14.0)",
+      "filter": "{{loader}} · {{version}}",
+      "unknownVersion": "version inconnue, compatibilité non vérifiée",
+      "searching": "Recherche…",
+      "none": "Aucun mod trouvé.",
+      "add": "Ajouter",
+      "listed": "Déjà dans la liste",
+      "downloads": "{{n}} téléchargements",
+      "hint": "Entrée ajoute directement un slug."
+    },
+    "upload": {
+      "drop": "Déposez un fichier .jar ici ou cliquez pour choisir",
+      "uploading": "Envoi…",
+      "cancel": "Annuler",
+      "done": "Mod déposé",
+      "replace": "Remplacer",
+      "replaceTitle": "Remplacer {{file}} ?",
+      "replaceDescription": "Le fichier existant est écrasé ; le serveur chargera le nouveau au prochain redémarrage."
     }
   }
 }

@@ -14,10 +14,22 @@
     "restartRequired": "Restart required: the server loads mods at startup only.",
     "modrinth": { "title": "Modrinth mods", "empty": "No Modrinth mod listed yet.", "installed": "Installed", "absent": "Not installed", "pending": "Pending restart", "unmanaged": "Lines kept as-is", "invalidLine": "Unrecognized line", "open": "Open on Modrinth" },
     "add": { "placeholder": "Project slug, e.g. lithium or lithium:0.14.0", "button": "Add", "hint": "The slug is the last part of the project URL on modrinth.com." },
+    "search": {
+      "placeholder": "Search Modrinth, or type a slug (lithium, lithium:0.14.0)",
+      "filter": "{{loader}} · {{version}}", "unknownVersion": "unknown version, compatibility not checked",
+      "searching": "Searching…", "none": "No mod found.", "add": "Add", "listed": "Already listed", "downloads": "{{n}} downloads", "hint": "Press Enter to add a slug directly."
+    },
+    "upload": {
+      "drop": "Drop a .jar file here or click to choose", "uploading": "Uploading…", "cancel": "Cancel", "done": "Mod uploaded",
+      "replace": "Replace", "replaceTitle": "Replace {{file}}?", "replaceDescription": "The existing file is overwritten; the server loads the new one at the next restart."
+    },
     "added": "Mod added", "removed": "Mod removed",
     "remove": { "button": "Remove", "title": "Remove {{entry}} from the list?", "description": "The image deletes its jar at the next restart. You can add it again later." },
     "enable": "Enable", "disable": "Disable",
-    "manual": { "title": "Manual jars", "description": "Files dropped by hand in the mods folder; disabled ones are renamed .jar.disabled.", "empty": "No jar dropped by hand.", "conflict": "Both .jar and .jar.disabled exist: remove one on the host." },
+    "manual": {
+      "title": "Manual jars", "description": "Files dropped by hand in the mods folder; disabled ones are renamed .jar.disabled.", "empty": "No jar dropped by hand.", "conflict": "Both .jar and .jar.disabled exist: remove one on the host.",
+      "delete": "Delete", "deleteTitle": "Delete {{file}} from the server?", "deleteDescription": "The file is removed permanently; nothing is kept.", "deleteConflictDescription": "Both the .jar and the .jar.disabled copies are removed."
+    },
     "errors": {
       "invalid_entry": "Invalid entry: use a Modrinth slug, optionally with :version, a loader prefix or a trailing ?.",
       "duplicate": "This project is already listed.",
@@ -28,7 +40,16 @@
       "unsupported_server": "Mods are not managed for this server type.",
       "busy": "Another data operation is running (backup, restore or configuration). Try again in a moment.",
       "conflict": "Conflicting state on disk: check the mods folder on the host.",
-      "not_found": "This mod is no longer listed."
+      "not_found": "This mod is no longer listed.",
+      "invalid_query": "Type at least 2 characters.",
+      "invalid_name": "File name not accepted: letters, digits, dots, dashes, spaces and .jar extension only.",
+      "too_large": "Jar files are limited to 100 MB.",
+      "upload_aborted": "The upload was interrupted.",
+      "not_a_jar": "This file is not a valid jar archive.",
+      "wrong_loader": "This jar is not a mod for the server loader (detected: {{detected}}).",
+      "exists": "A file with this name already exists.",
+      "managed": "This file is managed by Modrinth: remove it from the list instead.",
+      "duplicate_mod": "This mod is already provided by {{other}}."
     }
   },
   "fr": {
@@ -46,10 +67,22 @@
     "restartRequired": "Redémarrage requis : le serveur ne charge les mods qu'au démarrage.",
     "modrinth": { "title": "Mods Modrinth", "empty": "Aucun mod Modrinth pour l'instant.", "installed": "Installé", "absent": "Non installé", "pending": "En attente du redémarrage", "unmanaged": "Lignes conservées telles quelles", "invalidLine": "Ligne non reconnue", "open": "Ouvrir sur Modrinth" },
     "add": { "placeholder": "Slug du projet, ex. lithium ou lithium:0.14.0", "button": "Ajouter", "hint": "Le slug est la fin de l'URL du projet sur modrinth.com." },
+    "search": {
+      "placeholder": "Rechercher sur Modrinth, ou taper un slug (lithium, lithium:0.14.0)",
+      "filter": "{{loader}} · {{version}}", "unknownVersion": "version inconnue, compatibilité non vérifiée",
+      "searching": "Recherche…", "none": "Aucun mod trouvé.", "add": "Ajouter", "listed": "Déjà dans la liste", "downloads": "{{n}} téléchargements", "hint": "Entrée ajoute directement un slug."
+    },
+    "upload": {
+      "drop": "Déposez un fichier .jar ici ou cliquez pour choisir", "uploading": "Envoi…", "cancel": "Annuler", "done": "Mod déposé",
+      "replace": "Remplacer", "replaceTitle": "Remplacer {{file}} ?", "replaceDescription": "Le fichier existant est écrasé ; le serveur chargera le nouveau au prochain redémarrage."
+    },
     "added": "Mod ajouté", "removed": "Mod retiré",
     "remove": { "button": "Retirer", "title": "Retirer {{entry}} de la liste ?", "description": "L'image supprimera son jar au prochain redémarrage. Vous pourrez le rajouter plus tard." },
     "enable": "Activer", "disable": "Désactiver",
-    "manual": { "title": "Jars manuels", "description": "Fichiers déposés à la main dans le dossier des mods ; les désactivés sont renommés en .jar.disabled.", "empty": "Aucun jar déposé à la main.", "conflict": ".jar et .jar.disabled existent tous les deux : supprimez l'un des deux sur l'hôte." },
+    "manual": {
+      "title": "Jars manuels", "description": "Fichiers déposés à la main dans le dossier des mods ; les désactivés sont renommés en .jar.disabled.", "empty": "Aucun jar déposé à la main.", "conflict": ".jar et .jar.disabled existent tous les deux : supprimez l'un des deux sur l'hôte.",
+      "delete": "Supprimer", "deleteTitle": "Supprimer {{file}} du serveur ?", "deleteDescription": "Le fichier est supprimé définitivement, rien n'est conservé.", "deleteConflictDescription": "Les deux formes .jar et .jar.disabled sont supprimées."
+    },
     "errors": {
       "invalid_entry": "Entrée invalide : un slug Modrinth, éventuellement suivi de :version, précédé d'un loader ou suivi de ?.",
       "duplicate": "Ce projet est déjà dans la liste.",
@@ -60,7 +93,16 @@
       "unsupported_server": "Les mods ne sont pas gérés pour ce type de serveur.",
       "busy": "Une autre opération sur les données est en cours (sauvegarde, restauration ou configuration). Réessayez dans un instant.",
       "conflict": "État incohérent sur le disque : vérifiez le dossier des mods sur l'hôte.",
-      "not_found": "Ce mod n'est plus dans la liste."
+      "not_found": "Ce mod n'est plus dans la liste.",
+      "invalid_query": "Tapez au moins 2 caractères.",
+      "invalid_name": "Nom de fichier refusé : lettres, chiffres, points, tirets, espaces et extension .jar seulement.",
+      "too_large": "Les jars sont limités à 100 Mo.",
+      "upload_aborted": "L'envoi a été interrompu.",
+      "not_a_jar": "Ce fichier n'est pas une archive jar valide.",
+      "wrong_loader": "Ce jar n'est pas un mod pour le loader du serveur (détecté : {{detected}}).",
+      "exists": "Un fichier de ce nom existe déjà.",
+      "managed": "Ce fichier est géré par Modrinth : retirez-le de la liste à la place.",
+      "duplicate_mod": "Ce mod est déjà fourni par {{other}}."
     }
   }
 } }
