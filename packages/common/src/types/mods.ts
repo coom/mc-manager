@@ -77,9 +77,33 @@ export interface ModrinthSearchHit {
   alreadyListed: boolean;
 }
 
+/** Tags de catégorie Modrinth pour les projets de type mod (liste fixe de l'API, libellés dans i18n). */
+export const MODRINTH_CATEGORIES = [
+  'adventure', 'cursed', 'decoration', 'economy', 'equipment', 'food', 'game-mechanics', 'library', 'magic', 'management',
+  'minigame', 'mobs', 'optimization', 'social', 'storage', 'technology', 'transportation', 'utility', 'worldgen',
+] as const;
+export type ModrinthCategory = (typeof MODRINTH_CATEGORIES)[number];
+
+/** Tris acceptés par la recherche Modrinth ; `relevance` exige une requête, les autres permettent de feuilleter. */
+export const MODS_SEARCH_INDEXES = ['relevance', 'downloads', 'follows', 'newest', 'updated'] as const;
+export type ModsSearchIndex = (typeof MODS_SEARCH_INDEXES)[number];
+
+export const MODS_SEARCH_PAGE = 20;
+export const MODS_SEARCH_MAX_OFFSET = 10_000;
+
+export interface ModsSearchQuery {
+  q?: string;
+  index?: ModsSearchIndex;
+  offset?: number;
+  category?: ModrinthCategory;
+}
+
 export interface ModsSearchResult {
   loader: string;
   /** Version Minecraft utilisée comme filtre ; null = inconnue, filtre sur le loader seul. */
   gameVersion: string | null;
+  /** Nombre total de résultats côté Modrinth pour cette combinaison. */
+  total: number;
+  offset: number;
   hits: ModrinthSearchHit[];
 }

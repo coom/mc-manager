@@ -33,20 +33,33 @@ describe('realModrinth.search', () => {
   const hit = { slug: 'xaeros-minimap', project_id: '1bokaNcj', title: "Xaero's Minimap", description: 'A minimap.', icon_url: 'https://cdn.modrinth.com/m.png', author: 'xaero96', downloads: 12345678, follows: 4321, latest_version: '24.2.0' };
   it('encodes the query and facets, maps hits', async () => {
     const fetchFn = vi.fn().mockImplementation(() => json(200, { hits: [hit, { slug: 'nope' }] }));
-    const hits = await realModrinth(fetchFn as unknown as typeof fetch).search('mini map & co #1', { loader: 'fabric', gameVersion: '1.21.1', limit: 20 });
+    const r = await realModrinth(fetchFn as unknown as typeof fetch).search('mini map & co #1', { loader: 'fabric', gameVersion: '1.21.1', limit: 20 });
     const url = new URL((fetchFn.mock.calls[0] as [string])[0]);
     expect(url.origin + url.pathname).toBe('https://api.modrinth.com/v2/search');
     expect(url.searchParams.get('query')).toBe('mini map & co #1');
     expect(url.searchParams.get('limit')).toBe('20');
     expect(url.searchParams.get('index')).toBe('relevance');
+    expect(url.searchParams.get('offset')).toBe('0');
     expect(JSON.parse(url.searchParams.get('facets')!)).toEqual([['project_type:mod'], ['categories:fabric'], ['versions:1.21.1']]);
-    expect(hits).toEqual([{ slug: 'xaeros-minimap', projectId: '1bokaNcj', title: "Xaero's Minimap", description: 'A minimap.', iconUrl: 'https://cdn.modrinth.com/m.png', author: 'xaero96', downloads: 12345678, follows: 4321, latestVersion: '24.2.0' }]);
+    expect(r.hits).toEqual([{ slug: 'xaeros-minimap', projectId: '1bokaNcj', title: "Xaero's Minimap", description: 'A minimap.', iconUrl: 'https://cdn.modrinth.com/m.png', author: 'xaero96', downloads: 12345678, follows: 4321, latestVersion: '24.2.0' }]);
+    expect(r.total).toBe(1); // total_hits absent : nombre de résultats reçus
   });
   it('omits the version facet when unknown and tolerates missing optional fields', async () => {
     const fetchFn = vi.fn().mockImplementation(() => json(200, { hits: [{ slug: 'a', project_id: 'b', title: 'A' }] }));
-    const hits = await realModrinth(fetchFn as unknown as typeof fetch).search('a', { loader: 'paper', gameVersion: null, limit: 5 });
+    const r = await realModrinth(fetchFn as unknown as typeof fetch).search('a', { loader: 'paper', gameVersion: null, limit: 5 });
     expect(JSON.parse(new URL((fetchFn.mock.calls[0] as [string])[0]).searchParams.get('facets')!)).toEqual([['project_type:mod'], ['categories:paper']]);
-    expect(hits).toEqual([{ slug: 'a', projectId: 'b', title: 'A', description: null, iconUrl: null, author: null, downloads: 0, follows: 0, latestVersion: null }]);
+    expect(r.hits).toEqual([{ slug: 'a', projectId: 'b', title: 'A', description: null, iconUrl: null, author: null, downloads: 0, follows: 0, latestVersion: null }]);
+  });
+  it('browses without a query: sort index, offset, category facet and total_hits', async () => {
+    const fetchFn = vi.fn().mockImplementation(() => json(200, { hits: [hit], total_hits: 1284, offset: 40, limit: 20 }));
+    const r = await realModrinth(fetchFn as unknown as typeof fetch).search('', { loader: 'fabric', gameVersion: '1.21.1', limit: 20, index: 'downloads', offset: 40, category: 'optimization' });
+    const url = new URL((fetchFn.mock.calls[0] as [string])[0]);
+    expect(url.searchParams.get('query')).toBe('');
+    expect(url.searchParams.get('index')).toBe('downloads');
+    expect(url.searchParams.get('offset')).toBe('40');
+    expect(JSON.parse(url.searchParams.get('facets')!)).toEqual([['project_type:mod'], ['categories:fabric'], ['versions:1.21.1'], ['categories:optimization']]);
+    expect(r.total).toBe(1284);
+    expect(r.hits.map((h) => h.slug)).toEqual(['xaeros-minimap']);
   });
   it('throws ModrinthUnavailable on errors and malformed payloads', async () => {
     await expect(realModrinth(vi.fn().mockImplementation(() => json(503, {})) as unknown as typeof fetch).search('a', { loader: 'fabric', gameVersion: null, limit: 5 })).rejects.toBeInstanceOf(ModrinthUnavailable);

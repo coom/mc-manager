@@ -1,12 +1,13 @@
 export interface ModrinthProjectInfo { id: string; slug: string; title: string; description: string | null; iconUrl: string | null; projectType: string; loaders: string[] }
 export interface RawSearchHit { slug: string; projectId: string; title: string; description: string | null; iconUrl: string | null; author: string | null; downloads: number; follows: number; latestVersion: string | null }
-export interface SearchOpts { loader: string; gameVersion: string | null; limit: number }
+export interface SearchOpts { loader: string; gameVersion: string | null; limit: number; index?: string; offset?: number; category?: string | null }
+export interface SearchPage { hits: RawSearchHit[]; total: number }
 
 export interface ModrinthLike {
   /** null si le projet n'existe pas ; lève ModrinthUnavailable si l'API ne répond pas correctement. */
   getProject(slug: string): Promise<ModrinthProjectInfo | null>;
-  /** Recherche de projets de type mod pour un loader (et une version MC si connue). */
-  search(q: string, opts: SearchOpts): Promise<RawSearchHit[]>;
+  /** Recherche ou navigation (requête vide) de projets de type mod pour un loader, une version MC, un tri, un décalage et une catégorie. */
+  search(q: string, opts: SearchOpts): Promise<SearchPage>;
 }
 
 export class ModrinthUnavailable extends Error {
@@ -45,16 +46,19 @@ export function realModrinth(fetchFn: typeof fetch = fetch): ModrinthLike {
       };
     },
     async search(q, opts) {
+      // Chaque sous-tableau de facets est un ET ; le loader est lui aussi une catégorie côté Modrinth.
       const facets: string[][] = [['project_type:mod'], [`categories:${opts.loader}`]];
       if (opts.gameVersion) facets.push([`versions:${opts.gameVersion}`]);
-      const params = new URLSearchParams({ query: q, limit: String(opts.limit), index: 'relevance', facets: JSON.stringify(facets) });
-      const b = (await body(await request(fetchFn, `${BASE}/search?${params}`))) as { hits?: unknown };
+      if (opts.category) facets.push([`categories:${opts.category}`]);
+      const params = new URLSearchParams({ query: q, limit: String(opts.limit), offset: String(opts.offset ?? 0), index: opts.index ?? 'relevance', facets: JSON.stringify(facets) });
+      const b = (await body(await request(fetchFn, `${BASE}/search?${params}`))) as { hits?: unknown; total_hits?: unknown };
       if (!b || !Array.isArray(b.hits)) throw new ModrinthUnavailable('Modrinth answered with an unexpected payload');
-      return b.hits.flatMap((h: unknown): RawSearchHit[] => {
+      const hits = b.hits.flatMap((h: unknown): RawSearchHit[] => {
         const r = h as Record<string, unknown>;
         if (typeof r.slug !== 'string' || typeof r.project_id !== 'string' || typeof r.title !== 'string') return [];
         return [{ slug: r.slug, projectId: r.project_id, title: r.title, description: optStr(r.description), iconUrl: optStr(r.icon_url), author: optStr(r.author), downloads: num(r.downloads), follows: num(r.follows), latestVersion: optStr(r.latest_version) }];
       });
+      return { hits, total: typeof b.total_hits === 'number' && Number.isFinite(b.total_hits) ? b.total_hits : hits.length };
     },
   };
 }

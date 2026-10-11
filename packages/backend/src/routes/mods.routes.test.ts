@@ -63,10 +63,19 @@ describe('mods routes', () => {
   it('search is open to viewers, validates q and is not audited', async () => {
     const app = appWith('viewer');
     expect((await request(app).get('/api/mods/search?q=xaero')).status).toBe(200);
-    expect(app.locals.mods.search).toHaveBeenCalledWith('xaero');
+    expect(app.locals.mods.search).toHaveBeenCalledWith({ q: 'xaero', index: undefined, offset: undefined, category: undefined });
     expect((await request(app).get('/api/mods/search')).status).toBe(400);
     expect((await request(app).get('/api/mods/search?q=')).body.code).toBe('invalid_query');
     expect(audited(app)).toEqual([]);
+  });
+  it('search forwards browse parameters and rejects malformed ones before the service', async () => {
+    const app = appWith('admin');
+    expect((await request(app).get('/api/mods/search?index=downloads&offset=40&category=optimization')).status).toBe(200);
+    expect(app.locals.mods.search).toHaveBeenCalledWith({ q: '', index: 'downloads', offset: 40, category: 'optimization' });
+    expect((await request(app).get('/api/mods/search?index=bogus')).body.code).toBe('invalid_query');
+    expect((await request(app).get('/api/mods/search?index=downloads&offset=abc')).body.code).toBe('invalid_query');
+    expect((await request(app).get('/api/mods/search?index=downloads&category=nope')).body.code).toBe('invalid_query');
+    expect(app.locals.mods.search).toHaveBeenCalledTimes(1);
   });
   it('upload streams the raw body to the service with name, replace and declared size, audited', async () => {
     const app = appWith('admin');

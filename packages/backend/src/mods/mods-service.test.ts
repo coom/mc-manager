@@ -378,36 +378,61 @@ describe('ModsService.search', () => {
   it('queries Modrinth with the server loader and the running game version, flagging listed slugs', async () => {
     const { svc, modrinth } = await setup({ listing: 'xaeros-minimap\n', gameVersion: '1.21.1' });
     modrinth.hits = [hit, { ...hit, slug: 'other', projectId: '2' }];
-    const r = await svc.search('  xaero  ');
-    expect(modrinth.searches).toEqual([{ q: 'xaero', loader: 'fabric', gameVersion: '1.21.1' }]);
-    expect(r).toEqual({ loader: 'fabric', gameVersion: '1.21.1', hits: [{ ...hit, alreadyListed: true }, { ...hit, slug: 'other', projectId: '2', alreadyListed: false }] });
+    const r = await svc.search({ q: '  xaero  ' });
+    expect(modrinth.searches).toEqual([{ q: 'xaero', loader: 'fabric', gameVersion: '1.21.1', index: 'relevance', offset: 0, category: null }]);
+    expect(r).toEqual({ loader: 'fabric', gameVersion: '1.21.1', total: 2, offset: 0, hits: [{ ...hit, alreadyListed: true }, { ...hit, slug: 'other', projectId: '2', alreadyListed: false }] });
   });
   it('falls back on the container VERSION when numeric, else searches without version', async () => {
     const { svc, modrinth } = await setup({ env: ['TYPE=FABRIC', 'VERSION=1.20.4'], gameVersion: null });
-    await svc.search('ab');
+    await svc.search({ q: 'ab' });
     expect(modrinth.searches[0].gameVersion).toBe('1.20.4');
     const { svc: s2, modrinth: m2 } = await setup({ env: ['TYPE=PAPER', 'VERSION=LATEST'], gameVersion: null });
-    expect((await s2.search('ab')).gameVersion).toBeNull();
-    expect(m2.searches[0]).toEqual({ q: 'ab', loader: 'paper', gameVersion: null });
+    expect((await s2.search({ q: 'ab' })).gameVersion).toBeNull();
+    expect(m2.searches[0]).toEqual({ q: 'ab', loader: 'paper', gameVersion: null, index: 'relevance', offset: 0, category: null });
   });
   it('caches a query for 60 s but recomputes alreadyListed, and truncates long queries', async () => {
     const { svc, modrinth } = await setup({ listing: '' });
     modrinth.hits = [hit];
-    await svc.search('xaero');
+    await svc.search({ q: 'xaero' });
     modrinth.add({ slug: 'xaeros-minimap' });
     await svc.add('xaeros-minimap');
-    const r = await svc.search('xaero');
+    const r = await svc.search({ q: 'xaero' });
     expect(modrinth.searches.length).toBe(1);
     expect(r.hits[0].alreadyListed).toBe(true);
-    await svc.search('x'.repeat(200));
+    await svc.search({ q: 'x'.repeat(200) });
     expect(modrinth.searches[1].q.length).toBe(100);
+  });
+  it('browses without a query when sorted by popularity, with offset and category, cached per combination', async () => {
+    const { svc, modrinth } = await setup({ listing: '' });
+    modrinth.hits = [hit];
+    modrinth.total = 1284;
+    const r = await svc.search({ index: 'downloads', offset: 40, category: 'optimization' });
+    expect(modrinth.searches).toEqual([{ q: '', loader: 'fabric', gameVersion: null, index: 'downloads', offset: 40, category: 'optimization' }]);
+    expect(r.total).toBe(1284);
+    expect(r.offset).toBe(40);
+    await svc.search({ index: 'downloads', offset: 40, category: 'optimization' });
+    expect(modrinth.searches.length).toBe(1); // même combinaison : cache
+    await svc.search({ index: 'newest', offset: 0 });
+    expect(modrinth.searches.length).toBe(2);
+    expect(modrinth.searches[1]).toMatchObject({ index: 'newest', offset: 0, category: null });
+  });
+  it('validates index, offset and category, and still requires a query for relevance', async () => {
+    const { svc } = await setup({});
+    expect(await codeOf(svc.search({}))).toEqual([400, 'invalid_query']);
+    expect(await codeOf(svc.search({ q: 'a', index: 'relevance' }))).toEqual([400, 'invalid_query']);
+    expect(await codeOf(svc.search({ index: 'bogus' as never }))).toEqual([400, 'invalid_query']);
+    expect(await codeOf(svc.search({ index: 'downloads', category: 'nope' as never }))).toEqual([400, 'invalid_query']);
+    expect(await codeOf(svc.search({ index: 'downloads', offset: -1 }))).toEqual([400, 'invalid_query']);
+    expect(await codeOf(svc.search({ index: 'downloads', offset: 1.5 }))).toEqual([400, 'invalid_query']);
+    expect(await codeOf(svc.search({ index: 'downloads', offset: 10_000 }))).toEqual([200, undefined]);
+    expect(await codeOf(svc.search({ index: 'downloads', offset: 10_001 }))).toEqual([400, 'invalid_query']);
   });
   it('rejects short queries, unsupported servers and surfaces Modrinth outages', async () => {
     const { svc, modrinth } = await setup({});
-    expect(await codeOf(svc.search(' a '))).toEqual([400, 'invalid_query']);
+    expect(await codeOf(svc.search({ q: ' a ' }))).toEqual([400, 'invalid_query']);
     modrinth.down = true;
-    expect(await codeOf(svc.search('abc'))).toEqual([502, 'modrinth_unavailable']);
+    expect(await codeOf(svc.search({ q: 'abc' }))).toEqual([502, 'modrinth_unavailable']);
     const { svc: v } = await setup({ env: ['TYPE=VANILLA'] });
-    expect(await codeOf(v.search('abc'))).toEqual([409, 'unsupported_server']);
+    expect(await codeOf(v.search({ q: 'abc' }))).toEqual([409, 'unsupported_server']);
   });
 });

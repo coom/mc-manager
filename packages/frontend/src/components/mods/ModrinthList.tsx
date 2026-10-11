@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ExternalLink, Package, Trash2 } from 'lucide-react';
+import { ExternalLink, LayoutGrid, Package, Trash2 } from 'lucide-react';
 import type { ModrinthMod, ModsView } from '@mc/common';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog';
 import { ModSearchBox } from './ModSearchBox';
+import { CatalogueDialog } from './CatalogueDialog';
 
 interface Props {
   view: ModsView; canAct: boolean; pending: boolean;
@@ -19,10 +20,14 @@ interface Props {
 export function ModrinthList({ view, canAct, pending, onAdd, onToggle, onRemove }: Props) {
   const { t } = useTranslation();
   const [toRemove, setToRemove] = useState<ModrinthMod | null>(null);
+  const [catalogue, setCatalogue] = useState(false);
   return (
     <Card>
       <CardHeader className="space-y-3">
-        <CardTitle className="text-base">{t('mods.modrinth.title')}</CardTitle>
+        <div className="flex items-center justify-between gap-3">
+          <CardTitle className="text-base">{t('mods.modrinth.title')}</CardTitle>
+          {canAct && <Button size="sm" variant="outline" onClick={() => setCatalogue(true)}><LayoutGrid className="mr-1 h-3.5 w-3.5" />{t('mods.catalogue.open')}</Button>}
+        </div>
         {canAct && <ModSearchBox onAdd={onAdd} pending={pending} />}
       </CardHeader>
       <CardContent className="space-y-2">
@@ -66,6 +71,7 @@ export function ModrinthList({ view, canAct, pending, onAdd, onToggle, onRemove 
         )}
       </CardContent>
       <ConfirmDialog open={toRemove !== null} onOpenChange={(o) => { if (!o) setToRemove(null); }} title={t('mods.remove.title', { entry: toRemove?.entry ?? '' })} description={t('mods.remove.description')} destructive loading={pending} onConfirm={() => { if (toRemove) onRemove(toRemove.entry); setToRemove(null); }} />
+      {canAct && <CatalogueDialog open={catalogue} onOpenChange={setCatalogue} pending={pending} onAdd={(slug, done) => onAdd(slug, done)} />}
     </Card>
   );
 }

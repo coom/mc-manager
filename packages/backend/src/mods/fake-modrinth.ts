@@ -1,4 +1,4 @@
-import { ModrinthUnavailable, type ModrinthLike, type ModrinthProjectInfo, type RawSearchHit, type SearchOpts } from './modrinth-client.js';
+import { ModrinthUnavailable, type ModrinthLike, type ModrinthProjectInfo, type RawSearchHit, type SearchOpts, type SearchPage } from './modrinth-client.js';
 
 export class FakeModrinth implements ModrinthLike {
   projects = new Map<string, ModrinthProjectInfo>();
@@ -7,7 +7,9 @@ export class FakeModrinth implements ModrinthLike {
   calls: string[] = [];
   /** Résultats renvoyés par search(), tronqués à `limit`. */
   hits: RawSearchHit[] = [];
-  searches: { q: string; loader: string; gameVersion: string | null }[] = [];
+  /** total_hits renvoyé ; null = nombre de résultats renvoyés. */
+  total: number | null = null;
+  searches: { q: string; loader: string; gameVersion: string | null; index: string; offset: number; category: string | null }[] = [];
   add(p: Partial<ModrinthProjectInfo> & { slug: string }): void {
     this.projects.set(p.slug, { id: p.id ?? `id-${p.slug}`, slug: p.slug, title: p.title ?? p.slug, description: p.description ?? null, iconUrl: p.iconUrl ?? null, projectType: p.projectType ?? 'mod', loaders: p.loaders ?? ['fabric'] });
   }
@@ -16,9 +18,10 @@ export class FakeModrinth implements ModrinthLike {
     if (this.down) throw new ModrinthUnavailable('fake down');
     return this.projects.get(slug) ?? null;
   }
-  async search(q: string, opts: SearchOpts): Promise<RawSearchHit[]> {
-    this.searches.push({ q, loader: opts.loader, gameVersion: opts.gameVersion });
+  async search(q: string, opts: SearchOpts): Promise<SearchPage> {
+    this.searches.push({ q, loader: opts.loader, gameVersion: opts.gameVersion, index: opts.index ?? 'relevance', offset: opts.offset ?? 0, category: opts.category ?? null });
     if (this.down) throw new ModrinthUnavailable('fake down');
-    return this.hits.slice(0, opts.limit);
+    const hits = this.hits.slice(0, opts.limit);
+    return { hits, total: this.total ?? hits.length };
   }
 }

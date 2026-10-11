@@ -4,7 +4,7 @@ import { pipeline } from 'stream/promises';
 import { Transform, type Readable } from 'stream';
 import { randomUUID } from 'crypto';
 import path from 'path';
-import { MAX_UPLOAD_BYTES, type JarMeta, type ManualMod, type ModsDir, type ModsView, type ModrinthMod, type ModrinthSearchHit, type ModsSearchResult, type WsMessage } from '@mc/common';
+import { MAX_UPLOAD_BYTES, MODS_SEARCH_INDEXES, MODS_SEARCH_MAX_OFFSET, MODRINTH_CATEGORIES, type JarMeta, type ManualMod, type ModsDir, type ModsView, type ModrinthMod, type ModrinthSearchHit, type ModsSearchQuery, type ModsSearchResult, type WsMessage } from '@mc/common';
 import { inspectJar, pickLoader, JarError } from './jar-inspector.js';
 import type { PrismaClient } from '../../generated/prisma/index.js';
 import type { DockerService } from '../docker/docker-service.js';
@@ -207,7 +207,7 @@ export class ModsService {
 
   private fail(status: number, code: string, message: string): never { throw new AppError(status, message, undefined, code); }
 
-  private searchCache = new Map<string, { at: number; hits: Omit<ModrinthSearchHit, 'alreadyListed'>[] }>();
+  private searchCache = new Map<string, { at: number; hits: Omit<ModrinthSearchHit, 'alreadyListed'>[]; total: number }>();
 
   /** Version MC pour filtrer la recherche : logs du serveur, sinon VERSION du conteneur si numérique, sinon null. */
   private gameVersion(env: string[]): string | null {
@@ -217,29 +217,39 @@ export class ModsService {
     return VERSION_RE.test(v) ? v : null;
   }
 
-  /** Recherche dans le catalogue Modrinth, filtrée sur le loader (et la version MC si connue), cache 60 s par requête. */
-  async search(raw: string): Promise<ModsSearchResult> {
-    const q = raw.trim().slice(0, 100);
-    if (q.length < 2) this.fail(400, 'invalid_query', 'Query must have at least 2 characters');
+  /**
+   * Recherche ou navigation dans le catalogue Modrinth, filtrée sur le loader (et la version MC si connue),
+   * cache 60 s par combinaison (requête, tri, décalage, catégorie). `relevance` exige une requête ; les autres
+   * tris permettent de feuilleter sans requête.
+   */
+  async search(params: ModsSearchQuery): Promise<ModsSearchResult> {
+    const q = (params.q ?? '').trim().slice(0, 100);
+    const index = params.index ?? 'relevance';
+    const offset = params.offset ?? 0;
+    const category = params.category ?? null;
+    if (!(MODS_SEARCH_INDEXES as readonly string[]).includes(index)) this.fail(400, 'invalid_query', 'Unknown sort index');
+    if (!Number.isInteger(offset) || offset < 0 || offset > MODS_SEARCH_MAX_OFFSET) this.fail(400, 'invalid_query', 'Invalid offset');
+    if (category !== null && !(MODRINTH_CATEGORIES as readonly string[]).includes(category)) this.fail(400, 'invalid_query', 'Unknown category');
+    if (index === 'relevance' && q.length < 2) this.fail(400, 'invalid_query', 'Query must have at least 2 characters');
     const inspect = await this.inspect();
     const server = inspect ? serverTypeOf(inspect.env) : null;
     if (!server || !inspect) this.fail(409, 'unsupported_server', 'Mods are only managed for modded or plugin servers (TYPE=FABRIC, PAPER, ...)');
     const gameVersion = this.gameVersion(inspect.env);
-    const key = `${q}\u0000${server.loader}\u0000${gameVersion ?? ''}`;
+    const key = [q, server.loader, gameVersion ?? '', index, String(offset), category ?? ''].join('\u0000');
     const now = Date.now();
     let entry = this.searchCache.get(key);
     if (!entry || entry.at + SEARCH_TTL_MS < now) {
-      let hits;
-      try { hits = await this.deps.modrinth.search(q, { loader: server.loader, gameVersion, limit: SEARCH_LIMIT }); }
+      let page;
+      try { page = await this.deps.modrinth.search(q, { loader: server.loader, gameVersion, limit: SEARCH_LIMIT, index, offset, category }); }
       catch (err) { if (err instanceof ModrinthUnavailable) this.fail(502, 'modrinth_unavailable', err.message); throw err; }
-      entry = { at: now, hits };
+      entry = { at: now, hits: page.hits, total: page.total };
       this.searchCache.delete(key);
       this.searchCache.set(key, entry);
       while (this.searchCache.size > SEARCH_CACHE_MAX) this.searchCache.delete(this.searchCache.keys().next().value!);
     }
     // alreadyListed est recalculé à chaque appel : le fichier a pu changer depuis la mise en cache.
     const listed = new Set((await readListing(this.listingPath)).lines.filter(isManaged).map((l) => slugOf(l.entry)));
-    return { loader: server.loader, gameVersion, hits: entry.hits.map((h) => ({ ...h, alreadyListed: listed.has(h.slug) })) };
+    return { loader: server.loader, gameVersion, total: entry.total, offset, hits: entry.hits.map((h) => ({ ...h, alreadyListed: listed.has(h.slug) })) };
   }
 
   private async requireServer() {

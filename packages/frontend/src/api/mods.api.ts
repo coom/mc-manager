@@ -1,5 +1,5 @@
 import api from './client';
-import type { ModsSearchResult, ModsView } from '@mc/common';
+import type { ModsSearchQuery, ModsSearchResult, ModsView } from '@mc/common';
 
 const data = (p: Promise<{ data: ModsView }>): Promise<ModsView> => p.then((r) => r.data);
 
@@ -11,7 +11,8 @@ export const modsApi = {
   remove: (entry: string): Promise<ModsView> => data(api.delete(`/mods/modrinth/${encodeURIComponent(entry)}`)),
   toggleFile: (file: string, enabled: boolean): Promise<ModsView> => data(api.patch(`/mods/files/${encodeURIComponent(file)}`, { enabled })),
   deleteFile: (file: string): Promise<ModsView> => data(api.delete(`/mods/files/${encodeURIComponent(file)}`)),
-  search: (q: string, signal?: AbortSignal): Promise<ModsSearchResult> => api.get('/mods/search', { params: { q }, signal }).then((r) => r.data),
+  /** Recherche (`q`, tri `relevance`) ou navigation (`index` ≠ relevance, `offset`, `category`) dans le catalogue Modrinth. */
+  search: (params: ModsSearchQuery, signal?: AbortSignal): Promise<ModsSearchResult> => api.get('/mods/search', { params, signal }).then((r) => r.data),
   /** Corps brut, pas de timeout (gros fichiers), progression et annulation. */
   upload: (file: File, opts: { replace?: boolean; onProgress?: (fraction: number) => void; signal?: AbortSignal } = {}): Promise<ModsView> =>
     data(api.post('/mods/upload', file, {

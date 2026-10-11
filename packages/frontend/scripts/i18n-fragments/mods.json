@@ -19,6 +19,17 @@
       "filter": "{{loader}} · {{version}}", "unknownVersion": "unknown version, compatibility not checked",
       "searching": "Searching…", "none": "No mod found.", "add": "Add", "listed": "Already listed", "downloads": "{{n}} downloads", "hint": "Press Enter to add a slug directly."
     },
+    "catalogue": {
+      "open": "Browse catalogue", "title": "Modrinth catalogue", "searchPlaceholder": "Filter by name (optional)", "sort": "Sort",
+      "sortBy": { "downloads": "Popular", "newest": "Newest", "updated": "Recently updated", "follows": "Most followed" },
+      "all": "All categories", "count": "{{loader}} · {{version}} · {{n}} mods", "more": "Show more", "empty": "No mod found.", "loading": "Loading…"
+    },
+    "categories": {
+      "adventure": "Adventure", "cursed": "Cursed", "decoration": "Decoration", "economy": "Economy", "equipment": "Equipment", "food": "Food",
+      "game-mechanics": "Game mechanics", "library": "Library", "magic": "Magic", "management": "Management", "minigame": "Minigame", "mobs": "Mobs",
+      "optimization": "Optimization", "social": "Social", "storage": "Storage", "technology": "Technology", "transportation": "Transportation",
+      "utility": "Utility", "worldgen": "World generation"
+    },
     "upload": {
       "drop": "Drop a .jar file here or click to choose", "uploading": "Uploading…", "cancel": "Cancel", "done": "Mod uploaded",
       "replace": "Replace", "replaceTitle": "Replace {{file}}?", "replaceDescription": "The existing file is overwritten; the server loads the new one at the next restart."
@@ -71,6 +82,17 @@
       "placeholder": "Rechercher sur Modrinth, ou taper un slug (lithium, lithium:0.14.0)",
       "filter": "{{loader}} · {{version}}", "unknownVersion": "version inconnue, compatibilité non vérifiée",
       "searching": "Recherche…", "none": "Aucun mod trouvé.", "add": "Ajouter", "listed": "Déjà dans la liste", "downloads": "{{n}} téléchargements", "hint": "Entrée ajoute directement un slug."
+    },
+    "catalogue": {
+      "open": "Parcourir le catalogue", "title": "Catalogue Modrinth", "searchPlaceholder": "Filtrer par nom (facultatif)", "sort": "Tri",
+      "sortBy": { "downloads": "Populaires", "newest": "Nouveautés", "updated": "Mises à jour récentes", "follows": "Les plus suivis" },
+      "all": "Toutes les catégories", "count": "{{loader}} · {{version}} · {{n}} mods", "more": "Afficher plus", "empty": "Aucun mod trouvé.", "loading": "Chargement…"
+    },
+    "categories": {
+      "adventure": "Aventure", "cursed": "Maudit", "decoration": "Décoration", "economy": "Économie", "equipment": "Équipement", "food": "Nourriture",
+      "game-mechanics": "Mécaniques de jeu", "library": "Bibliothèque", "magic": "Magie", "management": "Gestion", "minigame": "Mini-jeu", "mobs": "Créatures",
+      "optimization": "Optimisation", "social": "Social", "storage": "Stockage", "technology": "Technologie", "transportation": "Transport",
+      "utility": "Utilitaire", "worldgen": "Génération de monde"
     },
     "upload": {
       "drop": "Déposez un fichier .jar ici ou cliquez pour choisir", "uploading": "Envoi…", "cancel": "Annuler", "done": "Mod déposé",

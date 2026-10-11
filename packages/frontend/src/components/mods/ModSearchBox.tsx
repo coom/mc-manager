@@ -1,14 +1,13 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
-import { Loader2, Package, Plus, Search } from 'lucide-react';
-import { MODRINTH_ENTRY_RE, type ModrinthSearchHit } from '@mc/common';
+import { Loader2, Plus, Search } from 'lucide-react';
+import { MODRINTH_ENTRY_RE } from '@mc/common';
 import { modsApi } from '@/api/mods.api';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { SearchHitRow } from './SearchHitRow';
 import { describeModsError, type ApiError } from './mods-errors';
-
-const compact = (n: number) => new Intl.NumberFormat('en', { notation: 'compact', maximumFractionDigits: 1 }).format(n);
 
 /** Champ unique : recherche Modrinth après 300 ms de pause (2 caractères minimum), ou ajout direct d'un slug avec Entrée. */
 export function ModSearchBox({ onAdd, pending }: { onAdd: (entry: string, reset: () => void) => void; pending: boolean }) {
@@ -25,10 +24,9 @@ export function ModSearchBox({ onAdd, pending }: { onAdd: (entry: string, reset:
     return () => { document.removeEventListener('mousedown', onDown); document.removeEventListener('keydown', onKey); };
   }, []);
   const enabled = query.length >= 2;
-  const { data, isFetching, error } = useQuery({ queryKey: ['mods', 'search', query], queryFn: ({ signal }) => modsApi.search(query, signal), enabled, staleTime: 60_000 });
+  const { data, isFetching, error } = useQuery({ queryKey: ['mods', 'search', query], queryFn: ({ signal }) => modsApi.search({ q: query }, signal), enabled, staleTime: 60_000 });
   const reset = () => { setText(''); setQuery(''); setOpen(false); };
   const submit = (e: FormEvent) => { e.preventDefault(); const v = text.trim(); if (MODRINTH_ENTRY_RE.test(v)) onAdd(v, reset); };
-  const add = (h: ModrinthSearchHit) => onAdd(h.slug, reset);
   return (
     <div ref={box} className="relative space-y-1">
       <form onSubmit={submit} className="flex gap-2">
@@ -45,17 +43,7 @@ export function ModSearchBox({ onAdd, pending }: { onAdd: (entry: string, reset:
           {isFetching && !data && <p className="flex items-center gap-2 px-1 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" />{t('mods.search.searching')}</p>}
           {error && <p className="px-1 text-sm text-destructive">{describeModsError(error as ApiError, t)}</p>}
           {data && data.hits.length === 0 && <p className="px-1 text-sm text-muted-foreground">{t('mods.search.none')}</p>}
-          {data?.hits.map((h) => (
-            <div key={h.slug} className="flex items-center gap-3 rounded-md p-2 hover:bg-muted/60">
-              {h.iconUrl ? <img src={h.iconUrl} alt="" className="h-8 w-8 rounded" /> : <div className="flex h-8 w-8 items-center justify-center rounded bg-muted"><Package className="h-4 w-4 text-muted-foreground" /></div>}
-              <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-medium">{h.title}{h.author && <span className="ml-2 text-xs font-normal text-muted-foreground">{h.author}</span>}</p>
-                {h.description && <p className="truncate text-xs text-muted-foreground" title={h.description}>{h.description}</p>}
-                <p className="text-xs text-muted-foreground">{t('mods.search.downloads', { n: compact(h.downloads) })}</p>
-              </div>
-              <Button size="sm" variant={h.alreadyListed ? 'outline' : 'default'} disabled={pending || h.alreadyListed} onClick={() => add(h)}>{h.alreadyListed ? t('mods.search.listed') : t('mods.search.add')}</Button>
-            </div>
-          ))}
+          {data?.hits.map((h) => <SearchHitRow key={h.slug} hit={h} listed={h.alreadyListed} pending={pending} onAdd={(slug) => onAdd(slug, reset)} />)}
         </div>
       )}
     </div>

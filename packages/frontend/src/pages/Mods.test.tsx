@@ -74,7 +74,7 @@ describe('Mods page', () => {
 
   it('searches Modrinth after a short pause, adds from a result and marks listed ones', async () => {
     setup();
-    vi.mocked(modsApi.search).mockResolvedValue({ loader: 'fabric', gameVersion: '1.21.1', hits: [
+    vi.mocked(modsApi.search).mockResolvedValue({ loader: 'fabric', gameVersion: '1.21.1', total: 2, offset: 0, hits: [
       { slug: 'xaeros-minimap', projectId: '1', title: "Xaero's Minimap", description: 'A minimap.', iconUrl: null, author: 'xaero96', downloads: 12345678, follows: 1, latestVersion: '24.2', alreadyListed: false },
       { slug: 'fabric-api', projectId: '2', title: 'Fabric API', description: null, iconUrl: null, author: null, downloads: 0, follows: 0, latestVersion: null, alreadyListed: true },
     ] });
@@ -83,7 +83,7 @@ describe('Mods page', () => {
     const input = screen.getByPlaceholderText(/Search Modrinth/);
     fireEvent.change(input, { target: { value: 'xa' } });
     expect(modsApi.search).not.toHaveBeenCalled();
-    await waitFor(() => expect(modsApi.search).toHaveBeenCalledWith('xa', expect.anything()), { timeout: 1500 });
+    await waitFor(() => expect(modsApi.search).toHaveBeenCalledWith({ q: 'xa' }, expect.anything()), { timeout: 1500 });
     expect(await screen.findByText("Xaero's Minimap")).toBeInTheDocument();
     expect(screen.getByText('fabric · 1.21.1')).toBeInTheDocument();
     expect(screen.getByText('12.3M downloads')).toBeInTheDocument();
@@ -92,6 +92,40 @@ describe('Mods page', () => {
     await waitFor(() => expect(modsApi.add).toHaveBeenCalledWith('xaeros-minimap'));
     await waitFor(() => expect(toast.success).toHaveBeenCalledWith('Mod added'));
     await waitFor(() => expect(screen.queryByText("Xaero's Minimap")).not.toBeInTheDocument()); // panneau fermé
+  });
+
+  it('browses the catalogue sorted by popularity, filters by category and loads more', async () => {
+    setup();
+    const page = (slugs: string[], offset: number) => ({ loader: 'fabric', gameVersion: '1.21.1', total: 45, offset, hits: slugs.map((s) => ({ slug: s, projectId: s, title: s.toUpperCase(), description: null, iconUrl: null, author: null, downloads: 10, follows: 0, latestVersion: null, alreadyListed: false })) });
+    vi.mocked(modsApi.search).mockImplementation(async (p) => page(p.category === 'optimization' ? ['lithium-x'] : p.offset ? ['third'] : ['first', 'second'], p.offset ?? 0));
+    await screen.findByText('custom.jar');
+    fireEvent.click(screen.getByRole('button', { name: 'Browse catalogue' }));
+    expect(await screen.findByText('FIRST')).toBeInTheDocument();
+    expect(modsApi.search).toHaveBeenCalledWith(expect.objectContaining({ index: 'downloads', offset: 0 }), expect.anything());
+    expect(screen.getByText('fabric · 1.21.1 · 45 mods')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Show more' }));
+    expect(await screen.findByText('THIRD')).toBeInTheDocument();
+    // La page suivante commence après les résultats reçus (2 dans ce mock ; 20 avec l'API réelle).
+    expect(modsApi.search).toHaveBeenCalledWith(expect.objectContaining({ index: 'downloads', offset: 2 }), expect.anything());
+    fireEvent.click(screen.getByRole('button', { name: 'Optimization' }));
+    expect(await screen.findByText('LITHIUM-X')).toBeInTheDocument();
+    expect(modsApi.search).toHaveBeenCalledWith(expect.objectContaining({ category: 'optimization', offset: 0 }), expect.anything());
+    expect(screen.queryByText('FIRST')).not.toBeInTheDocument();
+  });
+
+  it('adds from the catalogue without closing it and marks the row as listed', async () => {
+    setup();
+    vi.mocked(modsApi.search).mockResolvedValue({ loader: 'fabric', gameVersion: null, total: 1, offset: 0, hits: [{ slug: 'sodium', projectId: 's', title: 'Sodium', description: null, iconUrl: null, author: null, downloads: 1, follows: 0, latestVersion: null, alreadyListed: false }] });
+    vi.mocked(modsApi.add).mockResolvedValue(base);
+    await screen.findByText('custom.jar');
+    fireEvent.click(screen.getByRole('button', { name: 'Browse catalogue' }));
+    const dialog = await screen.findByRole('dialog');
+    expect(await screen.findByText('Sodium')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Add' }));
+    await waitFor(() => expect(modsApi.add).toHaveBeenCalledWith('sodium'));
+    await waitFor(() => expect(toast.success).toHaveBeenCalledWith('Mod added'));
+    expect(dialog).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: 'Already listed' })).toBeDisabled();
   });
 
   it('adds a typed slug directly on Enter and shows translated errors', async () => {

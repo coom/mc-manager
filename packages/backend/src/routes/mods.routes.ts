@@ -2,7 +2,7 @@ import { Router, type Request, type Response, type NextFunction } from 'express'
 import { requireRole } from '../middleware/rbac.js';
 import { AppError } from '../middleware/error-handler.js';
 import { audit } from '../audit/audit.js';
-import { MAX_UPLOAD_BYTES } from '@mc/common';
+import { MAX_UPLOAD_BYTES, MODS_SEARCH_INDEXES, MODRINTH_CATEGORIES, type ModsSearchIndex, type ModrinthCategory } from '@mc/common';
 import { isValidEntry } from '../mods/listing-file.js';
 import { UPLOAD_NAME_RE } from '../mods/mods-service.js';
 
@@ -33,9 +33,17 @@ modsRoutes.get('/', async (req: Request, res: Response, next: NextFunction) => {
 
 modsRoutes.get('/search', async (req: Request, res: Response, next: NextFunction) => {
   try {
+    const bad = (msg: string) => new AppError(400, msg, undefined, 'invalid_query');
     const q = typeof req.query.q === 'string' ? req.query.q : '';
-    if (q.trim().length < 2) throw new AppError(400, 'Query must have at least 2 characters', undefined, 'invalid_query');
-    res.json(await req.app.locals.mods.search(q));
+    const index = typeof req.query.index === 'string' ? req.query.index : undefined;
+    const category = typeof req.query.category === 'string' ? req.query.category : undefined;
+    const rawOffset = typeof req.query.offset === 'string' ? req.query.offset : undefined;
+    if (index !== undefined && !(MODS_SEARCH_INDEXES as readonly string[]).includes(index)) throw bad('Unknown sort index');
+    if (category !== undefined && !(MODRINTH_CATEGORIES as readonly string[]).includes(category)) throw bad('Unknown category');
+    if (rawOffset !== undefined && !/^\d{1,6}$/.test(rawOffset)) throw bad('Invalid offset');
+    if ((index === undefined || index === 'relevance') && q.trim().length < 2) throw bad('Query must have at least 2 characters');
+    const offset = rawOffset === undefined ? undefined : Number.parseInt(rawOffset, 10);
+    res.json(await req.app.locals.mods.search({ q, index: index as ModsSearchIndex | undefined, offset, category: category as ModrinthCategory | undefined }));
   } catch (err) { next(err); }
 });
 

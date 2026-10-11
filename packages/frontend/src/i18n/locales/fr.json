@@ -636,6 +636,44 @@
       "replace": "Remplacer",
       "replaceTitle": "Remplacer {{file}} ?",
       "replaceDescription": "Le fichier existant est écrasé ; le serveur chargera le nouveau au prochain redémarrage."
+    },
+    "catalogue": {
+      "open": "Parcourir le catalogue",
+      "title": "Catalogue Modrinth",
+      "searchPlaceholder": "Filtrer par nom (facultatif)",
+      "sort": "Tri",
+      "sortBy": {
+        "downloads": "Populaires",
+        "newest": "Nouveautés",
+        "updated": "Mises à jour récentes",
+        "follows": "Les plus suivis"
+      },
+      "all": "Toutes les catégories",
+      "count": "{{loader}} · {{version}} · {{n}} mods",
+      "more": "Afficher plus",
+      "empty": "Aucun mod trouvé.",
+      "loading": "Chargement…"
+    },
+    "categories": {
+      "adventure": "Aventure",
+      "cursed": "Maudit",
+      "decoration": "Décoration",
+      "economy": "Économie",
+      "equipment": "Équipement",
+      "food": "Nourriture",
+      "game-mechanics": "Mécaniques de jeu",
+      "library": "Bibliothèque",
+      "magic": "Magie",
+      "management": "Gestion",
+      "minigame": "Mini-jeu",
+      "mobs": "Créatures",
+      "optimization": "Optimisation",
+      "social": "Social",
+      "storage": "Stockage",
+      "technology": "Technologie",
+      "transportation": "Transport",
+      "utility": "Utilitaire",
+      "worldgen": "Génération de monde"
     }
   }
 }
