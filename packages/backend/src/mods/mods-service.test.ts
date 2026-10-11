@@ -62,22 +62,22 @@ describe('ModsService.view', () => {
     expect(v.manual.map((m) => m.file)).toEqual(['b.jar']);
   });
   it('aggregates listing, manifest, cache and the mods folder', async () => {
-    await prisma.modrinthProject.create({ data: { slug: 'lithium', projectId: 'gvQqBUqZ', title: 'Lithium', iconUrl: 'https://cdn.modrinth.com/l.png', fetchedAt: new Date() } });
+    await prisma.modrinthProject.create({ data: { slug: 'lithium', projectId: 'gvQqBUqZ', title: 'Lithium', description: 'Optimizes the game.', iconUrl: 'https://cdn.modrinth.com/l.png', fetchedAt: new Date() } });
     const { svc, modrinth } = await setup({
       listing: '# my header\nfabric-api\nlithium:0.14.0\n# spark\nbad entry\n',
       manifest: { files: ['mods/fabric-api.jar', 'mods/lithium.jar'], projects: ['fabric-api', 'lithium:0.14.0'] },
       mods: { 'fabric-api.jar': 'a', 'lithium.jar': 'b', 'custom.jar': 'c', 'old.jar.disabled': 'd', 'notes.txt': 'e' },
     });
-    modrinth.add({ slug: 'fabric-api', title: 'Fabric API' });
+    modrinth.add({ slug: 'fabric-api', title: 'Fabric API', description: 'Core API for Fabric mods.' });
     const v = await svc.view();
     expect(v.server).toEqual({ loader: 'fabric', dir: 'mods' });
     expect(v.source).toBe('file');
     expect(v.listingExists).toBe(true);
     expect(v.composeLine).toBe('MODRINTH_PROJECTS: "@/data/mc-manager/modrinth-projects.txt"');
     expect(v.modrinth).toEqual([
-      { entry: 'fabric-api', slug: 'fabric-api', enabled: true, installed: true, title: null, iconUrl: null, projectId: null },
-      { entry: 'lithium:0.14.0', slug: 'lithium', enabled: true, installed: true, title: 'Lithium', iconUrl: 'https://cdn.modrinth.com/l.png', projectId: 'gvQqBUqZ' },
-      { entry: 'spark', slug: 'spark', enabled: false, installed: false, title: null, iconUrl: null, projectId: null },
+      { entry: 'fabric-api', slug: 'fabric-api', enabled: true, installed: true, title: null, description: null, iconUrl: null, projectId: null },
+      { entry: 'lithium:0.14.0', slug: 'lithium', enabled: true, installed: true, title: 'Lithium', description: 'Optimizes the game.', iconUrl: 'https://cdn.modrinth.com/l.png', projectId: 'gvQqBUqZ' },
+      { entry: 'spark', slug: 'spark', enabled: false, installed: false, title: null, description: null, iconUrl: null, projectId: null },
     ]);
     expect(v.unmanagedLines).toEqual([{ raw: '# my header', invalid: false }, { raw: 'bad entry', invalid: true }]);
     expect(v.manual.map((m) => [m.file, m.enabled, m.conflict])).toEqual([['custom.jar', true, false], ['old.jar', false, false]]);
@@ -88,8 +88,20 @@ describe('ModsService.view', () => {
     expect(modrinth.calls.sort()).toEqual(['fabric-api', 'spark']);
     const v2 = await svc.view();
     expect(v2.modrinth[0].title).toBe('Fabric API');
+    expect(v2.modrinth[0].description).toBe('Core API for Fabric mods.');
     await svc.pendingResolution;
     expect(modrinth.calls.length).toBe(2); // spark inconnu : pas de nouvelle tentative avant une heure
+  });
+  it('re-resolves a cached project that has no description yet (rows cached before the field existed)', async () => {
+    await prisma.modrinthProject.create({ data: { slug: 'krypton', projectId: 'fQEb0iXm', title: 'Krypton', description: null, iconUrl: null, fetchedAt: new Date() } });
+    const { svc, modrinth } = await setup({ listing: 'krypton\n' });
+    modrinth.add({ slug: 'krypton', title: 'Krypton', description: 'Optimizes the networking stack.' });
+    expect((await svc.view()).modrinth[0].description).toBeNull();
+    await svc.pendingResolution;
+    expect(modrinth.calls).toEqual(['krypton']);
+    expect((await svc.view()).modrinth[0].description).toBe('Optimizes the networking stack.');
+    await svc.pendingResolution;
+    expect(modrinth.calls.length).toBe(1); // une fois renseignée, plus d'appel
   });
   it('requires a restart when active entries differ from the manifest, by slug', async () => {
     const { svc } = await setup({ listing: 'lithium\n# spark\n', manifest: { files: [], projects: ['lithium', 'spark'] } });

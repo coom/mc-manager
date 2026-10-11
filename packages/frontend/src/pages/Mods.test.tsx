@@ -16,9 +16,9 @@ const base: ModsView = {
   server: { loader: 'fabric', dir: 'mods' }, serverIssue: null, source: 'file', inlineEntries: [], listingExists: true,
   composeLine: 'MODRINTH_PROJECTS: "@/data/mc-manager/modrinth-projects.txt"', restartRequired: false,
   modrinth: [
-    { entry: 'fabric-api', slug: 'fabric-api', enabled: true, installed: true, title: 'Fabric API', iconUrl: null, projectId: 'P7dR8mSH' },
-    { entry: 'lithium:0.14.0', slug: 'lithium', enabled: false, installed: true, title: null, iconUrl: null, projectId: null },
-    { entry: 'spark', slug: 'spark', enabled: false, installed: false, title: null, iconUrl: null, projectId: null },
+    { entry: 'fabric-api', slug: 'fabric-api', enabled: true, installed: true, title: 'Fabric API', description: 'Lightweight and modular API providing common hooks.', iconUrl: null, projectId: 'P7dR8mSH' },
+    { entry: 'lithium:0.14.0', slug: 'lithium', enabled: false, installed: true, title: null, description: null, iconUrl: null, projectId: null },
+    { entry: 'spark', slug: 'spark', enabled: false, installed: false, title: null, description: null, iconUrl: null, projectId: null },
   ],
   unmanagedLines: [{ raw: 'bad entry', invalid: true }],
   manual: [{ file: 'custom.jar', enabled: true, size: 2048, mtime: '2026-10-11T10:00:00Z', conflict: false }],
@@ -46,6 +46,18 @@ describe('Mods page', () => {
     expect(screen.getByText('custom.jar')).toBeInTheDocument();
     expect(screen.getByText('2 KB')).toBeInTheDocument();
     expect(screen.queryByText(/Restart required/)).not.toBeInTheDocument();
+  });
+
+  it('shows the Modrinth summary under the name and links the name to the project page', async () => {
+    setup();
+    const summary = await screen.findByText('Lightweight and modular API providing common hooks.');
+    expect(summary).toHaveAttribute('title', 'Lightweight and modular API providing common hooks.');
+    const link = screen.getByRole('link', { name: /Fabric API/ });
+    expect(link).toHaveAttribute('href', 'https://modrinth.com/project/fabric-api');
+    expect(link).toHaveAttribute('target', '_blank');
+    expect(link).toHaveAttribute('rel', expect.stringContaining('noopener'));
+    // Sans résumé en cache, la ligne reste sur un seul niveau et le slug sert de nom.
+    expect(screen.getByRole('link', { name: /^lithium$/ })).toBeInTheDocument();
   });
 
   it('toggles a Modrinth mod and a manual jar, replacing the view', async () => {

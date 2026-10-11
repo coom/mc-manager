@@ -5,13 +5,17 @@ const json = (status: number, body: unknown) => Promise.resolve(new Response(JSO
 
 describe('realModrinth', () => {
   it('maps the API payload and sends a User-Agent', async () => {
-    const fetchFn = vi.fn().mockImplementation(() => json(200, { id: 'gvQqBUqZ', slug: 'lithium', title: 'Lithium', icon_url: 'https://cdn.modrinth.com/x.png', project_type: 'mod', loaders: ['fabric', 'quilt'] }));
+    const fetchFn = vi.fn().mockImplementation(() => json(200, { id: 'gvQqBUqZ', slug: 'lithium', title: 'Lithium', description: 'Optimizes many areas of the game.', icon_url: 'https://cdn.modrinth.com/x.png', project_type: 'mod', loaders: ['fabric', 'quilt'] }));
     const info = await realModrinth(fetchFn as unknown as typeof fetch).getProject('lithium');
-    expect(info).toEqual({ id: 'gvQqBUqZ', slug: 'lithium', title: 'Lithium', iconUrl: 'https://cdn.modrinth.com/x.png', projectType: 'mod', loaders: ['fabric', 'quilt'] });
+    expect(info).toEqual({ id: 'gvQqBUqZ', slug: 'lithium', title: 'Lithium', description: 'Optimizes many areas of the game.', iconUrl: 'https://cdn.modrinth.com/x.png', projectType: 'mod', loaders: ['fabric', 'quilt'] });
     const [url, init] = fetchFn.mock.calls[0] as [string, RequestInit];
     expect(url).toBe('https://api.modrinth.com/v2/project/lithium');
     expect((init.headers as Record<string, string>)['User-Agent']).toMatch(/^mc-manager/);
     expect(init.signal).toBeInstanceOf(AbortSignal);
+  });
+  it('maps a missing or blank description to null', async () => {
+    const fetchFn = vi.fn().mockImplementation(() => json(200, { id: 'x', slug: 'x', title: 'X', description: '   ', project_type: 'mod', loaders: [] }));
+    expect((await realModrinth(fetchFn as unknown as typeof fetch).getProject('x'))?.description).toBeNull();
   });
   it('encodes the slug and returns null on 404', async () => {
     const fetchFn = vi.fn().mockImplementation(() => json(404, { error: 'not_found' }));

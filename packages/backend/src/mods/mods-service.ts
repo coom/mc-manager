@@ -56,7 +56,7 @@ export class ModsService {
     const modrinth: ModrinthMod[] = managed.map((l) => {
       const slug = slugOf(l.entry);
       const c = bySlug.get(slug);
-      return { entry: l.entry, slug, enabled: l.kind === 'entry', installed: state.installed.has(slug), title: c?.title ?? null, iconUrl: c?.iconUrl ?? null, projectId: c?.projectId ?? null };
+      return { entry: l.entry, slug, enabled: l.kind === 'entry', installed: state.installed.has(slug), title: c?.title ?? null, description: c?.description ?? null, iconUrl: c?.iconUrl ?? null, projectId: c?.projectId ?? null };
     });
     const unmanagedLines = lines.filter((l) => l.kind === 'comment' || l.kind === 'invalid').map((l) => ({ raw: l.raw, invalid: l.kind === 'invalid' }));
     const manual = server ? await this.listManual(server.dir, manifestFiles) : [];
@@ -64,7 +64,8 @@ export class ModsService {
     const modrinthPending = source === 'file' && state.pending;
     const manualPending = !!inspect?.startedAt && this.lastFileWriteAt !== null && new Date(inspect.startedAt).getTime() < this.lastFileWriteAt.getTime();
     const serverIssue = server ? null : inspect ? 'unsupported' : 'unavailable';
-    this.scheduleResolution(slugs.filter((s) => !bySlug.has(s)));
+    // Sans ligne en cache, ou ligne mise en cache avant l'ajout du résumé : à résoudre en arrière-plan.
+    this.scheduleResolution(slugs.filter((s) => !bySlug.has(s) || bySlug.get(s)!.description === null));
     return { server, serverIssue, source, inlineEntries, listingExists: exists, composeLine: COMPOSE_LINE, restartRequired: modrinthPending || manualPending, modrinth, unmanagedLines, manual };
   }
 
@@ -147,8 +148,8 @@ export class ModsService {
     })().finally(() => { this.pendingResolution = null; });
   }
 
-  protected async cacheProject(slug: string, info: { id: string; title: string; iconUrl: string | null }): Promise<void> {
-    const data = { projectId: info.id, title: info.title, iconUrl: info.iconUrl, fetchedAt: new Date() };
+  protected async cacheProject(slug: string, info: { id: string; title: string; description: string | null; iconUrl: string | null }): Promise<void> {
+    const data = { projectId: info.id, title: info.title, description: info.description, iconUrl: info.iconUrl, fetchedAt: new Date() };
     await this.deps.prisma.modrinthProject.upsert({ where: { slug }, create: { slug, ...data }, update: data });
   }
 

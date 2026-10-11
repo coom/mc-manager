@@ -565,7 +565,8 @@
       "absent": "Not installed",
       "pending": "Pending restart",
       "unmanaged": "Lines kept as-is",
-      "invalidLine": "Unrecognized line"
+      "invalidLine": "Unrecognized line",
+      "open": "Open on Modrinth"
     },
     "add": {
       "placeholder": "Project slug, e.g. lithium or lithium:0.14.0",

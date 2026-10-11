@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Package, Trash2 } from 'lucide-react';
+import { ExternalLink, Package, Trash2 } from 'lucide-react';
 import type { ModrinthMod, ModsView } from '@mc/common';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -31,8 +31,15 @@ export function ModrinthList({ view, canAct, pending, onAdd, onToggle, onRemove 
           <div key={m.entry} className="flex items-center gap-3 rounded-md border border-border p-2">
             {m.iconUrl ? <img src={m.iconUrl} alt="" className="h-8 w-8 rounded" /> : <div className="flex h-8 w-8 items-center justify-center rounded bg-muted"><Package className="h-4 w-4 text-muted-foreground" /></div>}
             <div className="min-w-0 flex-1">
-              <p className="truncate text-sm font-medium">{m.title ?? m.slug}</p>
-              <p className="truncate font-mono-data text-xs text-muted-foreground">{m.entry}</p>
+              <p className="flex min-w-0 items-baseline gap-2">
+                <a href={`https://modrinth.com/project/${encodeURIComponent(m.slug)}`} target="_blank" rel="noopener noreferrer" title={t('mods.modrinth.open')}
+                  className="group inline-flex min-w-0 items-center gap-1 truncate text-sm font-medium hover:underline">
+                  <span className="truncate">{m.title ?? m.slug}</span>
+                  <ExternalLink className="h-3 w-3 shrink-0 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100" aria-hidden="true" />
+                </a>
+                <span className="truncate font-mono-data text-xs text-muted-foreground">{m.entry}</span>
+              </p>
+              {m.description && <p className="truncate text-xs text-muted-foreground" title={m.description}>{m.description}</p>}
             </div>
             {/* État voulu ≠ manifeste → en attente ; actif et installé → installé ; désactivé et absent → non installé. */}
             <Badge variant={m.installed !== m.enabled ? 'warning' : m.installed ? 'success' : 'secondary'}>

@@ -145,8 +145,10 @@ model WebLogin {
 /// Métadonnées Modrinth mises en cache pour l'affichage de la page Mods (jamais nécessaires au fonctionnement).
 model ModrinthProject {
   slug      String   @id
-  projectId String
-  title     String
-  iconUrl   String?
-  fetchedAt DateTime
+  projectId   String
+  title       String
+  /// Résumé court Modrinth ; null pour les lignes mises en cache avant l'ajout du champ (re-résolues en arrière-plan).
+  description String?
+  iconUrl     String?
+  fetchedAt   DateTime
 }

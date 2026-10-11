@@ -565,7 +565,8 @@
       "absent": "Non installé",
       "pending": "En attente du redémarrage",
       "unmanaged": "Lignes conservées telles quelles",
-      "invalidLine": "Ligne non reconnue"
+      "invalidLine": "Ligne non reconnue",
+      "open": "Ouvrir sur Modrinth"
     },
     "add": {
       "placeholder": "Slug du projet, ex. lithium ou lithium:0.14.0",

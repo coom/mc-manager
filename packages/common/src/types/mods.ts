@@ -15,6 +15,8 @@ export interface ModrinthMod {
   /** Présent dans `projects` du manifeste écrit par l'image au dernier démarrage. */
   installed: boolean;
   title: string | null;
+  /** Résumé court du projet Modrinth (anglais, 256 caractères max), null tant qu'il n'est pas en cache. */
+  description: string | null;
   iconUrl: string | null;
   projectId: string | null;
 }

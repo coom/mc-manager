@@ -1,4 +1,4 @@
-export interface ModrinthProjectInfo { id: string; slug: string; title: string; iconUrl: string | null; projectType: string; loaders: string[] }
+export interface ModrinthProjectInfo { id: string; slug: string; title: string; description: string | null; iconUrl: string | null; projectType: string; loaders: string[] }
 
 export interface ModrinthLike {
   /** null si le projet n'existe pas ; lève ModrinthUnavailable si l'API ne répond pas correctement. */
@@ -29,6 +29,7 @@ export function realModrinth(fetchFn: typeof fetch = fetch): ModrinthLike {
       if (!b || typeof b.id !== 'string' || typeof b.slug !== 'string' || typeof b.title !== 'string' || typeof b.project_type !== 'string') throw new ModrinthUnavailable('Modrinth answered with an unexpected payload');
       return {
         id: b.id, slug: b.slug, title: b.title,
+        description: typeof b.description === 'string' && b.description.trim() ? b.description.trim() : null,
         iconUrl: typeof b.icon_url === 'string' ? b.icon_url : null,
         projectType: b.project_type,
         loaders: Array.isArray(b.loaders) ? b.loaders.filter((l): l is string => typeof l === 'string') : [],
