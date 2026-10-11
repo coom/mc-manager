@@ -2,7 +2,9 @@ import { Router, type Request, type Response, type NextFunction } from 'express'
 import { requireRole } from '../middleware/rbac.js';
 import { AppError } from '../middleware/error-handler.js';
 import { audit } from '../audit/audit.js';
+import { MAX_UPLOAD_BYTES } from '@mc/common';
 import { isValidEntry } from '../mods/listing-file.js';
+import { UPLOAD_NAME_RE } from '../mods/mods-service.js';
 
 export const modsRoutes: Router = Router();
 const admin = requireRole('admin');
@@ -71,6 +73,30 @@ modsRoutes.delete('/modrinth/:entry', admin, async (req: Request, res: Response,
     const entry = entryParam(req);
     await req.app.locals.mods.remove(entry);
     await audit(req, 'mods.remove', entry);
+    res.json(await req.app.locals.mods.view());
+  } catch (err) { next(err); }
+});
+
+modsRoutes.post('/upload', admin, async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const name = typeof req.query.name === 'string' ? req.query.name : '';
+    if (!UPLOAD_NAME_RE.test(name) || name.includes('..')) throw new AppError(400, 'Invalid jar file name', undefined, 'invalid_name');
+    const replace = req.query.replace === '1' || req.query.replace === 'true';
+    const declaredSize = Number.parseInt(String(req.headers['content-length'] ?? ''), 10);
+    if (!Number.isInteger(declaredSize)) throw new AppError(411, 'Content-Length is required');
+    if (declaredSize < 1 || declaredSize > MAX_UPLOAD_BYTES) throw new AppError(413, `Jar files are limited to ${MAX_UPLOAD_BYTES} bytes`, undefined, 'too_large');
+    // Le corps brut est streamé par le service (express.json ne touche pas à ce Content-Type).
+    await req.app.locals.mods.upload({ name, replace, declaredSize, body: req });
+    await audit(req, 'mods.upload', `${name} ${declaredSize}`);
+    res.json(await req.app.locals.mods.view());
+  } catch (err) { next(err); }
+});
+
+modsRoutes.delete('/files/:file', admin, async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const file = fileParam(req);
+    await req.app.locals.mods.deleteFile(file);
+    await audit(req, 'mods.file.delete', file);
     res.json(await req.app.locals.mods.view());
   } catch (err) { next(err); }
 });

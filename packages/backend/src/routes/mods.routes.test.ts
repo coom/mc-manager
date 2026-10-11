@@ -15,6 +15,7 @@ function appWith(role: 'admin' | 'viewer') {
     view: vi.fn().mockResolvedValue(view), importFromEnv: vi.fn().mockResolvedValue(3), add: vi.fn().mockResolvedValue(undefined),
     setEnabled: vi.fn().mockResolvedValue(undefined), remove: vi.fn().mockResolvedValue(undefined), setFileEnabled: vi.fn().mockResolvedValue(undefined),
     search: vi.fn().mockResolvedValue({ loader: 'fabric', gameVersion: null, hits: [] }),
+    upload: vi.fn().mockResolvedValue(undefined), deleteFile: vi.fn().mockResolvedValue(undefined),
   };
   app.use('/api/mods', modsRoutes);
   app.use(errorHandler);
@@ -66,6 +67,37 @@ describe('mods routes', () => {
     expect((await request(app).get('/api/mods/search')).status).toBe(400);
     expect((await request(app).get('/api/mods/search?q=')).body.code).toBe('invalid_query');
     expect(audited(app)).toEqual([]);
+  });
+  it('upload streams the raw body to the service with name, replace and declared size, audited', async () => {
+    const app = appWith('admin');
+    const body = Buffer.from('PK\u0003\u0004fake');
+    const res = await request(app).post('/api/mods/upload?name=My%20Mod.jar&replace=1').set('Content-Type', 'application/java-archive').send(body);
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual(view);
+    const call = app.locals.mods.upload.mock.calls[0][0];
+    expect(call.name).toBe('My Mod.jar');
+    expect(call.replace).toBe(true);
+    expect(call.declaredSize).toBe(body.length);
+    expect(typeof call.body.pipe).toBe('function');
+    expect(audited(app)).toEqual([['mods.upload', `My Mod.jar ${body.length}`]]);
+  });
+  it('upload validates name and Content-Length before reading, refuses viewers', async () => {
+    const app = appWith('admin');
+    expect((await request(app).post('/api/mods/upload?name=..%2Fx.jar').send('x')).body.code).toBe('invalid_name');
+    expect((await request(app).post('/api/mods/upload?name=x.txt').send('x')).body.code).toBe('invalid_name');
+    expect((await request(app).post('/api/mods/upload').send('x')).body.code).toBe('invalid_name');
+    const big = await request(app).post('/api/mods/upload?name=x.jar').set('Content-Type', 'application/octet-stream').set('Content-Length', String(200 * 1024 * 1024)).send('x').then((r) => r.body.code, () => 'too_large');
+    expect(big).toBe('too_large');
+    expect(app.locals.mods.upload).not.toHaveBeenCalled();
+    expect((await request(appWith('viewer')).post('/api/mods/upload?name=x.jar').send('x')).status).toBe(403);
+  });
+  it('delete removes a manual jar, audited', async () => {
+    const app = appWith('admin');
+    expect((await request(app).delete('/api/mods/files/My%20Mod.jar')).status).toBe(200);
+    expect(app.locals.mods.deleteFile).toHaveBeenCalledWith('My Mod.jar');
+    expect(audited(app)).toEqual([['mods.file.delete', 'My Mod.jar']]);
+    expect((await request(app).delete('/api/mods/files/..%2Fx.jar')).status).toBe(404);
+    expect((await request(appWith('viewer')).delete('/api/mods/files/x.jar')).status).toBe(403);
   });
   it('surfaces service errors with their code and does not audit them', async () => {
     const app = appWith('admin');
