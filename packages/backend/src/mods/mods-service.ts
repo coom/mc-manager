@@ -10,8 +10,11 @@ import { logger } from '../utils/logger.js';
 import { mapWriteError } from '../utils/atomic-write.js';
 import { serverTypeOf, modrinthSource, COMPOSE_LINE, LISTING_RELATIVE } from './server-type.js';
 import { readListing, writeListing, isManaged, isValidEntry, slugOf, prefixOf, type ListingLine } from './listing-file.js';
-import { readManifest } from './manifest.js';
+import { readManifest, type ModrinthManifest } from './manifest.js';
 import { ModrinthUnavailable, type ModrinthLike } from './modrinth-client.js';
+
+/** AppSetting : slugs actifs au dernier démarrage qui a appliqué le fichier de liste (JSON, trié). */
+const APPLIED_KEY = 'mods.appliedSlugs';
 
 export interface ModsDeps {
   dataDir: string;
@@ -43,26 +46,61 @@ export class ModsService {
     const { source, inlineEntries } = modrinthSource(env);
     const { exists, lines } = await readListing(this.listingPath);
     const manifest = await readManifest(this.deps.dataDir);
-    const manifestSlugs = new Set((manifest?.projects ?? []).map(slugOf));
     const manifestFiles = new Set(manifest?.files ?? []);
     const managed = lines.filter(isManaged);
     const slugs = [...new Set(managed.map((l) => slugOf(l.entry)))];
     const cached = slugs.length ? await this.deps.prisma.modrinthProject.findMany({ where: { slug: { in: slugs } } }) : [];
     const bySlug = new Map(cached.map((c) => [c.slug, c]));
+    const active = new Set(managed.filter((l) => l.kind === 'entry').map((l) => slugOf(l.entry)));
+    const state = await this.installedState(manifest, active);
     const modrinth: ModrinthMod[] = managed.map((l) => {
       const slug = slugOf(l.entry);
       const c = bySlug.get(slug);
-      return { entry: l.entry, slug, enabled: l.kind === 'entry', installed: manifestSlugs.has(slug), title: c?.title ?? null, iconUrl: c?.iconUrl ?? null, projectId: c?.projectId ?? null };
+      return { entry: l.entry, slug, enabled: l.kind === 'entry', installed: state.installed.has(slug), title: c?.title ?? null, iconUrl: c?.iconUrl ?? null, projectId: c?.projectId ?? null };
     });
     const unmanagedLines = lines.filter((l) => l.kind === 'comment' || l.kind === 'invalid').map((l) => ({ raw: l.raw, invalid: l.kind === 'invalid' }));
     const manual = server ? await this.listManual(server.dir, manifestFiles) : [];
-    const active = new Set(modrinth.filter((m) => m.enabled).map((m) => m.slug));
     // Tant que MODRINTH_PROJECTS ne pointe pas sur notre fichier, un redémarrage n'appliquerait pas la liste : pas de bandeau.
-    const modrinthPending = source === 'file' && (active.size !== manifestSlugs.size || [...active].some((s) => !manifestSlugs.has(s)));
+    const modrinthPending = source === 'file' && state.pending;
     const manualPending = !!inspect?.startedAt && this.lastFileWriteAt !== null && new Date(inspect.startedAt).getTime() < this.lastFileWriteAt.getTime();
     const serverIssue = server ? null : inspect ? 'unsupported' : 'unavailable';
     this.scheduleResolution(slugs.filter((s) => !bySlug.has(s)));
     return { server, serverIssue, source, inlineEntries, listingExists: exists, composeLine: COMPOSE_LINE, restartRequired: modrinthPending || manualPending, modrinth, unmanagedLines, manual };
+  }
+
+  /**
+   * Ce que le dernier démarrage a installé, et si un redémarrage est attendu.
+   * - Liste inline : `projects` du manifeste contient les entrées, comparées par slug.
+   * - Fichier de liste : `projects` ne contient que `@/data/…` (mc-image-helper n'y met pas les entrées
+   *   développées) ; on compare alors la date du manifeste à celle du fichier. Manifeste plus récent =
+   *   la liste courante a été appliquée (les actives sont installées) et on mémorise ces slugs en base ;
+   *   fichier plus récent = redémarrage attendu, l'état installé est celui mémorisé au dernier démarrage.
+   */
+  private async installedState(manifest: ModrinthManifest | null, active: Set<string>): Promise<{ installed: Set<string>; pending: boolean }> {
+    if (!manifest) return { installed: new Set(), pending: active.size > 0 };
+    if (!manifest.projects.some((p) => p.startsWith('@'))) {
+      const installed = new Set(manifest.projects.map(slugOf));
+      return { installed, pending: installed.size !== active.size || [...active].some((s) => !installed.has(s)) };
+    }
+    const listingMtime = await stat(this.listingPath).then((s) => s.mtimeMs, () => Infinity);
+    if (listingMtime <= manifest.timestamp.getTime()) {
+      await this.saveApplied(active);
+      return { installed: new Set(active), pending: false };
+    }
+    return { installed: await this.loadApplied(), pending: true };
+  }
+
+  private async loadApplied(): Promise<Set<string>> {
+    const row = await this.deps.prisma.appSetting.findUnique({ where: { key: APPLIED_KEY } });
+    try { const v: unknown = row ? JSON.parse(row.value) : []; return new Set(Array.isArray(v) ? v.filter((s): s is string => typeof s === 'string') : []); }
+    catch { return new Set(); }
+  }
+
+  private async saveApplied(slugs: Set<string>): Promise<void> {
+    const value = JSON.stringify([...slugs].sort());
+    const row = await this.deps.prisma.appSetting.findUnique({ where: { key: APPLIED_KEY } });
+    if (row?.value === value) return;
+    await this.deps.prisma.appSetting.upsert({ where: { key: APPLIED_KEY }, create: { key: APPLIED_KEY, value }, update: { value } });
   }
 
   /** Jars du dossier non gérés par Modrinth (ni le .jar ni son .jar.disabled n'est dans le manifeste). */

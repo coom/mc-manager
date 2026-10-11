@@ -311,3 +311,21 @@ ajout (succès et erreur traduite), admin vs viewer.
   (écritures limitées à `mc-manager/` et renommages dans `mods/`).
 - `docker-compose.example.yml` : exemple `TYPE: FABRIC` avec
   `MODRINTH_PROJECTS: "@/data/mc-manager/modrinth-projects.txt"` commenté.
+
+## 8. Écarts d'implémentation
+
+- **Manifeste en mode fichier (constaté au premier déploiement Fabric)** : `projects` du manifeste
+  ne contient que la valeur brute de `--projects`, donc `@/data/mc-manager/modrinth-projects.txt`,
+  jamais les entrées développées (`ModrinthCommand.call()` passe le champ `projects` non développé
+  au builder). Les sections 2.2 et 2.4 supposaient le contraire. Implémentation retenue :
+  - `manifest.ts` lit aussi `timestamp` (secondes epoch ou ISO, repli sur le mtime du fichier) ;
+  - si `projects` contient une référence `@`, la liste est « appliquée » quand `timestamp` ≥ mtime du
+    fichier de liste : les entrées actives sont alors installées, `restartRequired` est faux, et les
+    slugs actifs sont mémorisés dans `AppSetting` `mods.appliedSlugs` ; sinon `restartRequired` est
+    vrai et l'état installé affiché est celui mémorisé au dernier démarrage appliqué ;
+  - en mode inline, `projects` contient les entrées et la comparaison par slug de la section 2.4
+    reste en vigueur.
+- `restartRequired` des jars manuels : horodatage en mémoire (section 2.4, déjà corrigée).
+- `wrong_type` : voir section 3.5.
+- Le badge d'un mod a trois états : « en attente » si l'état voulu diffère de l'état installé,
+  « installé », ou « non installé » (désactivé et absent).

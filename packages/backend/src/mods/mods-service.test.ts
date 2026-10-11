@@ -1,5 +1,5 @@
 import { describe, it, expect, afterAll, vi } from 'vitest';
-import { mkdtemp, mkdir, writeFile, readFile, readdir, stat } from 'fs/promises';
+import { mkdtemp, mkdir, writeFile, readFile, readdir, stat, utimes } from 'fs/promises';
 
 // stat est espionné pour simuler un jar supprimé entre readdir et stat (l'image retélécharge au démarrage).
 vi.mock('fs/promises', async (importOriginal) => { const m = await importOriginal<typeof import('fs/promises')>(); return { ...m, stat: vi.fn(m.stat) }; });
@@ -104,6 +104,41 @@ describe('ModsService.view', () => {
     const { svc: svc5 } = await setup({ env: ['TYPE=FABRIC', 'MODRINTH_PROJECTS=fabric-api'], listing: 'lithium\n' });
     expect((await svc5.view()).restartRequired).toBe(false);
   });
+  describe('listing-file mode (manifest.projects holds the raw @file reference)', () => {
+    const LISTING_REF = '@/data/mc-manager/modrinth-projects.txt';
+    // Dates dans le passé : un fichier réécrit par le test (mtime = maintenant) doit être plus récent que le manifeste.
+    const manifestAt = '2026-01-01T10:00:00Z';
+    const ageListing = (dataDir: string) => utimes(path.join(dataDir, LISTING), new Date('2026-01-01T09:00:00Z'), new Date('2026-01-01T09:00:00Z'));
+
+    it('treats a manifest newer than the listing file as applied: enabled entries installed, no restart', async () => {
+      const { svc, dataDir } = await setup({ listing: 'lithium\n# spark\n', manifest: { timestamp: manifestAt, files: ['mods/lithium-fabric-0.14.0.jar'], projects: [LISTING_REF] } });
+      await ageListing(dataDir);
+      const v = await svc.view();
+      expect(v.modrinth.map((m) => [m.slug, m.enabled, m.installed])).toEqual([['lithium', true, true], ['spark', false, false]]);
+      expect(v.restartRequired).toBe(false);
+    });
+    it('after a change, remembers what the last start applied and asks for a restart', async () => {
+      const { svc, dataDir } = await setup({ listing: 'lithium\n# spark\n', manifest: { timestamp: manifestAt, files: [], projects: [LISTING_REF] } });
+      await ageListing(dataDir);
+      await svc.view(); // observe l'état appliqué
+      await svc.setEnabled('spark', true); // le fichier devient plus récent que le manifeste
+      const v = await svc.view();
+      expect(v.modrinth.map((m) => [m.slug, m.enabled, m.installed])).toEqual([['lithium', true, true], ['spark', true, false]]);
+      expect(v.restartRequired).toBe(true);
+      // Le snapshot survit à un redémarrage du backend (stocké en base, pas en mémoire).
+      const again = new ModsService({ ...(svc as unknown as { deps: ConstructorParameters<typeof ModsService>[0] }).deps });
+      expect((await again.view()).modrinth.map((m) => m.installed)).toEqual([true, false]);
+    });
+    it('without any observed applied state, pending entries are reported as not installed', async () => {
+      const { svc } = await setup({ listing: 'lithium\n', manifest: { timestamp: manifestAt, files: [], projects: [LISTING_REF] } });
+      // listing écrit maintenant → plus récent que le manifeste, et aucun snapshot en base (clé AppSetting mods.appliedSlugs)
+      await prisma.appSetting.deleteMany({ where: { key: 'mods.appliedSlugs' } });
+      const v = await svc.view();
+      expect(v.modrinth[0].installed).toBe(false);
+      expect(v.restartRequired).toBe(true);
+    });
+  });
+
   it('hides both forms of a Modrinth-managed jar and flags a manual conflict', async () => {
     const { svc } = await setup({ manifest: { files: ['mods/lithium.jar'], projects: ['lithium'] }, listing: 'lithium\n', mods: { 'lithium.jar': 'a', 'lithium.jar.disabled': 'b', 'x.jar': 'c', 'x.jar.disabled': 'd' } });
     const v = await svc.view();
