@@ -486,7 +486,7 @@
       "raw": "Fichier brut"
     },
     "missing": "server.properties n'existe pas encore : démarrez le serveur une fois pour le créer.",
-    "lockedBy": "Définie par la variable {{var}} du conteneur ; modifiez-la dans votre fichier compose.",
+    "lockedBy": "Gérée par {{var}} dans l'environnement du conteneur. Définissez OVERRIDE_SERVER_PROPERTIES=false dans la stack Minecraft pour rendre ce fichier maître.",
     "lockedRcon": "Les réglages RCON sont gérés par MC Manager et ne sont pas modifiables ici.",
     "save": "Enregistrer",
     "saved": "Configuration enregistrée",
@@ -532,7 +532,8 @@
       "resource-pack": "URL du pack de ressources",
       "max-tick-time": "Temps de tick max (ms)",
       "server-port": "Port du serveur"
-    }
+    },
+    "lockedHint": "Certaines clés sont verrouillées parce que l'environnement du conteneur les impose à chaque démarrage. Définissez OVERRIDE_SERVER_PROPERTIES=false dans la stack Minecraft (ou retirez ces variables) pour les modifier ici."
   },
   "mods": {
     "title": "Mods",

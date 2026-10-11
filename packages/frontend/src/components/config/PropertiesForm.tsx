@@ -23,6 +23,12 @@ export function PropertiesForm({ values, locked, draft, onChange }: Props) {
   const lockTitle = (k: string) => (locked[k] === 'rcon' ? t('config.lockedRcon') : t('config.lockedBy', { var: locked[k] }));
   return (
     <div className="space-y-6">
+      {Object.values(locked).some((v) => v !== 'rcon') && (
+        <p className="flex items-start gap-2 rounded-md border border-border bg-muted/40 p-3 text-xs text-muted-foreground">
+          <Lock className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden />
+          <span>{t('config.lockedHint')}</span>
+        </p>
+      )}
       {GROUPS.map((g) => (
         <section key={g.id} className="space-y-3">
           <h2 className="text-sm font-medium">{t(`config.groups.${g.id}`)}</h2>

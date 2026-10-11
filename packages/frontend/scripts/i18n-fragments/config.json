@@ -2,7 +2,7 @@
   "en": {
     "title": "Server configuration", "tabs": { "form": "Form", "raw": "Raw file" },
     "missing": "server.properties does not exist yet: start the server once to create it.",
-    "lockedBy": "Set by the container variable {{var}}; change it in your compose file.", "lockedRcon": "RCON settings are managed by MC Manager and cannot be edited here.",
+    "lockedBy": "Managed by {{var}} in the container environment. Set OVERRIDE_SERVER_PROPERTIES=false in the Minecraft stack to make this file authoritative.", "lockedHint": "Some keys are locked because the container environment sets them at each start. Set OVERRIDE_SERVER_PROPERTIES=false in the Minecraft stack (or remove those variables) to edit them here.", "lockedRcon": "RCON settings are managed by MC Manager and cannot be edited here.",
     "save": "Save", "saved": "Configuration saved", "noChange": "Nothing to save",
     "restartRequired": "Restart required to apply the saved configuration.", "restartNow": "Restart now", "restartTitle": "Restart the server?", "restartDescription": "Players will be disconnected while the server restarts.", "restarting": "Restart requested",
     "changedLines": "{{count}} changed line(s)",
@@ -12,7 +12,7 @@
   "fr": {
     "title": "Configuration du serveur", "tabs": { "form": "Formulaire", "raw": "Fichier brut" },
     "missing": "server.properties n'existe pas encore : démarrez le serveur une fois pour le créer.",
-    "lockedBy": "Définie par la variable {{var}} du conteneur ; modifiez-la dans votre fichier compose.", "lockedRcon": "Les réglages RCON sont gérés par MC Manager et ne sont pas modifiables ici.",
+    "lockedBy": "Gérée par {{var}} dans l'environnement du conteneur. Définissez OVERRIDE_SERVER_PROPERTIES=false dans la stack Minecraft pour rendre ce fichier maître.", "lockedHint": "Certaines clés sont verrouillées parce que l'environnement du conteneur les impose à chaque démarrage. Définissez OVERRIDE_SERVER_PROPERTIES=false dans la stack Minecraft (ou retirez ces variables) pour les modifier ici.", "lockedRcon": "Les réglages RCON sont gérés par MC Manager et ne sont pas modifiables ici.",
     "save": "Enregistrer", "saved": "Configuration enregistrée", "noChange": "Rien à enregistrer",
     "restartRequired": "Redémarrage nécessaire pour appliquer la configuration enregistrée.", "restartNow": "Redémarrer maintenant", "restartTitle": "Redémarrer le serveur ?", "restartDescription": "Les joueurs seront déconnectés pendant le redémarrage.", "restarting": "Redémarrage demandé",
     "changedLines": "{{count}} ligne(s) modifiée(s)",

@@ -486,7 +486,7 @@
       "raw": "Raw file"
     },
     "missing": "server.properties does not exist yet: start the server once to create it.",
-    "lockedBy": "Set by the container variable {{var}}; change it in your compose file.",
+    "lockedBy": "Managed by {{var}} in the container environment. Set OVERRIDE_SERVER_PROPERTIES=false in the Minecraft stack to make this file authoritative.",
     "lockedRcon": "RCON settings are managed by MC Manager and cannot be edited here.",
     "save": "Save",
     "saved": "Configuration saved",
@@ -532,7 +532,8 @@
       "resource-pack": "Resource pack URL",
       "max-tick-time": "Max tick time (ms)",
       "server-port": "Server port"
-    }
+    },
+    "lockedHint": "Some keys are locked because the container environment sets them at each start. Set OVERRIDE_SERVER_PROPERTIES=false in the Minecraft stack (or remove those variables) to edit them here."
   },
   "mods": {
     "title": "Mods",

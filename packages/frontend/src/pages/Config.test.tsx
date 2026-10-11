@@ -35,7 +35,8 @@ describe('Config page', () => {
     setup();
     const motd = await screen.findByLabelText('Message of the day');
     expect(motd).toBeDisabled();
-    expect(screen.getByTitle(/container variable MOTD/)).toBeInTheDocument();
+    expect(screen.getByTitle(/Managed by MOTD in the container environment.*OVERRIDE_SERVER_PROPERTIES=false/)).toBeInTheDocument();
+    expect(screen.getByText(/Some keys are locked because the container environment sets them/)).toBeInTheDocument();
     const save = screen.getByRole('button', { name: 'Save' });
     expect(save).toBeDisabled();
     fireEvent.change(screen.getByLabelText('Max players'), { target: { value: '10' } });
@@ -44,6 +45,12 @@ describe('Config page', () => {
     await waitFor(() => expect(configApi.save).toHaveBeenCalledWith({ values: { 'max-players': '10' } }));
     await waitFor(() => expect(toast.success).toHaveBeenCalledWith('Configuration saved'));
     expect(await screen.findByText(/Restart required/)).toBeInTheDocument();
+  });
+
+  it('hides the lock hint when only RCON keys are locked', async () => {
+    setup('admin', { ...view, locked: { 'rcon.password': 'rcon', 'rcon.port': 'rcon', 'enable-rcon': 'rcon' } });
+    await screen.findByLabelText('Message of the day');
+    expect(screen.queryByText(/Some keys are locked/)).not.toBeInTheDocument();
   });
 
   it('raw tab saves the whole text and shows the changed line count', async () => {
