@@ -1,15 +1,17 @@
-import { readdir, stat } from 'fs/promises';
+import { access, readdir, rename, stat } from 'fs/promises';
 import type { Dirent } from 'fs';
 import path from 'path';
 import type { ManualMod, ModsDir, ModsView, ModrinthMod, WsMessage } from '@mc/common';
 import type { PrismaClient } from '../../generated/prisma/index.js';
 import type { DockerService } from '../docker/docker-service.js';
 import type { DataLock } from '../data/data-lock.js';
+import { AppError } from '../middleware/error-handler.js';
 import { logger } from '../utils/logger.js';
+import { mapWriteError } from '../utils/atomic-write.js';
 import { serverTypeOf, modrinthSource, COMPOSE_LINE, LISTING_RELATIVE } from './server-type.js';
-import { readListing, isManaged, slugOf } from './listing-file.js';
+import { readListing, writeListing, isManaged, isValidEntry, slugOf, prefixOf, type ListingLine } from './listing-file.js';
 import { readManifest } from './manifest.js';
-import type { ModrinthLike } from './modrinth-client.js';
+import { ModrinthUnavailable, type ModrinthLike } from './modrinth-client.js';
 
 export interface ModsDeps {
   dataDir: string;
@@ -105,5 +107,113 @@ export class ModsService {
   protected async cacheProject(slug: string, info: { id: string; title: string; iconUrl: string | null }): Promise<void> {
     const data = { projectId: info.id, title: info.title, iconUrl: info.iconUrl, fetchedAt: new Date() };
     await this.deps.prisma.modrinthProject.upsert({ where: { slug }, create: { slug, ...data }, update: data });
+  }
+
+  private fail(status: number, code: string, message: string): never { throw new AppError(status, message, undefined, code); }
+
+  private async requireServer() {
+    const inspect = await this.inspect();
+    const server = inspect ? serverTypeOf(inspect.env) : null;
+    if (!server) this.fail(409, 'unsupported_server', 'Mods are only managed for modded or plugin servers (TYPE=FABRIC, PAPER, ...)');
+    return server;
+  }
+
+  /** Exécute `fn` sous le verrou de données, puis diffuse mods.changed si `fn` renvoie changed. */
+  private async withLock<T>(fn: () => Promise<{ changed: boolean; result: T }>): Promise<T> {
+    const release = this.deps.lock.acquire('mods');
+    try {
+      const { changed, result } = await fn();
+      if (changed) this.deps.broadcast({ type: 'mods.changed' });
+      return result;
+    } finally { release(); }
+  }
+
+  /** Crée le fichier de liste à partir de MODRINTH_PROJECTS inline ; renvoie le nombre d'entrées écrites. */
+  async importFromEnv(): Promise<number> {
+    await this.requireServer();
+    const inspect = await this.inspect();
+    const { source, inlineEntries } = modrinthSource(inspect?.env ?? []);
+    if (source !== 'inline') this.fail(409, 'conflict', 'MODRINTH_PROJECTS is not an inline list');
+    return this.withLock(async () => {
+      if ((await readListing(this.listingPath)).exists) this.fail(409, 'conflict', 'The listing file already exists');
+      const lines: ListingLine[] = inlineEntries.map((e) => (isValidEntry(e) ? { kind: 'entry', entry: e, raw: e } : { kind: 'invalid', raw: e }));
+      await writeListing(this.listingPath, lines);
+      return { changed: true, result: lines.length };
+    });
+  }
+
+  async add(entry: string): Promise<void> {
+    if (!isValidEntry(entry)) this.fail(400, 'invalid_entry', 'Invalid Modrinth entry');
+    const server = await this.requireServer();
+    const slug = slugOf(entry);
+    const dup = (lines: ListingLine[]) => lines.some((l) => isManaged(l) && slugOf(l.entry) === slug);
+    if (dup((await readListing(this.listingPath)).lines)) this.fail(409, 'duplicate', `${slug} is already listed`);
+    // Appel Modrinth hors verrou (jusqu'à 10 s) ; le doublon est revérifié sous verrou avant d'écrire.
+    let info;
+    try { info = await this.deps.modrinth.getProject(slug); }
+    catch (err) { if (err instanceof ModrinthUnavailable) this.fail(502, 'modrinth_unavailable', err.message); throw err; }
+    if (!info) this.fail(404, 'unknown_project', `Modrinth project ${slug} not found`);
+    if (info.projectType !== 'mod') this.fail(422, 'wrong_type', `${slug} is a ${info.projectType}, not a mod`);
+    const wanted = prefixOf(entry) ?? server.loader;
+    if (!info.loaders.includes(wanted)) this.fail(422, 'loader_mismatch', `${slug} has no ${wanted} version (loaders: ${info.loaders.join(', ') || 'none'})`);
+    await this.cacheProject(slug, info);
+    await this.withLock(async () => {
+      const { lines } = await readListing(this.listingPath);
+      if (dup(lines)) this.fail(409, 'duplicate', `${slug} is already listed`);
+      await writeListing(this.listingPath, [...lines, { kind: 'entry', entry, raw: entry }]);
+      return { changed: true, result: undefined };
+    });
+  }
+
+  private findLine(lines: ListingLine[], entry: string): number {
+    if (!isValidEntry(entry)) this.fail(400, 'invalid_entry', 'Invalid Modrinth entry');
+    const i = lines.findIndex((l) => isManaged(l) && l.entry === entry);
+    if (i < 0) this.fail(404, 'not_found', `${entry} is not listed`);
+    return i;
+  }
+
+  async setEnabled(entry: string, enabled: boolean): Promise<void> {
+    await this.requireServer();
+    await this.withLock(async () => {
+      const { lines } = await readListing(this.listingPath);
+      const i = this.findLine(lines, entry);
+      const kind = enabled ? 'entry' : 'disabled';
+      if (lines[i].kind === kind) return { changed: false, result: undefined };
+      const next = [...lines];
+      next[i] = { kind, entry, raw: enabled ? entry : `# ${entry}` };
+      await writeListing(this.listingPath, next);
+      return { changed: true, result: undefined };
+    });
+  }
+
+  async remove(entry: string): Promise<void> {
+    await this.requireServer();
+    await this.withLock(async () => {
+      const { lines } = await readListing(this.listingPath);
+      const i = this.findLine(lines, entry);
+      await writeListing(this.listingPath, lines.filter((_, j) => j !== i));
+      return { changed: true, result: undefined };
+    });
+  }
+
+  /** Renomme <file> ⇄ <file>.disabled dans le dossier des mods ; `file` doit être un nom simple présent dans le listing manuel. */
+  async setFileEnabled(file: string, enabled: boolean): Promise<void> {
+    if (!/^[^/\\]+\.jar$/.test(file) || file.includes('..') || path.basename(file) !== file) this.fail(404, 'not_found', 'Unknown file');
+    const server = await this.requireServer();
+    await this.withLock(async () => {
+      const manifest = await readManifest(this.deps.dataDir);
+      const manual = await this.listManual(server.dir, new Set(manifest?.files ?? []));
+      const m = manual.find((x) => x.file === file);
+      if (!m) this.fail(404, 'not_found', 'Unknown file');
+      if (m.conflict) this.fail(409, 'conflict', `${file} and ${file}.disabled both exist: remove one on the host`);
+      if (m.enabled === enabled) return { changed: false, result: undefined };
+      const dir = path.join(this.deps.dataDir, server.dir);
+      const from = path.join(dir, enabled ? `${file}.disabled` : file);
+      const to = path.join(dir, enabled ? file : `${file}.disabled`);
+      if (await access(to).then(() => true, () => false)) this.fail(409, 'conflict', `${path.basename(to)} already exists`);
+      try { await rename(from, to); } catch (err) { throw mapWriteError(err, from, dir); }
+      this.lastFileWriteAt = new Date();
+      return { changed: true, result: undefined };
+    });
   }
 }
