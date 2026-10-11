@@ -148,7 +148,9 @@ The Mods page lists the mods (or plugins) of a modded server and lets an admin e
   ```
 
   If the variable still holds an inline list, the page offers to import it once. Disabling a mod comments its line; the image removes its jar at the next start and downloads it again when re-enabled. Adding a mod takes a Modrinth slug (optionally `slug:version`, a `fabric:`/`paper:`/`datapack:` prefix or a trailing `?` for optional), verified against the Modrinth API before it is written.
-- **Manual jars** dropped by hand in `mods/` (or `plugins/`) that the image does not manage are toggled by renaming them to `.jar.disabled`. Nothing is ever deleted.
+- **Manual jars** dropped by hand in `mods/` (or `plugins/`) that the image does not manage are toggled by renaming them to `.jar.disabled`.
+- **Catalogue**: the search box of the Modrinth card queries Modrinth through the backend (filtered on the server loader and, when known, the running Minecraft version) and adds a result with one click; typing a slug and pressing Enter still works.
+- **Upload**: drop a `.jar` on the Manual jars card. The backend streams it to a temporary file, checks that it is a valid archive carrying the descriptor of the server loader (`fabric.mod.json`, `quilt.mod.json`, `META-INF/mods.toml`, `META-INF/neoforge.mods.toml`, `plugin.yml`, `paper-plugin.yml`), reads its id, name and version, refuses duplicates (same file name unless you choose to replace, same mod id in another file, or a file managed by Modrinth) and moves it into the folder. Limit: 100 MB (nginx and backend). Manual jars can be deleted from the page; Modrinth-managed ones cannot.
 - Supported server types: `FABRIC`, `QUILT`, `FORGE`, `NEOFORGE` (folder `mods/`) and `PAPER`, `SPIGOT`, `BUKKIT`, `PURPUR`, `FOLIA` (folder `plugins/`). On a vanilla server the page is read-only.
 - All writes are admin-only, audited, and serialized with backups, restores and `server.properties` edits.
 
@@ -186,7 +188,7 @@ i18n: write a fragment in `packages/frontend/scripts/i18n-fragments/*.json`, the
 
 The dashboard, the Players page and the player sheets show player avatars loaded from the third-party service [mc-heads.net](https://mc-heads.net): the browser of every user sends the names of the online players to that service. The interface fonts (Outfit, JetBrains Mono) are also loaded from Google Fonts (`fonts.googleapis.com`), which exposes the visitor IP address to Google.
 
-The Mods page is the only other source of external calls: when an admin adds a mod, and once per unknown entry of the listing file, the backend queries `api.modrinth.com` to verify the project and cache its title and icon; the browser then loads mod icons from `cdn.modrinth.com`. Nothing is sent to Modrinth beyond the project slug.
+The Mods page is the only other source of external calls: when an admin adds a mod, and once per unknown entry of the listing file, the backend queries `api.modrinth.com` to verify the project and cache its title and icon; the browser then loads mod icons from `cdn.modrinth.com`. The catalogue search is also relayed by the backend: only the search text, the server loader and the Minecraft version are sent to `api.modrinth.com`. Nothing else is sent to Modrinth.
 
 IP geolocation uses the `geoip-lite` database embedded in the image (the one shipped with geoip-lite 2.0.2, with no automatic update): no external call, country only. IP addresses are visible to admins only, and the journal is purged according to the configured retention.
 
