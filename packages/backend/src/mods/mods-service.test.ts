@@ -20,7 +20,7 @@ afterAll(async () => { await prisma.$disconnect(); });
 
 const LISTING = 'mc-manager/modrinth-projects.txt';
 
-async function setup(opts: { env?: string[]; startedAt?: string | null; listing?: string; manifest?: object; mods?: Record<string, string>; noContainer?: boolean } = {}) {
+async function setup(opts: { env?: string[]; startedAt?: string | null; listing?: string; manifest?: object; mods?: Record<string, string>; noContainer?: boolean; gameVersion?: string | null } = {}) {
   const dataDir = await mkdtemp(path.join(tmpdir(), 'mc-mods-'));
   if (opts.listing !== undefined) { await mkdir(path.join(dataDir, 'mc-manager'), { recursive: true }); await writeFile(path.join(dataDir, LISTING), opts.listing); }
   if (opts.manifest) await writeFile(path.join(dataDir, MANIFEST_FILE), JSON.stringify(opts.manifest));
@@ -31,7 +31,7 @@ async function setup(opts: { env?: string[]; startedAt?: string | null; listing?
   const modrinth = new FakeModrinth();
   const sent: WsMessage[] = [];
   const lock = new DataLock();
-  const svc = new ModsService({ dataDir, docker, modrinth, prisma, lock, broadcast: (m) => sent.push(m) });
+  const svc = new ModsService({ dataDir, docker, modrinth, prisma, lock, broadcast: (m) => sent.push(m), gameVersion: () => opts.gameVersion ?? null });
   return { dataDir, svc, modrinth, sent, lock, docker, listing: () => readFile(path.join(dataDir, LISTING), 'utf8'), modsDir: () => readdir(path.join(dataDir, 'mods')) };
 }
 
@@ -253,5 +253,44 @@ describe('ModsService writes', () => {
     const { svc } = await setup({ listing: '', startedAt: null, mods: { 'custom.jar': 'a' } });
     await svc.setFileEnabled('custom.jar', false);
     expect((await svc.view()).restartRequired).toBe(false);
+  });
+});
+
+describe('ModsService.search', () => {
+  const hit = { slug: 'xaeros-minimap', projectId: '1', title: 'Xaero', description: null, iconUrl: null, author: null, downloads: 1, follows: 0, latestVersion: null };
+  it('queries Modrinth with the server loader and the running game version, flagging listed slugs', async () => {
+    const { svc, modrinth } = await setup({ listing: 'xaeros-minimap\n', gameVersion: '1.21.1' });
+    modrinth.hits = [hit, { ...hit, slug: 'other', projectId: '2' }];
+    const r = await svc.search('  xaero  ');
+    expect(modrinth.searches).toEqual([{ q: 'xaero', loader: 'fabric', gameVersion: '1.21.1' }]);
+    expect(r).toEqual({ loader: 'fabric', gameVersion: '1.21.1', hits: [{ ...hit, alreadyListed: true }, { ...hit, slug: 'other', projectId: '2', alreadyListed: false }] });
+  });
+  it('falls back on the container VERSION when numeric, else searches without version', async () => {
+    const { svc, modrinth } = await setup({ env: ['TYPE=FABRIC', 'VERSION=1.20.4'], gameVersion: null });
+    await svc.search('ab');
+    expect(modrinth.searches[0].gameVersion).toBe('1.20.4');
+    const { svc: s2, modrinth: m2 } = await setup({ env: ['TYPE=PAPER', 'VERSION=LATEST'], gameVersion: null });
+    expect((await s2.search('ab')).gameVersion).toBeNull();
+    expect(m2.searches[0]).toEqual({ q: 'ab', loader: 'paper', gameVersion: null });
+  });
+  it('caches a query for 60 s but recomputes alreadyListed, and truncates long queries', async () => {
+    const { svc, modrinth } = await setup({ listing: '' });
+    modrinth.hits = [hit];
+    await svc.search('xaero');
+    modrinth.add({ slug: 'xaeros-minimap' });
+    await svc.add('xaeros-minimap');
+    const r = await svc.search('xaero');
+    expect(modrinth.searches.length).toBe(1);
+    expect(r.hits[0].alreadyListed).toBe(true);
+    await svc.search('x'.repeat(200));
+    expect(modrinth.searches[1].q.length).toBe(100);
+  });
+  it('rejects short queries, unsupported servers and surfaces Modrinth outages', async () => {
+    const { svc, modrinth } = await setup({});
+    expect(await codeOf(svc.search(' a '))).toEqual([400, 'invalid_query']);
+    modrinth.down = true;
+    expect(await codeOf(svc.search('abc'))).toEqual([502, 'modrinth_unavailable']);
+    const { svc: v } = await setup({ env: ['TYPE=VANILLA'] });
+    expect(await codeOf(v.search('abc'))).toEqual([409, 'unsupported_server']);
   });
 });

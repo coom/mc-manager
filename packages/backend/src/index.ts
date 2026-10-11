@@ -110,7 +110,7 @@ async function main() {
   restore.on('done', (e) => { broadcast(wss, { type: 'restore.done', ...e }); broadcast(wss, { type: 'backup.list.changed' }); });
   app.locals.properties = new PropertiesService({ dataDir: config.mc.dataDir, docker, lock: backups.dataLock });
   // Mods (lot 3) : liste Modrinth gérée dans /data/mc-manager, jars manuels renommés dans mods/ ; écritures sous le même verrou.
-  app.locals.mods = new ModsService({ dataDir: config.mc.dataDir, docker, modrinth: realModrinth(), prisma, lock: backups.dataLock, broadcast: (msg) => broadcast(wss, msg) });
+  app.locals.mods = new ModsService({ dataDir: config.mc.dataDir, docker, modrinth: realModrinth(), prisma, lock: backups.dataLock, broadcast: (msg) => broadcast(wss, msg), gameVersion: () => metrics.latest().version });
   // Version : lue dans les logs au passage à ready ("Starting minecraft server version 1.21.1")
   logs.on('line', (l) => { const m = /Starting minecraft server version (\S+)/.exec(l.message); if (m) metrics.setVersion(m[1]); });
 

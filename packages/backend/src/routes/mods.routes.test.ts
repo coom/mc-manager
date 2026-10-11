@@ -14,6 +14,7 @@ function appWith(role: 'admin' | 'viewer') {
   app.locals.mods = {
     view: vi.fn().mockResolvedValue(view), importFromEnv: vi.fn().mockResolvedValue(3), add: vi.fn().mockResolvedValue(undefined),
     setEnabled: vi.fn().mockResolvedValue(undefined), remove: vi.fn().mockResolvedValue(undefined), setFileEnabled: vi.fn().mockResolvedValue(undefined),
+    search: vi.fn().mockResolvedValue({ loader: 'fabric', gameVersion: null, hits: [] }),
   };
   app.use('/api/mods', modsRoutes);
   app.use(errorHandler);
@@ -56,6 +57,14 @@ describe('mods routes', () => {
     expect(app.locals.mods.add).not.toHaveBeenCalled();
     expect(app.locals.mods.setEnabled).not.toHaveBeenCalled();
     expect(app.locals.mods.setFileEnabled).not.toHaveBeenCalled();
+    expect(audited(app)).toEqual([]);
+  });
+  it('search is open to viewers, validates q and is not audited', async () => {
+    const app = appWith('viewer');
+    expect((await request(app).get('/api/mods/search?q=xaero')).status).toBe(200);
+    expect(app.locals.mods.search).toHaveBeenCalledWith('xaero');
+    expect((await request(app).get('/api/mods/search')).status).toBe(400);
+    expect((await request(app).get('/api/mods/search?q=')).body.code).toBe('invalid_query');
     expect(audited(app)).toEqual([]);
   });
   it('surfaces service errors with their code and does not audit them', async () => {

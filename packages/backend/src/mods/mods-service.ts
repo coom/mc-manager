@@ -1,14 +1,14 @@
 import { access, readdir, rename, stat } from 'fs/promises';
 import type { Dirent, Stats } from 'fs';
 import path from 'path';
-import type { ManualMod, ModsDir, ModsView, ModrinthMod, WsMessage } from '@mc/common';
+import type { ManualMod, ModsDir, ModsView, ModrinthMod, ModrinthSearchHit, ModsSearchResult, WsMessage } from '@mc/common';
 import type { PrismaClient } from '../../generated/prisma/index.js';
 import type { DockerService } from '../docker/docker-service.js';
 import type { DataLock } from '../data/data-lock.js';
 import { AppError } from '../middleware/error-handler.js';
 import { logger } from '../utils/logger.js';
 import { mapWriteError } from '../utils/atomic-write.js';
-import { serverTypeOf, modrinthSource, COMPOSE_LINE, LISTING_RELATIVE } from './server-type.js';
+import { serverTypeOf, modrinthSource, envMap, COMPOSE_LINE, LISTING_RELATIVE } from './server-type.js';
 import { readListing, writeListing, isManaged, isValidEntry, slugOf, prefixOf, type ListingLine } from './listing-file.js';
 import { readManifest, type ModrinthManifest } from './manifest.js';
 import { ModrinthUnavailable, type ModrinthLike } from './modrinth-client.js';
@@ -23,9 +23,15 @@ export interface ModsDeps {
   prisma: PrismaClient;
   lock: DataLock;
   broadcast: (msg: WsMessage) => void;
+  /** Version Minecraft en cours d'exécution (lue dans les logs par le collecteur), null si inconnue. */
+  gameVersion?: () => string | null;
 }
 
 const RESOLVE_RETRY_MS = 60 * 60_000;
+const SEARCH_TTL_MS = 60_000;
+const SEARCH_CACHE_MAX = 50;
+const SEARCH_LIMIT = 20;
+const VERSION_RE = /^\d+\.\d+(\.\d+)?$/;
 
 export class ModsService {
   readonly listingPath: string;
@@ -154,6 +160,41 @@ export class ModsService {
   }
 
   private fail(status: number, code: string, message: string): never { throw new AppError(status, message, undefined, code); }
+
+  private searchCache = new Map<string, { at: number; hits: Omit<ModrinthSearchHit, 'alreadyListed'>[] }>();
+
+  /** Version MC pour filtrer la recherche : logs du serveur, sinon VERSION du conteneur si numérique, sinon null. */
+  private gameVersion(env: string[]): string | null {
+    const running = this.deps.gameVersion?.() ?? null;
+    if (running && VERSION_RE.test(running)) return running;
+    const v = (envMap(env).get('VERSION') ?? '').trim();
+    return VERSION_RE.test(v) ? v : null;
+  }
+
+  /** Recherche dans le catalogue Modrinth, filtrée sur le loader (et la version MC si connue), cache 60 s par requête. */
+  async search(raw: string): Promise<ModsSearchResult> {
+    const q = raw.trim().slice(0, 100);
+    if (q.length < 2) this.fail(400, 'invalid_query', 'Query must have at least 2 characters');
+    const inspect = await this.inspect();
+    const server = inspect ? serverTypeOf(inspect.env) : null;
+    if (!server || !inspect) this.fail(409, 'unsupported_server', 'Mods are only managed for modded or plugin servers (TYPE=FABRIC, PAPER, ...)');
+    const gameVersion = this.gameVersion(inspect.env);
+    const key = `${q}\u0000${server.loader}\u0000${gameVersion ?? ''}`;
+    const now = Date.now();
+    let entry = this.searchCache.get(key);
+    if (!entry || entry.at + SEARCH_TTL_MS < now) {
+      let hits;
+      try { hits = await this.deps.modrinth.search(q, { loader: server.loader, gameVersion, limit: SEARCH_LIMIT }); }
+      catch (err) { if (err instanceof ModrinthUnavailable) this.fail(502, 'modrinth_unavailable', err.message); throw err; }
+      entry = { at: now, hits };
+      this.searchCache.delete(key);
+      this.searchCache.set(key, entry);
+      while (this.searchCache.size > SEARCH_CACHE_MAX) this.searchCache.delete(this.searchCache.keys().next().value!);
+    }
+    // alreadyListed est recalculé à chaque appel : le fichier a pu changer depuis la mise en cache.
+    const listed = new Set((await readListing(this.listingPath)).lines.filter(isManaged).map((l) => slugOf(l.entry)));
+    return { loader: server.loader, gameVersion, hits: entry.hits.map((h) => ({ ...h, alreadyListed: listed.has(h.slug) })) };
+  }
 
   private async requireServer() {
     const inspect = await this.inspect();

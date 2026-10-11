@@ -29,6 +29,14 @@ modsRoutes.get('/', async (req: Request, res: Response, next: NextFunction) => {
   try { res.json(await req.app.locals.mods.view()); } catch (err) { next(err); }
 });
 
+modsRoutes.get('/search', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const q = typeof req.query.q === 'string' ? req.query.q : '';
+    if (q.trim().length < 2) throw new AppError(400, 'Query must have at least 2 characters', undefined, 'invalid_query');
+    res.json(await req.app.locals.mods.search(q));
+  } catch (err) { next(err); }
+});
+
 modsRoutes.post('/import', admin, async (req: Request, res: Response, next: NextFunction) => {
   try {
     const n: number = await req.app.locals.mods.importFromEnv();
