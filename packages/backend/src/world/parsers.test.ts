@@ -1,0 +1,44 @@
+import { describe, it, expect } from 'vitest';
+import { isUnknownCommand, parseTimeQuery, parseGamerule, parseDifficulty, parseTickStatus } from './parsers.js';
+
+describe('world parsers', () => {
+  it('detects an unknown command, with or without colours', () => {
+    expect(isUnknownCommand('Unknown or incomplete command, see below for error\ntick query<--[HERE]')).toBe(true);
+    expect(isUnknownCommand('§cUnknown command')).toBe(true);
+    expect(isUnknownCommand('Target tick rate: 20.0 per second.')).toBe(false);
+    expect(isUnknownCommand('')).toBe(false);
+  });
+  it('parses time queries', () => {
+    expect(parseTimeQuery('The time is 6000')).toBe(6000);
+    expect(parseTimeQuery('§eThe time is §f12')).toBe(12);
+    expect(parseTimeQuery('Unknown or incomplete command')).toBeNull();
+    expect(parseTimeQuery('')).toBeNull();
+  });
+  it('parses gamerule reads and writes', () => {
+    expect(parseGamerule('Gamerule keepInventory is currently set to: false')).toBe(false);
+    expect(parseGamerule('Gamerule keepInventory is now set to: true')).toBe(true);
+    expect(parseGamerule('Gamerule randomTickSpeed is currently set to: 3')).toBe(3);
+    expect(parseGamerule('Gamerule spawnRadius is now set to: 0')).toBe(0);
+    expect(parseGamerule('Unknown or incomplete command')).toBeNull();
+    expect(parseGamerule('Gamerule foo is currently set to: maybe')).toBeNull();
+  });
+  it('parses the difficulty in lowercase and rejects unknown values', () => {
+    expect(parseDifficulty('The difficulty is Normal')).toBe('normal');
+    expect(parseDifficulty('§aThe difficulty is Peaceful')).toBe('peaceful');
+    expect(parseDifficulty('The difficulty is Brutal')).toBeNull();
+    expect(parseDifficulty('')).toBeNull();
+  });
+  it('parses tick status when running, frozen or sprinting', () => {
+    expect(parseTickStatus('Target tick rate: 20.0 per second.\nAverage time per tick: 3.2ms (Target: 50.0ms)\nPercentiles: P50: 2.9ms P95: 5.1ms P99: 9.0ms, sample: 100'))
+      .toEqual({ targetRate: 20, frozen: false, sprinting: false });
+    expect(parseTickStatus('The game is frozen\nTarget tick rate: 40.0 per second.\nAverage time per tick: 0.1ms'))
+      .toEqual({ targetRate: 40, frozen: true, sprinting: false });
+    expect(parseTickStatus('The game is sprinting\nTarget tick rate: 20.0 per second.'))
+      .toEqual({ targetRate: 20, frozen: false, sprinting: true });
+    // Ligne de taux absente : l'état est quand même rendu.
+    expect(parseTickStatus('The game is frozen')).toEqual({ targetRate: null, frozen: true, sprinting: false });
+    expect(parseTickStatus('§aTarget tick rate: §f12.5§a per second.')?.targetRate).toBe(12.5);
+    expect(parseTickStatus('Unknown or incomplete command')).toBeNull();
+    expect(parseTickStatus('')).toBeNull();
+  });
+});
