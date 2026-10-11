@@ -1,6 +1,9 @@
-import { GAMERULES, GAMEMODES, type Gamemode, type WorldState } from '@mc/common';
+import { GAMERULES, GAMEMODES, type Difficulty, type Gamemode, type TimePreset, type WeatherKind, type WorldState, type WorldTickUpdate } from '@mc/common';
+import { AppError } from '../middleware/error-handler.js';
+import { stripColors } from '../rcon/parsers.js';
 import { lockedKeys } from '../server-properties/itzg-env.js';
 import { isUnknownCommand, parseDifficulty, parseGamerule, parseTickStatus, parseTimeQuery } from './parsers.js';
+import { assertDifficulty, assertGamemode, assertGamerule, assertPreset, assertTick, assertWeather } from './validate.js';
 
 export interface WorldDeps {
   rcon: { send(cmd: string): Promise<string> };
@@ -36,5 +39,27 @@ export class WorldService {
     if (locked.difficulty && locked.difficulty !== 'rcon') resetOnRestart.difficulty = locked.difficulty;
     if (locked.gamemode && locked.gamemode !== 'rcon') resetOnRestart.gamemode = locked.gamemode;
     return { time: { daytime, day }, tick, difficulty, defaultGamemode, gamerules, resetOnRestart };
+  }
+
+  /** Envoie une commande validée ; seuls les motifs d'erreur sont interprétés, la phrase de confirmation varie selon le serveur. */
+  private async run(cmd: string): Promise<void> {
+    const raw = stripColors(await this.deps.rcon.send(cmd));
+    if (isUnknownCommand(raw)) throw new AppError(501, 'Command not supported by this server', undefined, 'unsupported');
+    if (/incorrect argument|expected |invalid|unknown/i.test(raw)) throw new AppError(502, `Unexpected server response: ${raw.slice(0, 200)}`);
+  }
+
+  async setTime(preset: TimePreset): Promise<void> { await this.run(`time set ${assertPreset(preset)}`); }
+  async setWeather(kind: WeatherKind): Promise<void> { await this.run(`weather ${assertWeather(kind)}`); }
+  async setDifficulty(d: Difficulty): Promise<void> { await this.run(`difficulty ${assertDifficulty(d)}`); }
+  async setDefaultGamemode(g: Gamemode): Promise<void> { await this.run(`defaultgamemode ${assertGamemode(g)}`); }
+  async setTick(update: WorldTickUpdate): Promise<void> {
+    const u = assertTick(update);
+    if ('rate' in u) await this.run(`tick rate ${u.rate}`);
+    else if ('frozen' in u) await this.run(u.frozen ? 'tick freeze' : 'tick unfreeze');
+    else await this.run(`tick sprint ${u.sprint}`);
+  }
+  async setGamerule(name: string, value: boolean | number): Promise<void> {
+    const g = assertGamerule(name, value);
+    await this.run(`gamerule ${g.name} ${g.value}`);
   }
 }

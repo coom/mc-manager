@@ -75,3 +75,39 @@ describe('WorldService.read', () => {
     await expect(new WorldService(deps(rcon as never)).read()).rejects.toMatchObject({ statusCode: 503 });
   });
 });
+
+describe('WorldService setters', () => {
+  const svc = (rcon: ReturnType<typeof fakeRcon>) => new WorldService(deps(rcon));
+  it('sends one exact command per action', async () => {
+    const rcon = fakeRcon({
+      'time set night': 'Set the time to 13000', 'weather thunder': 'Set the weather to thunder', 'difficulty hard': 'The difficulty has been set to Hard',
+      'defaultgamemode creative': 'The default game mode is now Creative Mode', 'tick rate 40': 'Set the target tick rate to 40.0 per second',
+      'tick freeze': 'The game is now frozen', 'tick unfreeze': 'The game is now running', 'tick sprint 1200': 'Sprinting 1200 ticks',
+      'gamerule keepInventory true': 'Gamerule keepInventory is now set to: true', 'gamerule randomTickSpeed 100': 'Gamerule randomTickSpeed is now set to: 100',
+    });
+    const s = svc(rcon);
+    await s.setTime('night'); await s.setWeather('thunder'); await s.setDifficulty('hard'); await s.setDefaultGamemode('creative');
+    await s.setTick({ rate: 40 }); await s.setTick({ frozen: true }); await s.setTick({ frozen: false }); await s.setTick({ sprint: 1200 });
+    await s.setGamerule('keepInventory', true); await s.setGamerule('randomTickSpeed', 100);
+    expect(rcon.sent).toEqual(['time set night', 'weather thunder', 'difficulty hard', 'defaultgamemode creative', 'tick rate 40', 'tick freeze', 'tick unfreeze', 'tick sprint 1200', 'gamerule keepInventory true', 'gamerule randomTickSpeed 100']);
+  });
+  it('treats an empty reply and a "did not change" reply as success', async () => {
+    const rcon = fakeRcon({ 'difficulty normal': 'The difficulty did not change; it is already set to Normal', 'gamerule keepInventory false': '' });
+    await expect(svc(rcon).setDifficulty('normal')).resolves.toBeUndefined();
+    await expect(svc(rcon).setGamerule('keepInventory', false)).resolves.toBeUndefined();
+  });
+  it('maps an unknown command to 501 with the unsupported code', async () => {
+    await expect(svc(fakeRcon()).setTick({ rate: 40 })).rejects.toMatchObject({ statusCode: 501, code: 'unsupported' });
+  });
+  it('maps an argument error to 502', async () => {
+    const rcon = fakeRcon({ 'gamerule randomTickSpeed 100': 'Incorrect argument for command' });
+    await expect(svc(rcon).setGamerule('randomTickSpeed', 100)).rejects.toMatchObject({ statusCode: 502 });
+  });
+  it('validates before sending anything', async () => {
+    const rcon = fakeRcon();
+    await expect(svc(rcon).setGamerule('randomTickSpeed', '5' as never)).rejects.toMatchObject({ statusCode: 400 });
+    await expect(svc(rcon).setTick({ rate: 0 })).rejects.toMatchObject({ statusCode: 400 });
+    await expect(svc(rcon).setTime('dawn' as never)).rejects.toMatchObject({ statusCode: 400 });
+    expect(rcon.sent).toEqual([]);
+  });
+});
