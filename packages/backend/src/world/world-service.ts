@@ -2,7 +2,7 @@ import { GAMERULES, GAMEMODES, type Difficulty, type Gamemode, type GameruleDef,
 import { AppError } from '../middleware/error-handler.js';
 import { stripColors } from '../rcon/parsers.js';
 import { lockedKeys } from '../server-properties/itzg-env.js';
-import { isUnknownCommand, parseDifficulty, parseGamerule, parseTickStatus, parseTimeQuery } from './parsers.js';
+import { isUnknownCommand, parseDifficulty, parseGamerule, parseTickStatus, parseTimeQuery, parseTimelinePosition, parseTimelineRepetitions } from './parsers.js';
 import { assertDifficulty, assertGamemode, assertGamerule, assertPreset, assertTick, assertWeather } from './validate.js';
 
 export interface WorldDeps {
@@ -36,8 +36,18 @@ export class WorldService {
   /** État courant ; une réponse non reconnue donne null pour le champ concerné, jamais une erreur. */
   async read(): Promise<WorldState> {
     const send = (cmd: string) => this.deps.rcon.send(cmd);
-    const daytime = parseTimeQuery(await send('time query daytime'));
-    const day = parseTimeQuery(await send('time query day'));
+    // 1.21.11+ : `day` est une timeline dont la position est l'heure du jour et `daytime` n'existe plus ;
+    // avant : `time query daytime` donne l'heure et `time query day` le nombre de jours.
+    const dayRaw = await send('time query day');
+    const position = parseTimelinePosition(dayRaw);
+    let daytime: number | null; let day: number | null;
+    if (position !== null) {
+      daytime = position;
+      day = parseTimelineRepetitions(await send('time query day repetitions'));
+    } else {
+      day = parseTimeQuery(dayRaw);
+      daytime = parseTimeQuery(await send('time query daytime'));
+    }
     const tickRaw = await send('tick query');
     const tick = isUnknownCommand(tickRaw) ? { supported: false, ...NO_TICK } : { supported: true, ...(parseTickStatus(tickRaw) ?? NO_TICK) };
     const difficulty = parseDifficulty(await send('difficulty'));
@@ -67,7 +77,7 @@ export class WorldService {
   private async run(cmd: string): Promise<void> {
     const raw = stripColors(await this.deps.rcon.send(cmd));
     if (isUnknownCommand(raw)) throw new AppError(501, 'Command not supported by this server', undefined, 'unsupported');
-    if (/incorrect argument|expected |invalid|unknown/i.test(raw)) throw new AppError(502, `Unexpected server response: ${raw.slice(0, 200)}`);
+    if (/incorrect argument|expected |invalid|unknown|can't find element/i.test(raw)) throw new AppError(502, `Unexpected server response: ${raw.slice(0, 200)}`);
   }
 
   async setTime(preset: TimePreset): Promise<void> { await this.run(`time set ${assertPreset(preset)}`); }

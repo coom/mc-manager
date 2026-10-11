@@ -12,10 +12,24 @@ export function parseTimeQuery(raw: string): number | null {
   return m ? parseInt(m[1], 10) : null;
 }
 
-/** `gamerule <name>` → « … is currently set to: X » ; `gamerule <name> <v>` → « … is now set to: X ». */
+/** 1.21.11+ : `time query <timeline>` → « Timeline minecraft:day is at 9223 tick(s) » (position dans la journée). */
+export function parseTimelinePosition(raw: string): number | null {
+  const m = /Timeline \S+ is at (\d+) tick/i.exec(stripColors(raw));
+  return m ? parseInt(m[1], 10) : null;
+}
+
+/** 1.21.11+ : « Timeline minecraft:day has passed 12 repetition(s) » (nombre de jours écoulés). */
+export function parseTimelineRepetitions(raw: string): number | null {
+  const m = /Timeline \S+ has passed (\d+) repetition/i.exec(stripColors(raw));
+  return m ? parseInt(m[1], 10) : null;
+}
+
+/**
+ * `gamerule <name>` → « Gamerule keepInventory is currently set to: false » (≤ 1.21.10) ou
+ * « Game rule keep_inventory is currently set to false » (1.21.11+) ; écriture : « … is now set to … ».
+ */
 export function parseGamerule(raw: string): boolean | number | null {
-  // L'identifiant est camelCase (≤ 1.21.10) ou snake_case, parfois préfixé `minecraft:` (1.21.11+).
-  const m = /Gamerule \S+ is (?:currently|now) set to:\s*(\S+)/i.exec(stripColors(raw));
+  const m = /Game ?rule \S+ is (?:currently|now) set to:?\s*(\S+)/i.exec(stripColors(raw));
   if (!m) return null;
   if (m[1] === 'true') return true;
   if (m[1] === 'false') return false;

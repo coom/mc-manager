@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { isUnknownCommand, parseTimeQuery, parseGamerule, parseDifficulty, parseTickStatus } from './parsers.js';
+import { isUnknownCommand, parseTimeQuery, parseTimelinePosition, parseTimelineRepetitions, parseGamerule, parseDifficulty, parseTickStatus } from './parsers.js';
 
 describe('world parsers', () => {
   it('detects an unknown command, with or without colours', () => {
@@ -14,7 +14,17 @@ describe('world parsers', () => {
     expect(parseTimeQuery('Unknown or incomplete command')).toBeNull();
     expect(parseTimeQuery('')).toBeNull();
   });
+  it('parses the 1.21.11+ timeline replies of time query', () => {
+    expect(parseTimelinePosition('Timeline minecraft:day is at 9223 tick(s)')).toBe(9223);
+    expect(parseTimelinePosition('The time is 6000')).toBeNull();
+    expect(parseTimelinePosition("Can't find element 'minecraft:daytime' of type 'minecraft:timeline'")).toBeNull();
+    expect(parseTimelineRepetitions('Timeline minecraft:day has passed 12 repetition(s)')).toBe(12);
+    expect(parseTimelineRepetitions('Timeline minecraft:day is at 9223 tick(s)')).toBeNull();
+  });
   it('parses gamerule reads and writes', () => {
+    // 1.21.11+ : « Game rule » en deux mots, sans deux-points.
+    expect(parseGamerule('Game rule keep_inventory is currently set to false')).toBe(false);
+    expect(parseGamerule('Game rule random_tick_speed is now set to 10')).toBe(10);
     expect(parseGamerule('Gamerule keep_inventory is currently set to: false')).toBe(false);
     expect(parseGamerule('Gamerule keep_inventory is now set to: true')).toBe(true);
     expect(parseGamerule('Gamerule random_tick_speed is currently set to: 3')).toBe(3);
