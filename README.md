@@ -131,9 +131,17 @@ If the server is already stopped, no safety backup can be taken: an explicit con
 
 The Configuration page edits `server.properties`, either through a form of the common keys or as the raw file. Saving is atomic and the interface then offers to restart the server.
 
-- Keys governed by an environment variable of the itzg container are shown locked and cannot be changed here: the container rewrites them at each start. Setting `OVERRIDE_SERVER_PROPERTIES=false` in the Minecraft stack makes the file authoritative instead, which frees these keys.
+- Keys governed by an environment variable of the itzg container are shown locked and cannot be changed here: the container rewrites them at each start. Setting `OVERRIDE_SERVER_PROPERTIES=false` in the Minecraft stack makes the file authoritative instead, which frees these keys. The form shows a hint explaining this whenever a locked key is present.
 - The RCON keys (`enable-rcon`, `rcon.port`, `rcon.password`) are always locked and the RCON password is never shown.
 - Changes only take effect after a restart.
+
+## World
+
+The World page (admin only) adjusts the running world through RCON, without a restart: time of day and weather (with "freeze" switches backed by `doDaylightCycle` / `doWeatherCycle`), tick rate, freeze and sprint (`/tick`, Minecraft 1.20.3+), difficulty, default game mode and a curated list of game rules.
+
+- Every action is a single validated command, audited as `world.*` before it is sent. Nothing is written to `/data` by MC Manager: the server persists these values in the world itself.
+- Difficulty and default game mode are also written to `server.properties` by the server. If `DIFFICULTY` or `MODE` is set in the container environment, the itzg image resets them at the next start; the page says so.
+- The weather has no read command in vanilla, so no current state is shown for it.
 
 ## Mods
 
