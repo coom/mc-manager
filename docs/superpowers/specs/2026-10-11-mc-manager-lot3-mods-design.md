@@ -116,8 +116,11 @@ signalé (`conflict: true`), aucune action possible dessus.
 
 - l'ensemble des entrées Modrinth actives diffère de `manifest.projects` (manifeste
   absent inclus, dès qu'il y a au moins une entrée active) ;
-- le `mtime` du dossier `mods/` est postérieur à `State.StartedAt` du conteneur
-  (renommage manuel depuis le démarrage) ;
+- un renommage manuel a eu lieu depuis le démarrage du conteneur : horodatage de la
+  dernière écriture gardé en mémoire par le service et comparé à `State.StartedAt`,
+  même mécanisme que `PropertiesService` (un redémarrage du backend remet ce drapeau
+  à zéro). Le `mtime` du dossier ne convient pas : l'image elle-même y écrit après
+  `StartedAt` au moment du téléchargement des mods ;
 - quand le serveur est arrêté, la seule première condition compte.
 
 ### 2.5 Cache des métadonnées Modrinth
@@ -182,8 +185,11 @@ Dépendances : `dataDir`, `DockerService` (pour `inspectServer().env` et `starte
 - `importFromEnv()` : refuse (409) si le fichier existe déjà ou si `source !== 'inline'` ;
   écrit une ligne par entrée (entrées non conformes → ligne `invalid` conservée).
 - `add(entry)` : validation grammaire (400), doublon par `slug` (409), appel Modrinth
-  (404 inconnu, 502 injoignable), `projectType` ≠ `mod` ou `plugin` selon le dossier
-  (422), loader absent de `loaders` (422), puis écriture et cache.
+  (404 inconnu, 502 injoignable), `projectType` ≠ `mod` (422 `wrong_type` : l'API
+  Modrinth classe mods, plugins et datapacks sous `project_type: "mod"` et les distingue
+  par `loaders` ; `modpack`, `resourcepack`, `shader` sont refusés), loader attendu
+  (préfixe de l'entrée s'il y en a un, sinon celui du serveur) absent de `loaders`
+  (422 `loader_mismatch`), puis écriture et cache.
 - `setEnabled(entry, enabled)` : ligne introuvable → 404 ; déjà dans l'état → 200 sans
   écrire.
 - `remove(entry)` : supprime la ligne (404 si absente).

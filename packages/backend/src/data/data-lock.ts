@@ -1,6 +1,6 @@
 import { AppError } from '../middleware/error-handler.js';
 
-export type DataOp = 'backup' | 'restore' | 'properties';
+export type DataOp = 'backup' | 'restore' | 'properties' | 'mods';
 
 /**
  * Verrou global des écritures dans /data et des sauvegardes : une seule opération à la fois.
@@ -13,7 +13,7 @@ export class DataLock {
   get busy(): DataOp | null { return this.current; }
 
   assertFree(): void {
-    if (this.current) throw new AppError(409, `Another operation is running: ${this.current}`);
+    if (this.current) throw new AppError(409, `Another operation is running: ${this.current}`, undefined, 'busy');
   }
 
   /** Prend le verrou ou lève 409 ; renvoie la fonction de libération (idempotente, liée à cette prise). */

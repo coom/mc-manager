@@ -13,4 +13,5 @@ export type WsMessage =
   | { type: 'player.session'; kind: 'join' | 'leave'; player: OnlinePlayer; leftAt?: string }
   | { type: 'player.lists.changed' }
   | { type: 'restore.progress'; step: RestoreStep; line: string }
-  | { type: 'restore.done'; ok: boolean; message: string; safetyBackup: string | null };
+  | { type: 'restore.done'; ok: boolean; message: string; safetyBackup: string | null }
+  | { type: 'mods.changed' };

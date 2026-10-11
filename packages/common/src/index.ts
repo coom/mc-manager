@@ -7,4 +7,5 @@ export * from './types/audit.js';
 export * from './types/players.js';
 export * from './types/journal.js';
 export * from './types/properties.js';
+export * from './types/mods.js';
 export * from './ws-messages.js';

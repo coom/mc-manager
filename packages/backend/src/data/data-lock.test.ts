@@ -37,4 +37,10 @@ describe('DataLock', () => {
     r2();
     expect(lock.busy).toBeNull();
   });
+  it('refuses a second operation with the busy code', () => {
+    const lock = new DataLock();
+    lock.acquire('mods');
+    try { lock.acquire('restore'); throw new Error('should have thrown'); }
+    catch (err) { expect((err as AppError).statusCode).toBe(409); expect((err as AppError).code).toBe('busy'); }
+  });
 });
