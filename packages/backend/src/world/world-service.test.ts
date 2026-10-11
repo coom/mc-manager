@@ -19,6 +19,14 @@ const vanillaReplies = () => ({
   difficulty: 'The difficulty is Normal',
   ...Object.fromEntries(GAMERULES.map((g) => [`gamerule ${g.name}`, `Gamerule ${g.name} is currently set to: ${g.type === 'bool' ? 'true' : '3'}`])),
 });
+/** Serveur ≤ 1.21.10 : seuls les anciens noms camelCase répondent, les identifiants modernes sont rejetés. */
+const legacyReplies = () => ({
+  'time query daytime': 'The time is 6000', 'time query day': 'The time is 12',
+  'tick query': 'Target tick rate: 20.0 per second.', difficulty: 'The difficulty is Normal',
+  ...Object.fromEntries(GAMERULES.map((g) => [`gamerule ${g.legacy}`, `Gamerule ${g.legacy} is currently set to: ${g.type === 'bool' ? 'true' : '3'}`])),
+  ...Object.fromEntries(GAMERULES.map((g) => [`gamerule ${g.name}`, `Incorrect argument for command
+gamerule ${g.name}<--[HERE]`])),
+});
 const deps = (rcon: ReturnType<typeof fakeRcon>, opts: { env?: string[]; gamemode?: string } = {}) => ({
   rcon,
   docker: { inspectServer: async () => ({ env: opts.env ?? [] }) },
@@ -34,11 +42,12 @@ describe('WorldService.read', () => {
     expect(state.difficulty).toBe('normal');
     expect(state.defaultGamemode).toBe('survival');
     expect(Object.keys(state.gamerules).sort()).toEqual(GAMERULES.map((g) => g.name).sort());
-    expect(state.gamerules.keepInventory).toBe(true);
-    expect(state.gamerules.randomTickSpeed).toBe(3);
+    expect(state.gamerules.keep_inventory).toBe(true);
+    expect(state.gamerules.random_tick_speed).toBe(3);
+    expect(state.legacyGamerules).toBe(false);
     expect(state.resetOnRestart).toEqual({});
     expect(rcon.sent[0]).toBe('time query daytime');
-    expect(rcon.sent).toContain('gamerule keepInventory');
+    expect(rcon.sent).toContain('gamerule keep_inventory');
   });
   it('marks tick as unsupported before 1.20.3 and keeps the rest of the state', async () => {
     const replies = vanillaReplies(); delete (replies as Record<string, string>)['tick query'];
@@ -51,18 +60,30 @@ describe('WorldService.read', () => {
     expect((await new WorldService(deps(fakeRcon(replies))).read()).tick).toEqual({ supported: true, targetRate: 20, frozen: true, sprinting: false });
   });
   it('turns unrecognised replies into null without failing', async () => {
-    const replies = { ...vanillaReplies(), 'time query daytime': 'weird', difficulty: 'The difficulty is Brutal', 'gamerule keepInventory': 'nope' };
+    const replies = { ...vanillaReplies(), 'time query daytime': 'weird', difficulty: 'The difficulty is Brutal', 'gamerule keep_inventory': 'nope' };
     const state = await new WorldService(deps(fakeRcon(replies), { gamemode: 'hardcore' })).read();
     expect(state.time.daytime).toBeNull();
     expect(state.difficulty).toBeNull();
-    expect(state.gamerules.keepInventory).toBeNull();
-    expect(state.gamerules.mobGriefing).toBe(true);
+    expect(state.gamerules.keep_inventory).toBeNull();
+    expect(state.gamerules.mob_griefing).toBe(true);
     expect(state.defaultGamemode).toBeNull();
   });
   it('reports the itzg variables that will reset difficulty and gamemode at restart', async () => {
     const env = ['DIFFICULTY=hard', 'MODE=creative', 'MOTD=hi'];
     expect((await new WorldService(deps(fakeRcon(vanillaReplies()), { env })).read()).resetOnRestart).toEqual({ difficulty: 'DIFFICULTY', gamemode: 'MODE' });
     expect((await new WorldService(deps(fakeRcon(vanillaReplies()), { env: [...env, 'OVERRIDE_SERVER_PROPERTIES=false'] })).read()).resetOnRestart).toEqual({});
+  });
+  it('falls back to the legacy camelCase names on an old server and inverts raids', async () => {
+    const rcon = fakeRcon(legacyReplies());
+    const state = await new WorldService(deps(rcon)).read();
+    expect(state.legacyGamerules).toBe(true);
+    expect(state.gamerules.keep_inventory).toBe(true);
+    expect(state.gamerules.random_tick_speed).toBe(3);
+    // disableRaids=true ⇔ raids=false
+    expect(state.gamerules.raids).toBe(false);
+    expect(rcon.sent).toContain('gamerule doDaylightCycle');
+    expect(rcon.sent).not.toContain('gamerule keep_inventory');
+    expect(rcon.sent.filter((c) => c.startsWith('gamerule ')).length).toBe(GAMERULES.length + 1);
   });
   it('tolerates docker and properties failures', async () => {
     const svc = new WorldService({ rcon: fakeRcon(vanillaReplies()), docker: { inspectServer: async () => { throw new Error('no socket'); } }, properties: { read: async () => { throw new Error('ENOENT'); } } });
@@ -83,29 +104,38 @@ describe('WorldService setters', () => {
       'time set night': 'Set the time to 13000', 'weather thunder': 'Set the weather to thunder', 'difficulty hard': 'The difficulty has been set to Hard',
       'defaultgamemode creative': 'The default game mode is now Creative Mode', 'tick rate 40': 'Set the target tick rate to 40.0 per second',
       'tick freeze': 'The game is now frozen', 'tick unfreeze': 'The game is now running', 'tick sprint 1200': 'Sprinting 1200 ticks',
-      'gamerule keepInventory true': 'Gamerule keepInventory is now set to: true', 'gamerule randomTickSpeed 100': 'Gamerule randomTickSpeed is now set to: 100',
+      'gamerule keep_inventory true': 'Gamerule keep_inventory is now set to: true', 'gamerule random_tick_speed 100': 'Gamerule random_tick_speed is now set to: 100',
     });
     const s = svc(rcon);
     await s.setTime('night'); await s.setWeather('thunder'); await s.setDifficulty('hard'); await s.setDefaultGamemode('creative');
     await s.setTick({ rate: 40 }); await s.setTick({ frozen: true }); await s.setTick({ frozen: false }); await s.setTick({ sprint: 1200 });
-    await s.setGamerule('keepInventory', true); await s.setGamerule('randomTickSpeed', 100);
-    expect(rcon.sent).toEqual(['time set night', 'weather thunder', 'difficulty hard', 'defaultgamemode creative', 'tick rate 40', 'tick freeze', 'tick unfreeze', 'tick sprint 1200', 'gamerule keepInventory true', 'gamerule randomTickSpeed 100']);
+    await s.setGamerule('keep_inventory', true); await s.setGamerule('random_tick_speed', 100);
+    expect(rcon.sent).toEqual(['time set night', 'weather thunder', 'difficulty hard', 'defaultgamemode creative', 'tick rate 40', 'tick freeze', 'tick unfreeze', 'tick sprint 1200', 'gamerule keep_inventory true', 'gamerule random_tick_speed 100']);
   });
   it('treats an empty reply and a "did not change" reply as success', async () => {
-    const rcon = fakeRcon({ 'difficulty normal': 'The difficulty did not change; it is already set to Normal', 'gamerule keepInventory false': '' });
+    const rcon = fakeRcon({ 'difficulty normal': 'The difficulty did not change; it is already set to Normal', 'gamerule keep_inventory false': '' });
     await expect(svc(rcon).setDifficulty('normal')).resolves.toBeUndefined();
-    await expect(svc(rcon).setGamerule('keepInventory', false)).resolves.toBeUndefined();
+    await expect(svc(rcon).setGamerule('keep_inventory', false)).resolves.toBeUndefined();
   });
   it('maps an unknown command to 501 with the unsupported code', async () => {
     await expect(svc(fakeRcon()).setTick({ rate: 40 })).rejects.toMatchObject({ statusCode: 501, code: 'unsupported' });
   });
   it('maps an argument error to 502', async () => {
-    const rcon = fakeRcon({ 'gamerule randomTickSpeed 100': 'Incorrect argument for command' });
-    await expect(svc(rcon).setGamerule('randomTickSpeed', 100)).rejects.toMatchObject({ statusCode: 502 });
+    const rcon = fakeRcon({ 'gamerule random_tick_speed 100': 'Incorrect argument for command' });
+    await expect(svc(rcon).setGamerule('random_tick_speed', 100)).rejects.toMatchObject({ statusCode: 502 });
+  });
+  it('uses the legacy names (and inverts raids) after reading a legacy server', async () => {
+    const rcon = fakeRcon({ ...legacyReplies(), 'gamerule keepInventory true': 'Gamerule keepInventory is now set to: true', 'gamerule disableRaids true': 'Gamerule disableRaids is now set to: true' });
+    const s = svc(rcon);
+    await s.read();
+    const before = rcon.sent.length;
+    await s.setGamerule('keep_inventory', true);
+    await s.setGamerule('raids', false);
+    expect(rcon.sent.slice(before)).toEqual(['gamerule keepInventory true', 'gamerule disableRaids true']);
   });
   it('validates before sending anything', async () => {
     const rcon = fakeRcon();
-    await expect(svc(rcon).setGamerule('randomTickSpeed', '5' as never)).rejects.toMatchObject({ statusCode: 400 });
+    await expect(svc(rcon).setGamerule('random_tick_speed', '5' as never)).rejects.toMatchObject({ statusCode: 400 });
     await expect(svc(rcon).setTick({ rate: 0 })).rejects.toMatchObject({ statusCode: 400 });
     await expect(svc(rcon).setTime('dawn' as never)).rejects.toMatchObject({ statusCode: 400 });
     expect(rcon.sent).toEqual([]);

@@ -33,6 +33,7 @@ export function GamerulesCard({ state, pending, run }: WorldCardProps) {
     <Card className="lg:col-span-2">
       <CardHeader className="pb-3"><CardTitle className="text-base">{t('world.gamerules.title')}</CardTitle></CardHeader>
       <CardContent className="grid gap-6 md:grid-cols-2">
+        {state.legacyGamerules && <p className="text-xs text-muted-foreground md:col-span-2">{t('world.gamerules.legacy')}</p>}
         {GAMERULE_GROUPS.map((group) => (
           <section key={group} className="space-y-3">
             <h3 className="text-sm font-medium">{t(`world.gamerules.groups.${group}`)}</h3>

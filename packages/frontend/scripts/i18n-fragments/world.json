@@ -1,38 +1,175 @@
-{ "namespace": "world", "keys": {
+{
+ "namespace": "world",
+ "keys": {
   "en": {
-    "title": "World",
-    "offline": "The server must be running to adjust the world.",
-    "applied": "Applied",
-    "unsupported": "This command is not supported by this Minecraft version.",
-    "unknown": "unknown",
-    "time": { "title": "Time and weather", "clock": "World time", "day": "Day {{day}}", "presets": { "day": "Day", "noon": "Noon", "night": "Night", "midnight": "Midnight" }, "freezeDaylight": "Freeze the day-night cycle" },
-    "weather": { "title": "Weather", "clear": "Clear", "rain": "Rain", "thunder": "Thunder", "freeze": "Freeze the weather" },
-    "tick": { "title": "Tick", "target": "Target tick rate", "rate": "Tick rate", "apply": "Apply", "normal": "Normal (20)", "freeze": "Freeze the game", "sprint": "Sprint", "sprintSeconds": "Seconds to sprint", "run": "Sprint", "sprinting": "Sprinting in progress", "unsupported": "Requires Minecraft 1.20.3 or later." },
-    "rules": { "title": "Difficulty and game mode", "difficulty": "Difficulty", "gamemode": "Default game mode", "resetOnRestart": "Reset at restart by {{var}} in the container environment." },
-    "gamerules": { "title": "Game rules", "apply": "Apply", "groups": { "world": "World", "players": "Players", "spawning": "Spawning", "misc": "Miscellaneous" },
-      "names": {
-        "doDaylightCycle": "Day-night cycle", "doWeatherCycle": "Weather cycle", "randomTickSpeed": "Random tick speed (crop growth)", "doFireTick": "Fire spreads", "mobGriefing": "Mob griefing", "doTileDrops": "Blocks drop items", "doEntityDrops": "Entities drop items", "doMobLoot": "Mobs drop loot",
-        "keepInventory": "Keep inventory on death", "naturalRegeneration": "Natural regeneration", "doImmediateRespawn": "Immediate respawn", "playersSleepingPercentage": "Players needed to sleep (%)", "spawnRadius": "Spawn radius", "fallDamage": "Fall damage", "drowningDamage": "Drowning damage", "fireDamage": "Fire damage", "freezeDamage": "Freeze damage",
-        "doMobSpawning": "Mob spawning", "doInsomnia": "Phantoms (insomnia)", "doPatrolSpawning": "Pillager patrols", "doTraderSpawning": "Wandering traders", "doWardenSpawning": "Warden spawning", "disableRaids": "Disable raids", "maxEntityCramming": "Max entity cramming",
-        "announceAdvancements": "Announce advancements", "showDeathMessages": "Show death messages", "commandBlockOutput": "Command block output", "sendCommandFeedback": "Command feedback"
-      } }
+   "title": "World",
+   "offline": "The server must be running to adjust the world.",
+   "applied": "Applied",
+   "unsupported": "This command is not supported by this Minecraft version.",
+   "unknown": "unknown",
+   "time": {
+    "title": "Time and weather",
+    "clock": "World time",
+    "day": "Day {{day}}",
+    "presets": {
+     "day": "Day",
+     "noon": "Noon",
+     "night": "Night",
+     "midnight": "Midnight"
+    },
+    "freezeDaylight": "Freeze the day-night cycle"
+   },
+   "weather": {
+    "title": "Weather",
+    "clear": "Clear",
+    "rain": "Rain",
+    "thunder": "Thunder",
+    "freeze": "Freeze the weather"
+   },
+   "tick": {
+    "title": "Tick",
+    "target": "Target tick rate",
+    "rate": "Tick rate",
+    "apply": "Apply",
+    "normal": "Normal (20)",
+    "freeze": "Freeze the game",
+    "sprint": "Sprint",
+    "sprintSeconds": "Seconds to sprint",
+    "run": "Sprint",
+    "sprinting": "Sprinting in progress",
+    "unsupported": "Requires Minecraft 1.20.3 or later."
+   },
+   "rules": {
+    "title": "Difficulty and game mode",
+    "difficulty": "Difficulty",
+    "gamemode": "Default game mode",
+    "resetOnRestart": "Reset at restart by {{var}} in the container environment."
+   },
+   "gamerules": {
+    "title": "Game rules",
+    "apply": "Apply",
+    "groups": {
+     "world": "World",
+     "players": "Players",
+     "spawning": "Spawning",
+     "misc": "Miscellaneous"
+    },
+    "names": {
+     "advance_time": "Day-night cycle",
+     "advance_weather": "Weather cycle",
+     "random_tick_speed": "Random tick speed (crop growth)",
+     "mob_griefing": "Mob griefing",
+     "block_drops": "Blocks drop items",
+     "entity_drops": "Entities drop items",
+     "mob_drops": "Mobs drop loot",
+     "keep_inventory": "Keep inventory on death",
+     "natural_health_regeneration": "Natural regeneration",
+     "immediate_respawn": "Immediate respawn",
+     "players_sleeping_percentage": "Players needed to sleep (%)",
+     "respawn_radius": "Spawn radius",
+     "fall_damage": "Fall damage",
+     "drowning_damage": "Drowning damage",
+     "fire_damage": "Fire damage",
+     "freeze_damage": "Freeze damage",
+     "spawn_mobs": "Mob spawning",
+     "spawn_phantoms": "Phantoms (insomnia)",
+     "spawn_patrols": "Pillager patrols",
+     "spawn_wandering_traders": "Wandering traders",
+     "spawn_wardens": "Warden spawning",
+     "raids": "Raids",
+     "max_entity_cramming": "Max entity cramming",
+     "show_advancement_messages": "Announce advancements",
+     "show_death_messages": "Show death messages",
+     "command_block_output": "Command block output",
+     "send_command_feedback": "Command feedback"
+    },
+    "legacy": "This server predates Minecraft 1.21.11: the old rule names are used."
+   }
   },
   "fr": {
-    "title": "Monde",
-    "offline": "Le serveur doit être démarré pour ajuster le monde.",
-    "applied": "Appliqué",
-    "unsupported": "Commande non prise en charge par cette version de Minecraft.",
-    "unknown": "inconnu",
-    "time": { "title": "Heure et météo", "clock": "Heure du monde", "day": "Jour {{day}}", "presets": { "day": "Jour", "noon": "Midi", "night": "Nuit", "midnight": "Minuit" }, "freezeDaylight": "Figer le cycle jour-nuit" },
-    "weather": { "title": "Météo", "clear": "Clair", "rain": "Pluie", "thunder": "Orage", "freeze": "Figer la météo" },
-    "tick": { "title": "Tick", "target": "Taux de tick cible", "rate": "Taux de tick", "apply": "Appliquer", "normal": "Normal (20)", "freeze": "Geler le jeu", "sprint": "Sprint", "sprintSeconds": "Secondes à sprinter", "run": "Sprinter", "sprinting": "Sprint en cours", "unsupported": "Nécessite Minecraft 1.20.3 ou plus." },
-    "rules": { "title": "Difficulté et mode de jeu", "difficulty": "Difficulté", "gamemode": "Mode de jeu par défaut", "resetOnRestart": "Réinitialisé au redémarrage par {{var}} dans l'environnement du conteneur." },
-    "gamerules": { "title": "Règles du jeu", "apply": "Appliquer", "groups": { "world": "Monde", "players": "Joueurs", "spawning": "Apparition", "misc": "Divers" },
-      "names": {
-        "doDaylightCycle": "Cycle jour-nuit", "doWeatherCycle": "Cycle météo", "randomTickSpeed": "Vitesse des ticks aléatoires (pousse)", "doFireTick": "Propagation du feu", "mobGriefing": "Dégâts des créatures", "doTileDrops": "Les blocs lâchent des objets", "doEntityDrops": "Les entités lâchent des objets", "doMobLoot": "Butin des créatures",
-        "keepInventory": "Garder l'inventaire à la mort", "naturalRegeneration": "Régénération naturelle", "doImmediateRespawn": "Réapparition immédiate", "playersSleepingPercentage": "Joueurs requis pour dormir (%)", "spawnRadius": "Rayon d'apparition", "fallDamage": "Dégâts de chute", "drowningDamage": "Dégâts de noyade", "fireDamage": "Dégâts de feu", "freezeDamage": "Dégâts de gel",
-        "doMobSpawning": "Apparition des créatures", "doInsomnia": "Phantoms (insomnie)", "doPatrolSpawning": "Patrouilles de pillards", "doTraderSpawning": "Marchands ambulants", "doWardenSpawning": "Apparition du Warden", "disableRaids": "Désactiver les raids", "maxEntityCramming": "Entassement max d'entités",
-        "announceAdvancements": "Annoncer les progrès", "showDeathMessages": "Afficher les messages de mort", "commandBlockOutput": "Sortie des blocs de commande", "sendCommandFeedback": "Retour des commandes"
-      } }
+   "title": "Monde",
+   "offline": "Le serveur doit être démarré pour ajuster le monde.",
+   "applied": "Appliqué",
+   "unsupported": "Commande non prise en charge par cette version de Minecraft.",
+   "unknown": "inconnu",
+   "time": {
+    "title": "Heure et météo",
+    "clock": "Heure du monde",
+    "day": "Jour {{day}}",
+    "presets": {
+     "day": "Jour",
+     "noon": "Midi",
+     "night": "Nuit",
+     "midnight": "Minuit"
+    },
+    "freezeDaylight": "Figer le cycle jour-nuit"
+   },
+   "weather": {
+    "title": "Météo",
+    "clear": "Clair",
+    "rain": "Pluie",
+    "thunder": "Orage",
+    "freeze": "Figer la météo"
+   },
+   "tick": {
+    "title": "Tick",
+    "target": "Taux de tick cible",
+    "rate": "Taux de tick",
+    "apply": "Appliquer",
+    "normal": "Normal (20)",
+    "freeze": "Geler le jeu",
+    "sprint": "Sprint",
+    "sprintSeconds": "Secondes à sprinter",
+    "run": "Sprinter",
+    "sprinting": "Sprint en cours",
+    "unsupported": "Nécessite Minecraft 1.20.3 ou plus."
+   },
+   "rules": {
+    "title": "Difficulté et mode de jeu",
+    "difficulty": "Difficulté",
+    "gamemode": "Mode de jeu par défaut",
+    "resetOnRestart": "Réinitialisé au redémarrage par {{var}} dans l'environnement du conteneur."
+   },
+   "gamerules": {
+    "title": "Règles du jeu",
+    "apply": "Appliquer",
+    "groups": {
+     "world": "Monde",
+     "players": "Joueurs",
+     "spawning": "Apparition",
+     "misc": "Divers"
+    },
+    "names": {
+     "advance_time": "Cycle jour-nuit",
+     "advance_weather": "Cycle météo",
+     "random_tick_speed": "Vitesse des ticks aléatoires (pousse)",
+     "mob_griefing": "Dégâts des créatures",
+     "block_drops": "Les blocs lâchent des objets",
+     "entity_drops": "Les entités lâchent des objets",
+     "mob_drops": "Butin des créatures",
+     "keep_inventory": "Garder l'inventaire à la mort",
+     "natural_health_regeneration": "Régénération naturelle",
+     "immediate_respawn": "Réapparition immédiate",
+     "players_sleeping_percentage": "Joueurs requis pour dormir (%)",
+     "respawn_radius": "Rayon d'apparition",
+     "fall_damage": "Dégâts de chute",
+     "drowning_damage": "Dégâts de noyade",
+     "fire_damage": "Dégâts de feu",
+     "freeze_damage": "Dégâts de gel",
+     "spawn_mobs": "Apparition des créatures",
+     "spawn_phantoms": "Phantoms (insomnie)",
+     "spawn_patrols": "Patrouilles de pillards",
+     "spawn_wandering_traders": "Marchands ambulants",
+     "spawn_wardens": "Apparition du Warden",
+     "raids": "Raids",
+     "max_entity_cramming": "Entassement max d'entités",
+     "show_advancement_messages": "Annoncer les progrès",
+     "show_death_messages": "Afficher les messages de mort",
+     "command_block_output": "Sortie des blocs de commande",
+     "send_command_feedback": "Retour des commandes"
+    },
+    "legacy": "Ce serveur est antérieur à Minecraft 1.21.11 : les anciens noms de règles sont utilisés."
+   }
   }
-} }
+ }
+}

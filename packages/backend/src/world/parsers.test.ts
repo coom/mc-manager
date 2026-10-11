@@ -15,11 +15,14 @@ describe('world parsers', () => {
     expect(parseTimeQuery('')).toBeNull();
   });
   it('parses gamerule reads and writes', () => {
-    expect(parseGamerule('Gamerule keepInventory is currently set to: false')).toBe(false);
-    expect(parseGamerule('Gamerule keepInventory is now set to: true')).toBe(true);
-    expect(parseGamerule('Gamerule randomTickSpeed is currently set to: 3')).toBe(3);
-    expect(parseGamerule('Gamerule spawnRadius is now set to: 0')).toBe(0);
+    expect(parseGamerule('Gamerule keep_inventory is currently set to: false')).toBe(false);
+    expect(parseGamerule('Gamerule keep_inventory is now set to: true')).toBe(true);
+    expect(parseGamerule('Gamerule random_tick_speed is currently set to: 3')).toBe(3);
+    expect(parseGamerule('Gamerule respawn_radius is now set to: 0')).toBe(0);
+    expect(parseGamerule('Gamerule minecraft:keep_inventory is currently set to: false')).toBe(false);
+    expect(parseGamerule('Gamerule advance_time is now set to: true')).toBe(true);
     expect(parseGamerule('Unknown or incomplete command')).toBeNull();
+    expect(parseGamerule('Incorrect argument for command\ngamerule keepInventory<--[HERE]')).toBeNull();
     expect(parseGamerule('Gamerule foo is currently set to: maybe')).toBeNull();
   });
   it('parses the difficulty in lowercase and rejects unknown values', () => {

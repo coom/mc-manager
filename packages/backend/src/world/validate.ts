@@ -1,4 +1,4 @@
-import { DIFFICULTIES, GAMEMODES, GAMERULES, TICK_RATE, TICK_SPRINT_MAX, TIME_PRESETS, WEATHER_KINDS, type Difficulty, type Gamemode, type TimePreset, type WeatherKind, type WorldTickUpdate } from '@mc/common';
+import { DIFFICULTIES, GAMEMODES, GAMERULES, TICK_RATE, TICK_SPRINT_MAX, TIME_PRESETS, WEATHER_KINDS, type Difficulty, type Gamemode, type GameruleDef, type TimePreset, type WeatherKind, type WorldTickUpdate } from '@mc/common';
 import { AppError } from '../middleware/error-handler.js';
 
 function oneOf<T extends string>(list: readonly T[], v: unknown, what: string): T {
@@ -29,15 +29,15 @@ export function assertTick(body: unknown): WorldTickUpdate {
 }
 
 /** Nom dans le catalogue, valeur du bon type et dans les bornes : rien d'autre n'atteint la console. */
-export function assertGamerule(name: unknown, value: unknown): { name: string; value: boolean | number } {
+export function assertGamerule(name: unknown, value: unknown): { name: string; def: GameruleDef; value: boolean | number } {
   const def = typeof name === 'string' ? GAMERULES.find((g) => g.name === name) : undefined;
   if (!def) throw new AppError(400, 'Unknown gamerule');
   if (def.type === 'bool') {
     if (typeof value !== 'boolean') throw new AppError(400, `${def.name} must be a boolean`);
-    return { name: def.name, value };
+    return { name: def.name, def, value };
   }
   if (typeof value !== 'number' || !Number.isInteger(value) || (def.min !== undefined && value < def.min) || (def.max !== undefined && value > def.max)) {
     throw new AppError(400, `${def.name} must be an integer between ${def.min ?? '-∞'} and ${def.max ?? '∞'}`);
   }
-  return { name: def.name, value };
+  return { name: def.name, def, value };
 }

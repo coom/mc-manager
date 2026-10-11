@@ -1,4 +1,4 @@
-import { GAMERULES, GAMEMODES, type Difficulty, type Gamemode, type TimePreset, type WeatherKind, type WorldState, type WorldTickUpdate } from '@mc/common';
+import { GAMERULES, GAMEMODES, type Difficulty, type Gamemode, type GameruleDef, type TimePreset, type WeatherKind, type WorldState, type WorldTickUpdate } from '@mc/common';
 import { AppError } from '../middleware/error-handler.js';
 import { stripColors } from '../rcon/parsers.js';
 import { lockedKeys } from '../server-properties/itzg-env.js';
@@ -18,7 +18,20 @@ const NO_TICK = { targetRate: null, frozen: false, sprinting: false };
  * Rien n'est écrit dans /data : le serveur persiste lui-même ces valeurs dans le monde.
  */
 export class WorldService {
+  /** true quand le serveur n'accepte que les anciens noms camelCase (≤ 1.21.10) ; détecté à chaque read(). */
+  private legacyGamerules = false;
+
   constructor(private deps: WorldDeps) {}
+
+  /** Nom envoyé au serveur selon le mode détecté. */
+  private ruleName(def: GameruleDef): string {
+    return this.legacyGamerules && def.legacy ? def.legacy : def.name;
+  }
+
+  /** Valeur côté serveur ⇄ valeur du catalogue (règles dont l'ancien nom avait le sens inverse). */
+  private ruleValue(def: GameruleDef, value: boolean | number | null): boolean | number | null {
+    return this.legacyGamerules && def.invertedLegacy && typeof value === 'boolean' ? !value : value;
+  }
 
   /** État courant ; une réponse non reconnue donne null pour le champ concerné, jamais une erreur. */
   async read(): Promise<WorldState> {
@@ -29,7 +42,16 @@ export class WorldService {
     const tick = isUnknownCommand(tickRaw) ? { supported: false, ...NO_TICK } : { supported: true, ...(parseTickStatus(tickRaw) ?? NO_TICK) };
     const difficulty = parseDifficulty(await send('difficulty'));
     const gamerules: Record<string, boolean | number | null> = {};
-    for (const g of GAMERULES) gamerules[g.name] = parseGamerule(await send(`gamerule ${g.name}`));
+    // Détection du nommage sur la première règle : identifiant moderne, puis ancien nom si le serveur le rejette.
+    const [probe, ...rest] = GAMERULES;
+    this.legacyGamerules = false;
+    let probeValue = parseGamerule(await send(`gamerule ${probe.name}`));
+    if (probeValue === null && probe.legacy) {
+      const legacyValue = parseGamerule(await send(`gamerule ${probe.legacy}`));
+      if (legacyValue !== null) { this.legacyGamerules = true; probeValue = legacyValue; }
+    }
+    gamerules[probe.name] = this.ruleValue(probe, probeValue);
+    for (const g of rest) gamerules[g.name] = this.ruleValue(g, parseGamerule(await send(`gamerule ${this.ruleName(g)}`)));
     const props = await this.deps.properties.read().catch(() => null);
     const gm = props?.values.gamemode?.toLowerCase();
     const defaultGamemode = gm && (GAMEMODES as readonly string[]).includes(gm) ? (gm as Gamemode) : null;
@@ -38,7 +60,7 @@ export class WorldService {
     const resetOnRestart: WorldState['resetOnRestart'] = {};
     if (locked.difficulty && locked.difficulty !== 'rcon') resetOnRestart.difficulty = locked.difficulty;
     if (locked.gamemode && locked.gamemode !== 'rcon') resetOnRestart.gamemode = locked.gamemode;
-    return { time: { daytime, day }, tick, difficulty, defaultGamemode, gamerules, resetOnRestart };
+    return { time: { daytime, day }, tick, difficulty, defaultGamemode, gamerules, legacyGamerules: this.legacyGamerules, resetOnRestart };
   }
 
   /** Envoie une commande validée ; seuls les motifs d'erreur sont interprétés, la phrase de confirmation varie selon le serveur. */
@@ -59,7 +81,7 @@ export class WorldService {
     else await this.run(`tick sprint ${u.sprint}`);
   }
   async setGamerule(name: string, value: boolean | number): Promise<void> {
-    const g = assertGamerule(name, value);
-    await this.run(`gamerule ${g.name} ${g.value}`);
+    const { def, value: v } = assertGamerule(name, value);
+    await this.run(`gamerule ${this.ruleName(def)} ${this.ruleValue(def, v)}`);
   }
 }

@@ -4,7 +4,7 @@ import request from 'supertest';
 import { worldRoutes } from './world.routes.js';
 import { errorHandler, AppError } from '../middleware/error-handler.js';
 
-const state = { time: { daytime: 6000, day: 1 }, tick: { supported: true, targetRate: 20, frozen: false, sprinting: false }, difficulty: 'normal', defaultGamemode: 'survival', gamerules: { keepInventory: false }, resetOnRestart: {} };
+const state = { time: { daytime: 6000, day: 1 }, tick: { supported: true, targetRate: 20, frozen: false, sprinting: false }, difficulty: 'normal', defaultGamemode: 'survival', gamerules: { keep_inventory: false }, resetOnRestart: {} };
 
 function appWith(role: 'admin' | 'viewer') {
   const app = express();
@@ -27,7 +27,7 @@ describe('world routes', () => {
     const app = appWith('viewer');
     expect((await request(app).get('/api/world')).status).toBe(403);
     expect((await request(app).put('/api/world/time').send({ preset: 'day' })).status).toBe(403);
-    expect((await request(app).put('/api/world/gamerules/keepInventory').send({ value: true })).status).toBe(403);
+    expect((await request(app).put('/api/world/gamerules/keep_inventory').send({ value: true })).status).toBe(403);
     expect(app.locals.world.setTime).not.toHaveBeenCalled();
   });
   it('admin reads the state', async () => {
@@ -45,7 +45,7 @@ describe('world routes', () => {
       ['/api/world/tick', { rate: 40 }, 'world.tick', 'rate=40', [{ rate: 40 }]],
       ['/api/world/tick', { frozen: true }, 'world.tick', 'frozen=true', [{ frozen: true }]],
       ['/api/world/tick', { sprint: 1200 }, 'world.tick', 'sprint=1200', [{ sprint: 1200 }]],
-      ['/api/world/gamerules/keepInventory', { value: true }, 'world.gamerule', 'keepInventory=true', ['keepInventory', true]],
+      ['/api/world/gamerules/keep_inventory', { value: true }, 'world.gamerule', 'keep_inventory=true', ['keep_inventory', true]],
     ];
     for (const [path, body, action, detail, args] of cases) {
       const res = await request(app).put(path).send(body);
@@ -61,7 +61,7 @@ describe('world routes', () => {
     expect((await request(app).put('/api/world/time').send({ preset: 'dawn' })).status).toBe(400);
     expect((await request(app).put('/api/world/tick').send({ rate: '40' })).status).toBe(400);
     expect((await request(app).put('/api/world/tick').send({})).status).toBe(400);
-    expect((await request(app).put('/api/world/gamerules/randomTickSpeed').send({ value: 5.5 })).status).toBe(400);
+    expect((await request(app).put('/api/world/gamerules/random_tick_speed').send({ value: 5.5 })).status).toBe(400);
     expect((await request(app).put('/api/world/gamerules/notARule').send({ value: true })).status).toBe(400);
     expect(auditOf(app)).not.toHaveBeenCalled();
     expect(app.locals.world.setTick).not.toHaveBeenCalled();

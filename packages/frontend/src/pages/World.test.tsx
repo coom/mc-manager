@@ -14,7 +14,8 @@ vi.mock('@/api/world.api', () => ({ worldApi: { get: vi.fn(), setTime: vi.fn(), 
 export const worldState: WorldState = {
   time: { daytime: 6000, day: 12 }, tick: { supported: true, targetRate: 20, frozen: false, sprinting: false },
   difficulty: 'normal', defaultGamemode: 'survival',
-  gamerules: { doDaylightCycle: true, doWeatherCycle: true, randomTickSpeed: 3, keepInventory: false, playersSleepingPercentage: 100 },
+  gamerules: { advance_time: true, advance_weather: true, random_tick_speed: 3, keep_inventory: false, players_sleeping_percentage: 100 },
+  legacyGamerules: false,
   resetOnRestart: {},
 };
 
@@ -62,13 +63,13 @@ describe('World cards', () => {
     await waitFor(() => expect(worldApi.setTime).toHaveBeenCalledWith('night'));
     expect(await screen.findByText('19:00')).toBeInTheDocument();
   });
-  it('freezing the daylight cycle sets doDaylightCycle to false', async () => {
+  it('freezing the daylight cycle sets advance_time to false', async () => {
     setup();
     const sw = await screen.findByRole('switch', { name: 'Freeze the day-night cycle' });
     expect(sw).toHaveAttribute('aria-checked', 'false');
-    vi.mocked(worldApi.setGamerule).mockResolvedValue({ ...worldState, gamerules: { ...worldState.gamerules, doDaylightCycle: false } });
+    vi.mocked(worldApi.setGamerule).mockResolvedValue({ ...worldState, gamerules: { ...worldState.gamerules, advance_time: false } });
     fireEvent.click(sw);
-    await waitFor(() => expect(worldApi.setGamerule).toHaveBeenCalledWith('doDaylightCycle', false));
+    await waitFor(() => expect(worldApi.setGamerule).toHaveBeenCalledWith('advance_time', false));
     await waitFor(() => expect(sw).toHaveAttribute('aria-checked', 'true'));
   });
   it('sends the weather and the tick rate', async () => {
@@ -97,14 +98,18 @@ describe('World cards', () => {
     setup('admin', 'ready', { ...worldState, resetOnRestart: { difficulty: 'DIFFICULTY' } });
     expect(await screen.findByText(/Reset at restart by DIFFICULTY/)).toBeInTheDocument();
   });
+  it('mentions the legacy rule names on an old server', async () => {
+    setup('admin', 'ready', { ...worldState, legacyGamerules: true });
+    expect(await screen.findByText(/old rule names are used/)).toBeInTheDocument();
+  });
   it('applies an integer gamerule and shows unknown values', async () => {
-    setup('admin', 'ready', { ...worldState, gamerules: { ...worldState.gamerules, randomTickSpeed: null } });
+    setup('admin', 'ready', { ...worldState, gamerules: { ...worldState.gamerules, random_tick_speed: null } });
     const input = await screen.findByLabelText('Random tick speed (crop growth)');
     expect(input).toHaveValue(null);
     expect(screen.getAllByText('unknown').length).toBeGreaterThan(0);
-    vi.mocked(worldApi.setGamerule).mockResolvedValue({ ...worldState, gamerules: { ...worldState.gamerules, randomTickSpeed: 10 } });
+    vi.mocked(worldApi.setGamerule).mockResolvedValue({ ...worldState, gamerules: { ...worldState.gamerules, random_tick_speed: 10 } });
     fireEvent.change(input, { target: { value: '10' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Apply randomTickSpeed' }));
-    await waitFor(() => expect(worldApi.setGamerule).toHaveBeenCalledWith('randomTickSpeed', 10));
+    fireEvent.click(screen.getByRole('button', { name: 'Apply random_tick_speed' }));
+    await waitFor(() => expect(worldApi.setGamerule).toHaveBeenCalledWith('random_tick_speed', 10));
   });
 });

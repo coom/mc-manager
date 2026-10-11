@@ -14,7 +14,8 @@ export function parseTimeQuery(raw: string): number | null {
 
 /** `gamerule <name>` → « … is currently set to: X » ; `gamerule <name> <v>` → « … is now set to: X ». */
 export function parseGamerule(raw: string): boolean | number | null {
-  const m = /Gamerule \w+ is (?:currently|now) set to:\s*(\S+)/i.exec(stripColors(raw));
+  // L'identifiant est camelCase (≤ 1.21.10) ou snake_case, parfois préfixé `minecraft:` (1.21.11+).
+  const m = /Gamerule \S+ is (?:currently|now) set to:\s*(\S+)/i.exec(stripColors(raw));
   if (!m) return null;
   if (m[1] === 'true') return true;
   if (m[1] === 'false') return false;

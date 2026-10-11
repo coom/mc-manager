@@ -141,6 +141,7 @@ The World page (admin only) adjusts the running world through RCON, without a re
 
 - Every action is a single validated command, audited as `world.*` before it is sent. Nothing is written to `/data` by MC Manager: the server persists these values in the world itself.
 - Difficulty and default game mode are also written to `server.properties` by the server. If `DIFFICULTY` or `MODE` is set in the container environment, the itzg image resets them at the next start; the page says so.
+- Game rules use the registry IDs introduced in Minecraft 1.21.11 (`keep_inventory`, `advance_time`, ...). On an older server the page detects it and falls back to the former camelCase names.
 - The weather has no read command in vanilla, so no current state is shown for it.
 
 ## Mods

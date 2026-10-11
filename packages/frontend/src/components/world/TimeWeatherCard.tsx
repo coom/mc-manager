@@ -10,8 +10,8 @@ import { formatWorldTime } from './world-time';
 
 export function TimeWeatherCard({ state, pending, run }: WorldCardProps) {
   const { t } = useTranslation();
-  const daylight = state.gamerules.doDaylightCycle;
-  const weather = state.gamerules.doWeatherCycle;
+  const daylight = state.gamerules.advance_time;
+  const weather = state.gamerules.advance_weather;
   return (
     <Card>
       <CardHeader className="pb-3"><CardTitle className="text-base">{t('world.time.title')}</CardTitle></CardHeader>
@@ -25,7 +25,7 @@ export function TimeWeatherCard({ state, pending, run }: WorldCardProps) {
           {TIME_PRESETS.map((p) => <Button key={p} size="sm" variant="outline" disabled={pending === `time:${p}`} onClick={() => run(`time:${p}`, () => worldApi.setTime(p))}>{t(`world.time.presets.${p}`)}</Button>)}
         </div>
         <div className="flex items-center gap-3">
-          <Switch id="freeze-daylight" aria-label={t('world.time.freezeDaylight')} checked={daylight === false} disabled={pending === 'gamerule:doDaylightCycle'} onCheckedChange={(v) => run('gamerule:doDaylightCycle', () => worldApi.setGamerule('doDaylightCycle', !v))} />
+          <Switch id="freeze-daylight" aria-label={t('world.time.freezeDaylight')} checked={daylight === false} disabled={pending === 'gamerule:advance_time'} onCheckedChange={(v) => run('gamerule:advance_time', () => worldApi.setGamerule('advance_time', !v))} />
           <Label htmlFor="freeze-daylight" className="text-xs">{t('world.time.freezeDaylight')}</Label>
         </div>
         <h3 className="text-sm font-medium">{t('world.weather.title')}</h3>
@@ -33,7 +33,7 @@ export function TimeWeatherCard({ state, pending, run }: WorldCardProps) {
           {WEATHER_KINDS.map((k) => <Button key={k} size="sm" variant="outline" disabled={pending === `weather:${k}`} onClick={() => run(`weather:${k}`, () => worldApi.setWeather(k))}>{t(`world.weather.${k}`)}</Button>)}
         </div>
         <div className="flex items-center gap-3">
-          <Switch id="freeze-weather" aria-label={t('world.weather.freeze')} checked={weather === false} disabled={pending === 'gamerule:doWeatherCycle'} onCheckedChange={(v) => run('gamerule:doWeatherCycle', () => worldApi.setGamerule('doWeatherCycle', !v))} />
+          <Switch id="freeze-weather" aria-label={t('world.weather.freeze')} checked={weather === false} disabled={pending === 'gamerule:advance_weather'} onCheckedChange={(v) => run('gamerule:advance_weather', () => worldApi.setGamerule('advance_weather', !v))} />
           <Label htmlFor="freeze-weather" className="text-xs">{t('world.weather.freeze')}</Label>
         </div>
       </CardContent>

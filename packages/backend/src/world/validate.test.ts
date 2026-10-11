@@ -21,15 +21,15 @@ describe('world validators', () => {
     bad(() => assertTick({ rate: 20, frozen: true })); bad(() => assertTick({})); bad(() => assertTick(null));
   });
   it('validates gamerules against the catalogue, by type and bounds', () => {
-    expect(assertGamerule('keepInventory', true)).toEqual({ name: 'keepInventory', value: true });
-    expect(assertGamerule('randomTickSpeed', 100)).toEqual({ name: 'randomTickSpeed', value: 100 });
-    bad(() => assertGamerule('keepInventory', 'true'));
-    bad(() => assertGamerule('randomTickSpeed', '5'));
-    bad(() => assertGamerule('randomTickSpeed', 5.5));
-    bad(() => assertGamerule('randomTickSpeed', -1));
-    bad(() => assertGamerule('randomTickSpeed', 4097));
-    bad(() => assertGamerule('randomTickSpeed', true));
+    expect(assertGamerule('keep_inventory', true)).toMatchObject({ name: 'keep_inventory', value: true });
+    expect(assertGamerule('random_tick_speed', 100)).toMatchObject({ name: 'random_tick_speed', value: 100 });
+    bad(() => assertGamerule('keep_inventory', 'true'));
+    bad(() => assertGamerule('random_tick_speed', '5'));
+    bad(() => assertGamerule('random_tick_speed', 5.5));
+    bad(() => assertGamerule('random_tick_speed', -1));
+    bad(() => assertGamerule('random_tick_speed', 4097));
+    bad(() => assertGamerule('random_tick_speed', true));
     bad(() => assertGamerule('notARule', true));
-    bad(() => assertGamerule('keepInventory; say hi', true));
+    bad(() => assertGamerule('keep_inventory; say hi', true));
   });
 });
