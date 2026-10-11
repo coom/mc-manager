@@ -144,6 +144,10 @@ The World page (admin only) adjusts the running world through RCON, without a re
 - Game rules use the registry IDs introduced in Minecraft 1.21.11 (`keep_inventory`, `advance_time`, ...). On an older server the page detects it and falls back to the former camelCase names.
 - The weather has no read command in vanilla, so no current state is shown for it.
 
+## World map
+
+The Map page embeds the public address of your BlueMap or Dynmap page (any `http(s)` URL) in a frame, with a button to open it in a new tab. An admin sets or clears the address in Settings (audited as `map.url`); the page and its menu entry only appear when an address is configured. MC Manager never contacts that address itself: only the browser loads it, so the map must be reachable by your users (for example behind your own reverse proxy). If the map site sends an `X-Frame-Options` or `frame-ancestors` header, the frame stays blank and the new-tab button is the way in.
+
 ## Mods
 
 The Mods page lists the mods (or plugins) of a modded server and lets an admin enable, disable, add or remove them. Nothing is loaded at runtime: every change applies at the next restart, and the page says so.
@@ -196,6 +200,8 @@ i18n: write a fragment in `packages/frontend/scripts/i18n-fragments/*.json`, the
 ## Privacy
 
 The dashboard, the Players page and the player sheets show player avatars loaded from the third-party service [mc-heads.net](https://mc-heads.net): the browser of every user sends the names of the online players to that service. The interface fonts (Outfit, JetBrains Mono) are also loaded from Google Fonts (`fonts.googleapis.com`), which exposes the visitor IP address to Google.
+
+When a map address is configured, the browser of every user loads that address in the Map page, which exposes the visitor IP address to that site (your own BlueMap host, typically).
 
 The Mods page is the only other source of external calls: when an admin adds a mod, and once per unknown entry of the listing file, the backend queries `api.modrinth.com` to verify the project and cache its title and icon; the browser then loads mod icons from `cdn.modrinth.com`. The catalogue search is also relayed by the backend: only the search text, the server loader and the Minecraft version are sent to `api.modrinth.com`. Nothing else is sent to Modrinth.
 

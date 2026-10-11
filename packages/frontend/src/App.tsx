@@ -19,6 +19,7 @@ const Mods = lazy(() => import('@/pages/Mods'));
 const Journal = lazy(() => import('@/pages/Journal'));
 const Config = lazy(() => import('@/pages/Config'));
 const World = lazy(() => import('@/pages/World'));
+const Map = lazy(() => import('@/pages/Map'));
 const Audit = lazy(() => import('@/pages/Audit'));
 const Settings = lazy(() => import('@/pages/Settings'));
 const NotFound = lazy(() => import('@/pages/NotFound'));
@@ -42,6 +43,7 @@ export function App() {
               <Route path="/journal" element={<Journal />} />
               <Route path="/config" element={<Config />} />
               <Route path="/world" element={<World />} />
+              <Route path="/map" element={<Map />} />
               <Route path="/backups" element={<Backups />} />
               <Route path="/audit" element={<Audit />} />
               <Route path="/settings" element={<Settings />} />

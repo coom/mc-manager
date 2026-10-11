@@ -1,0 +1,4 @@
+{ "namespace": "settings", "keys": {
+  "en": { "users": { "mapUrl": { "title": "World map", "url": "Public address", "hint": "Address of your BlueMap or Dynmap page, loaded by the browser in the Map page. Leave empty to hide the page. MC Manager never contacts it.", "save": "Save", "saved": "Map address saved", "failed": "Could not save the map address" } } },
+  "fr": { "users": { "mapUrl": { "title": "Carte du monde", "url": "Adresse publique", "hint": "Adresse de votre page BlueMap ou Dynmap, chargée par le navigateur dans la page Carte. Vide = page masquée. MC Manager ne la contacte jamais.", "save": "Enregistrer", "saved": "Adresse de la carte enregistrée", "failed": "Impossible d'enregistrer l'adresse de la carte" } } }
+} }

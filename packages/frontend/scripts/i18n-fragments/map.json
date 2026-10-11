@@ -1,0 +1,18 @@
+{ "namespace": "map", "keys": {
+  "en": {
+    "title": "World map",
+    "frameTitle": "World map",
+    "openNewTab": "Open in a new tab",
+    "empty": "No map configured.",
+    "emptyHint": "Add the public address of your BlueMap or Dynmap page in Settings and it will show up here.",
+    "configure": "Configure in Settings"
+  },
+  "fr": {
+    "title": "Carte du monde",
+    "frameTitle": "Carte du monde",
+    "openNewTab": "Ouvrir dans un nouvel onglet",
+    "empty": "Aucune carte configurée.",
+    "emptyHint": "Renseignez l'adresse publique de votre page BlueMap ou Dynmap dans Paramètres et elle s'affichera ici.",
+    "configure": "Configurer dans Paramètres"
+  }
+} }

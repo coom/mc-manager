@@ -1,5 +1,8 @@
+import type React from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Terminal, Archive, History, Settings, ChevronLeft, ChevronRight, Users, BookOpenText, SlidersHorizontal, Puzzle, Globe } from 'lucide-react';
+import { LayoutDashboard, Terminal, Archive, History, Settings, ChevronLeft, ChevronRight, Users, BookOpenText, SlidersHorizontal, Puzzle, Globe, Map } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
+import { mapApi } from '@/api/map.api';
 import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/utils';
 import { useUiStore } from '@/stores/ui.store';
@@ -8,7 +11,8 @@ import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/comp
 import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
 
-const navSections = [
+type NavItem = { to: string; icon: React.ComponentType<{ className?: string }>; label: string; adminOnly?: boolean; requiresMap?: boolean };
+const navSections: { label: string; adminOnly?: boolean; items: NavItem[] }[] = [
   { label: 'nav.server', items: [
     { to: '/dashboard', icon: LayoutDashboard, label: 'nav.dashboard' },
     { to: '/console', icon: Terminal, label: 'nav.console' },
@@ -16,6 +20,8 @@ const navSections = [
     { to: '/mods', icon: Puzzle, label: 'nav.mods' },
     { to: '/config', icon: SlidersHorizontal, label: 'nav.config', adminOnly: true },
     { to: '/world', icon: Globe, label: 'nav.world', adminOnly: true },
+    // Visible seulement quand une adresse de carte est configurée (Paramètres).
+    { to: '/map', icon: Map, label: 'nav.map', requiresMap: true },
   ] },
   { label: 'nav.data', items: [
     { to: '/backups', icon: Archive, label: 'nav.backups' },
@@ -29,6 +35,8 @@ export function Sidebar() {
   const isAdmin = useAuthStore((s) => s.isAdmin());
   const location = useLocation();
   const { t } = useTranslation();
+  const { data: map } = useQuery({ queryKey: ['map'], queryFn: mapApi.get, staleTime: 5 * 60_000 });
+  const hasMap = Boolean(map?.url);
 
   return (
     <TooltipProvider delayDuration={0}>
@@ -61,9 +69,9 @@ export function Sidebar() {
         <ScrollArea className="flex-1 py-2">
           <nav className="space-y-1 px-2">
             {navSections
-              .filter((section) => !(section as any).adminOnly || isAdmin)
+              .filter((section) => !section.adminOnly || isAdmin)
               .map((section, si) => {
-                const visibleItems = section.items.filter((item) => !(item as any).adminOnly || isAdmin);
+                const visibleItems = section.items.filter((item) => (!item.adminOnly || isAdmin) && (!item.requiresMap || hasMap));
                 if (visibleItems.length === 0) return null;
                 return (
                   <div key={section.label}>

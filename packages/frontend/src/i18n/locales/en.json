@@ -200,7 +200,15 @@
         "failed": "Could not save retention"
       },
       "requireMfa": "Require MFA (enroll at first login)",
-      "mustChangePassword": "Change password at next logon"
+      "mustChangePassword": "Change password at next logon",
+      "mapUrl": {
+        "title": "World map",
+        "url": "Public address",
+        "hint": "Address of your BlueMap or Dynmap page, loaded by the browser in the Map page. Leave empty to hide the page. MC Manager never contacts it.",
+        "save": "Save",
+        "saved": "Map address saved",
+        "failed": "Could not save the map address"
+      }
     }
   },
   "nav": {
@@ -217,7 +225,8 @@
     "journal": "Journal",
     "config": "Configuration",
     "mods": "Mods",
-    "world": "World"
+    "world": "World",
+    "map": "Map"
   },
   "console": {
     "title": "Console",
@@ -341,7 +350,8 @@
       "whitelist": "Whitelist",
       "journal": "Journal",
       "mods": "Mods",
-      "world": "World"
+      "world": "World",
+      "map": "Map"
     }
   },
   "journal": {
@@ -763,5 +773,13 @@
       },
       "legacy": "This server predates Minecraft 1.21.11: the old rule names are used."
     }
+  },
+  "map": {
+    "title": "World map",
+    "frameTitle": "World map",
+    "openNewTab": "Open in a new tab",
+    "empty": "No map configured.",
+    "emptyHint": "Add the public address of your BlueMap or Dynmap page in Settings and it will show up here.",
+    "configure": "Configure in Settings"
   }
 }

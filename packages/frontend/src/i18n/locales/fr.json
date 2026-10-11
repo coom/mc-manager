@@ -200,7 +200,15 @@
         "failed": "Impossible d'enregistrer la rétention"
       },
       "requireMfa": "Exiger le MFA (enrôlement à la 1re connexion)",
-      "mustChangePassword": "Changer le mot de passe à la prochaine connexion"
+      "mustChangePassword": "Changer le mot de passe à la prochaine connexion",
+      "mapUrl": {
+        "title": "Carte du monde",
+        "url": "Adresse publique",
+        "hint": "Adresse de votre page BlueMap ou Dynmap, chargée par le navigateur dans la page Carte. Vide = page masquée. MC Manager ne la contacte jamais.",
+        "save": "Enregistrer",
+        "saved": "Adresse de la carte enregistrée",
+        "failed": "Impossible d'enregistrer l'adresse de la carte"
+      }
     }
   },
   "nav": {
@@ -217,7 +225,8 @@
     "journal": "Journal",
     "config": "Configuration",
     "mods": "Mods",
-    "world": "Monde"
+    "world": "Monde",
+    "map": "Carte"
   },
   "console": {
     "title": "Console",
@@ -341,7 +350,8 @@
       "whitelist": "Whitelist",
       "journal": "Journal",
       "mods": "Mods",
-      "world": "Monde"
+      "world": "Monde",
+      "map": "Carte"
     }
   },
   "journal": {
@@ -763,5 +773,13 @@
       },
       "legacy": "Ce serveur est antérieur à Minecraft 1.21.11 : les anciens noms de règles sont utilisés."
     }
+  },
+  "map": {
+    "title": "Carte du monde",
+    "frameTitle": "Carte du monde",
+    "openNewTab": "Ouvrir dans un nouvel onglet",
+    "empty": "Aucune carte configurée.",
+    "emptyHint": "Renseignez l'adresse publique de votre page BlueMap ou Dynmap dans Paramètres et elle s'affichera ici.",
+    "configure": "Configurer dans Paramètres"
   }
 }
