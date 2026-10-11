@@ -1,4 +1,4 @@
 { "namespace": "nav", "keys": {
-  "en": { "server": "Server", "data": "Data", "dashboard": "Dashboard", "console": "Console", "backups": "Backups", "audit": "Audit log", "settings": "Settings", "logout": "Sign out", "collapse": "Collapse", "players": "Players", "journal": "Journal", "config": "Configuration", "mods": "Mods" },
-  "fr": { "server": "Serveur", "data": "Données", "dashboard": "Tableau de bord", "console": "Console", "backups": "Sauvegardes", "audit": "Journal d'audit", "settings": "Paramètres", "logout": "Déconnexion", "collapse": "Réduire", "players": "Joueurs", "journal": "Journal", "config": "Configuration", "mods": "Mods" }
+  "en": { "server": "Server", "data": "Data", "dashboard": "Dashboard", "console": "Console", "backups": "Backups", "audit": "Audit log", "settings": "Settings", "logout": "Sign out", "collapse": "Collapse", "players": "Players", "journal": "Journal", "config": "Configuration", "mods": "Mods", "world": "World" },
+  "fr": { "server": "Serveur", "data": "Données", "dashboard": "Tableau de bord", "console": "Console", "backups": "Sauvegardes", "audit": "Journal d'audit", "settings": "Paramètres", "logout": "Déconnexion", "collapse": "Réduire", "players": "Joueurs", "journal": "Journal", "config": "Configuration", "mods": "Mods", "world": "Monde" }
 } }

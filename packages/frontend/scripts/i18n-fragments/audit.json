@@ -1,4 +1,4 @@
 { "namespace": "audit", "keys": {
-  "en": { "title": "Audit log", "when": "When", "who": "Who", "action": "Action", "detail": "Detail", "user": "User", "actions": { "all": "All", "server": "Server", "rcon": "RCON", "backup": "Backups", "user": "Users", "player": "Players", "whitelist": "Whitelist", "journal": "Journal", "mods": "Mods" } },
-  "fr": { "title": "Journal d'audit", "when": "Quand", "who": "Qui", "action": "Action", "detail": "Détail", "user": "Utilisateur", "actions": { "all": "Toutes", "server": "Serveur", "rcon": "RCON", "backup": "Sauvegardes", "user": "Utilisateurs", "player": "Joueurs", "whitelist": "Whitelist", "journal": "Journal", "mods": "Mods" } }
+  "en": { "title": "Audit log", "when": "When", "who": "Who", "action": "Action", "detail": "Detail", "user": "User", "actions": { "all": "All", "server": "Server", "rcon": "RCON", "backup": "Backups", "user": "Users", "player": "Players", "whitelist": "Whitelist", "journal": "Journal", "mods": "Mods", "world": "World" } },
+  "fr": { "title": "Journal d'audit", "when": "Quand", "who": "Qui", "action": "Action", "detail": "Détail", "user": "Utilisateur", "actions": { "all": "Toutes", "server": "Serveur", "rcon": "RCON", "backup": "Sauvegardes", "user": "Utilisateurs", "player": "Joueurs", "whitelist": "Whitelist", "journal": "Journal", "mods": "Mods", "world": "Monde" } }
 } }

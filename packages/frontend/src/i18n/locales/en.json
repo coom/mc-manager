@@ -216,7 +216,8 @@
     "players": "Players",
     "journal": "Journal",
     "config": "Configuration",
-    "mods": "Mods"
+    "mods": "Mods",
+    "world": "World"
   },
   "console": {
     "title": "Console",
@@ -339,7 +340,8 @@
       "player": "Players",
       "whitelist": "Whitelist",
       "journal": "Journal",
-      "mods": "Mods"
+      "mods": "Mods",
+      "world": "World"
     }
   },
   "journal": {
@@ -674,6 +676,91 @@
       "transportation": "Transportation",
       "utility": "Utility",
       "worldgen": "World generation"
+    }
+  },
+  "world": {
+    "title": "World",
+    "offline": "The server must be running to adjust the world.",
+    "applied": "Applied",
+    "unsupported": "This command is not supported by this Minecraft version.",
+    "unknown": "unknown",
+    "time": {
+      "title": "Time and weather",
+      "clock": "World time",
+      "day": "Day {{day}}",
+      "presets": {
+        "day": "Day",
+        "noon": "Noon",
+        "night": "Night",
+        "midnight": "Midnight"
+      },
+      "freezeDaylight": "Freeze the day-night cycle"
+    },
+    "weather": {
+      "title": "Weather",
+      "clear": "Clear",
+      "rain": "Rain",
+      "thunder": "Thunder",
+      "freeze": "Freeze the weather"
+    },
+    "tick": {
+      "title": "Tick",
+      "target": "Target tick rate",
+      "rate": "Tick rate",
+      "apply": "Apply",
+      "normal": "Normal (20)",
+      "freeze": "Freeze the game",
+      "sprint": "Sprint",
+      "sprintSeconds": "Seconds to sprint",
+      "run": "Sprint",
+      "sprinting": "Sprinting in progress",
+      "unsupported": "Requires Minecraft 1.20.3 or later."
+    },
+    "rules": {
+      "title": "Difficulty and game mode",
+      "difficulty": "Difficulty",
+      "gamemode": "Default game mode",
+      "resetOnRestart": "Reset at restart by {{var}} in the container environment."
+    },
+    "gamerules": {
+      "title": "Game rules",
+      "apply": "Apply",
+      "groups": {
+        "world": "World",
+        "players": "Players",
+        "spawning": "Spawning",
+        "misc": "Miscellaneous"
+      },
+      "names": {
+        "doDaylightCycle": "Day-night cycle",
+        "doWeatherCycle": "Weather cycle",
+        "randomTickSpeed": "Random tick speed (crop growth)",
+        "doFireTick": "Fire spreads",
+        "mobGriefing": "Mob griefing",
+        "doTileDrops": "Blocks drop items",
+        "doEntityDrops": "Entities drop items",
+        "doMobLoot": "Mobs drop loot",
+        "keepInventory": "Keep inventory on death",
+        "naturalRegeneration": "Natural regeneration",
+        "doImmediateRespawn": "Immediate respawn",
+        "playersSleepingPercentage": "Players needed to sleep (%)",
+        "spawnRadius": "Spawn radius",
+        "fallDamage": "Fall damage",
+        "drowningDamage": "Drowning damage",
+        "fireDamage": "Fire damage",
+        "freezeDamage": "Freeze damage",
+        "doMobSpawning": "Mob spawning",
+        "doInsomnia": "Phantoms (insomnia)",
+        "doPatrolSpawning": "Pillager patrols",
+        "doTraderSpawning": "Wandering traders",
+        "doWardenSpawning": "Warden spawning",
+        "disableRaids": "Disable raids",
+        "maxEntityCramming": "Max entity cramming",
+        "announceAdvancements": "Announce advancements",
+        "showDeathMessages": "Show death messages",
+        "commandBlockOutput": "Command block output",
+        "sendCommandFeedback": "Command feedback"
+      }
     }
   }
 }

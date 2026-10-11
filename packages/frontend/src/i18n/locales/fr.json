@@ -216,7 +216,8 @@
     "players": "Joueurs",
     "journal": "Journal",
     "config": "Configuration",
-    "mods": "Mods"
+    "mods": "Mods",
+    "world": "Monde"
   },
   "console": {
     "title": "Console",
@@ -339,7 +340,8 @@
       "player": "Joueurs",
       "whitelist": "Whitelist",
       "journal": "Journal",
-      "mods": "Mods"
+      "mods": "Mods",
+      "world": "Monde"
     }
   },
   "journal": {
@@ -674,6 +676,91 @@
       "transportation": "Transport",
       "utility": "Utilitaire",
       "worldgen": "Génération de monde"
+    }
+  },
+  "world": {
+    "title": "Monde",
+    "offline": "Le serveur doit être démarré pour ajuster le monde.",
+    "applied": "Appliqué",
+    "unsupported": "Commande non prise en charge par cette version de Minecraft.",
+    "unknown": "inconnu",
+    "time": {
+      "title": "Heure et météo",
+      "clock": "Heure du monde",
+      "day": "Jour {{day}}",
+      "presets": {
+        "day": "Jour",
+        "noon": "Midi",
+        "night": "Nuit",
+        "midnight": "Minuit"
+      },
+      "freezeDaylight": "Figer le cycle jour-nuit"
+    },
+    "weather": {
+      "title": "Météo",
+      "clear": "Clair",
+      "rain": "Pluie",
+      "thunder": "Orage",
+      "freeze": "Figer la météo"
+    },
+    "tick": {
+      "title": "Tick",
+      "target": "Taux de tick cible",
+      "rate": "Taux de tick",
+      "apply": "Appliquer",
+      "normal": "Normal (20)",
+      "freeze": "Geler le jeu",
+      "sprint": "Sprint",
+      "sprintSeconds": "Secondes à sprinter",
+      "run": "Sprinter",
+      "sprinting": "Sprint en cours",
+      "unsupported": "Nécessite Minecraft 1.20.3 ou plus."
+    },
+    "rules": {
+      "title": "Difficulté et mode de jeu",
+      "difficulty": "Difficulté",
+      "gamemode": "Mode de jeu par défaut",
+      "resetOnRestart": "Réinitialisé au redémarrage par {{var}} dans l'environnement du conteneur."
+    },
+    "gamerules": {
+      "title": "Règles du jeu",
+      "apply": "Appliquer",
+      "groups": {
+        "world": "Monde",
+        "players": "Joueurs",
+        "spawning": "Apparition",
+        "misc": "Divers"
+      },
+      "names": {
+        "doDaylightCycle": "Cycle jour-nuit",
+        "doWeatherCycle": "Cycle météo",
+        "randomTickSpeed": "Vitesse des ticks aléatoires (pousse)",
+        "doFireTick": "Propagation du feu",
+        "mobGriefing": "Dégâts des créatures",
+        "doTileDrops": "Les blocs lâchent des objets",
+        "doEntityDrops": "Les entités lâchent des objets",
+        "doMobLoot": "Butin des créatures",
+        "keepInventory": "Garder l'inventaire à la mort",
+        "naturalRegeneration": "Régénération naturelle",
+        "doImmediateRespawn": "Réapparition immédiate",
+        "playersSleepingPercentage": "Joueurs requis pour dormir (%)",
+        "spawnRadius": "Rayon d'apparition",
+        "fallDamage": "Dégâts de chute",
+        "drowningDamage": "Dégâts de noyade",
+        "fireDamage": "Dégâts de feu",
+        "freezeDamage": "Dégâts de gel",
+        "doMobSpawning": "Apparition des créatures",
+        "doInsomnia": "Phantoms (insomnie)",
+        "doPatrolSpawning": "Patrouilles de pillards",
+        "doTraderSpawning": "Marchands ambulants",
+        "doWardenSpawning": "Apparition du Warden",
+        "disableRaids": "Désactiver les raids",
+        "maxEntityCramming": "Entassement max d'entités",
+        "announceAdvancements": "Annoncer les progrès",
+        "showDeathMessages": "Afficher les messages de mort",
+        "commandBlockOutput": "Sortie des blocs de commande",
+        "sendCommandFeedback": "Retour des commandes"
+      }
     }
   }
 }

@@ -1,5 +1,5 @@
 import { NavLink, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Terminal, Archive, History, Settings, ChevronLeft, ChevronRight, Users, BookOpenText, SlidersHorizontal, Puzzle } from 'lucide-react';
+import { LayoutDashboard, Terminal, Archive, History, Settings, ChevronLeft, ChevronRight, Users, BookOpenText, SlidersHorizontal, Puzzle, Globe } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/utils';
 import { useUiStore } from '@/stores/ui.store';
@@ -15,6 +15,7 @@ const navSections = [
     { to: '/players', icon: Users, label: 'nav.players' },
     { to: '/mods', icon: Puzzle, label: 'nav.mods' },
     { to: '/config', icon: SlidersHorizontal, label: 'nav.config', adminOnly: true },
+    { to: '/world', icon: Globe, label: 'nav.world', adminOnly: true },
   ] },
   { label: 'nav.data', items: [
     { to: '/backups', icon: Archive, label: 'nav.backups' },
