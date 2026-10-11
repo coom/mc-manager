@@ -19,6 +19,7 @@ import { playersRoutes, bansRoutes, listsRoutes, whitelistRoutes } from './route
 import { journalRoutes } from './routes/journal.routes.js';
 import { modsRoutes } from './routes/mods.routes.js';
 import { worldRoutes } from './routes/world.routes.js';
+import { mapRoutes } from './routes/map.routes.js';
 
 export function createApp(): Express {
   const app = express();
@@ -58,6 +59,7 @@ export function createApp(): Express {
   app.use('/api/journal', journalRoutes);
   app.use('/api/mods', modsRoutes);
   app.use('/api/world', worldRoutes);
+  app.use('/api/map', mapRoutes);
 
   app.use(errorHandler);
   return app;

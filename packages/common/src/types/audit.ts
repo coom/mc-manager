@@ -8,6 +8,7 @@ export type AuditAction =
   | 'journal.retention'
   | 'mods.import' | 'mods.add' | 'mods.toggle' | 'mods.remove' | 'mods.file.toggle'
   | 'mods.upload' | 'mods.file.delete'
-  | 'world.time' | 'world.weather' | 'world.difficulty' | 'world.gamemode' | 'world.tick' | 'world.gamerule';
+  | 'world.time' | 'world.weather' | 'world.difficulty' | 'world.gamemode' | 'world.tick' | 'world.gamerule'
+  | 'map.url';
 export interface AuditEntry { id: number; at: string; userId: number; username: string; action: AuditAction; detail: string | null; ip: string | null }
 export interface AuditPage { entries: AuditEntry[]; total: number; page: number; pageSize: number }

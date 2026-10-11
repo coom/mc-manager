@@ -9,4 +9,5 @@ export * from './types/journal.js';
 export * from './types/properties.js';
 export * from './types/mods.js';
 export * from './types/world.js';
+export * from './types/map.js';
 export * from './ws-messages.js';
