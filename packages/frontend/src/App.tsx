@@ -15,6 +15,7 @@ const Console = lazy(() => import('@/pages/Console'));
 const Backups = lazy(() => import('@/pages/Backups'));
 const Players = lazy(() => import('@/pages/Players'));
 const PlayerSheet = lazy(() => import('@/pages/PlayerSheet'));
+const Mods = lazy(() => import('@/pages/Mods'));
 const Journal = lazy(() => import('@/pages/Journal'));
 const Config = lazy(() => import('@/pages/Config'));
 const Audit = lazy(() => import('@/pages/Audit'));
@@ -36,6 +37,7 @@ export function App() {
               <Route path="/console" element={<Console />} />
               <Route path="/players" element={<Players />} />
               <Route path="/players/:uuid" element={<PlayerSheet />} />
+              <Route path="/mods" element={<Mods />} />
               <Route path="/journal" element={<Journal />} />
               <Route path="/config" element={<Config />} />
               <Route path="/backups" element={<Backups />} />

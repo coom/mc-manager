@@ -36,6 +36,7 @@ export function useWebSocket(): void {
         void queryClient.invalidateQueries({ queryKey: ['metrics'] });
         void queryClient.invalidateQueries({ queryKey: ['players'] });
         void queryClient.invalidateQueries({ queryKey: ['lists'] });
+        void queryClient.invalidateQueries({ queryKey: ['mods'] });
       };
       socket.onmessage = (e) => {
         try {
@@ -45,6 +46,7 @@ export function useWebSocket(): void {
           if (msg.type === 'restore.done') void queryClient.invalidateQueries({ queryKey: ['server'] });
           if (msg.type === 'player.session') void queryClient.invalidateQueries({ queryKey: ['players'] });
           if (msg.type === 'player.lists.changed') { void queryClient.invalidateQueries({ queryKey: ['lists'] }); void queryClient.invalidateQueries({ queryKey: ['players'] }); }
+          if (msg.type === 'mods.changed') void queryClient.invalidateQueries({ queryKey: ['mods'] });
         } catch { /* message illisible, ignoré */ }
       };
       socket.onclose = (e) => {

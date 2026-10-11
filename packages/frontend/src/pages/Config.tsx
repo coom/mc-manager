@@ -13,7 +13,7 @@ import { EmptyState } from '@/components/shared/EmptyState';
 import { PageLoader } from '@/components/shared/LoadingSpinner';
 import { PropertiesForm } from '@/components/config/PropertiesForm';
 import { PropertiesRaw } from '@/components/config/PropertiesRaw';
-import { RestartBanner } from '@/components/config/RestartBanner';
+import { RestartBanner } from '@/components/shared/RestartBanner';
 
 export default function Config() {
   const { t } = useTranslation();

@@ -39,6 +39,18 @@ describe('useWebSocket', () => {
     expect(useServerStore.getState().info?.status).toBe('ready');
   });
 
+  it('invalidates the mods query on mods.changed and on open', () => {
+    const invalidate = vi.spyOn(queryClient, 'invalidateQueries');
+    renderHook(() => useWebSocket(), { wrapper });
+    const ws = FakeSocket.instances[0];
+    act(() => ws.onopen?.());
+    expect(invalidate).toHaveBeenCalledWith({ queryKey: ['mods'] });
+    invalidate.mockClear();
+    act(() => ws.onmessage?.({ data: JSON.stringify({ type: 'mods.changed' }) }));
+    expect(invalidate).toHaveBeenCalledWith({ queryKey: ['mods'] });
+    expect(useServerStore.getState().info).toBeNull(); // le store ignore ce message
+  });
+
   it('refreshes the token before reconnecting after a 4401 close', async () => {
     renderHook(() => useWebSocket(), { wrapper });
     const ws = FakeSocket.instances[0];
@@ -115,12 +127,12 @@ describe('useWebSocket', () => {
     expect(spy).toHaveBeenCalledWith({ queryKey: ['players'] });
   });
 
-  it('invalidates the server, backups, metrics, players and lists queries on open', () => {
+  it('invalidates the server, backups, metrics, players, lists and mods queries on open', () => {
     const spy = vi.spyOn(queryClient, 'invalidateQueries');
     renderHook(() => useWebSocket(), { wrapper });
     act(() => FakeSocket.instances[0].onopen?.());
     const keys = spy.mock.calls.map((c) => c[0]?.queryKey);
-    expect(keys).toEqual([['server'], ['backups'], ['metrics'], ['players'], ['lists']]);
+    expect(keys).toEqual([['server'], ['backups'], ['metrics'], ['players'], ['lists'], ['mods']]);
     expect(useServerStore.getState().connected).toBe(true);
   });
 });

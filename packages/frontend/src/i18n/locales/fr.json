@@ -215,7 +215,8 @@
     "collapse": "Réduire",
     "players": "Joueurs",
     "journal": "Journal",
-    "config": "Configuration"
+    "config": "Configuration",
+    "mods": "Mods"
   },
   "console": {
     "title": "Console",
@@ -337,7 +338,8 @@
       "user": "Utilisateurs",
       "player": "Joueurs",
       "whitelist": "Whitelist",
-      "journal": "Journal"
+      "journal": "Journal",
+      "mods": "Mods"
     }
   },
   "journal": {
@@ -528,6 +530,74 @@
       "resource-pack": "URL du pack de ressources",
       "max-tick-time": "Temps de tick max (ms)",
       "server-port": "Port du serveur"
+    }
+  },
+  "mods": {
+    "title": "Mods",
+    "unsupported": {
+      "title": "Les mods ne sont pas gérés pour ce serveur",
+      "description": "Le conteneur Minecraft doit être un serveur moddé ou à plugins (TYPE=FABRIC, QUILT, FORGE, NEOFORGE, PAPER, ...). Un serveur vanilla n'a pas de dossier de mods."
+    },
+    "source": {
+      "inline": {
+        "title": "La liste des mods est encore dans votre compose",
+        "description": "Importez-la une fois, puis faites pointer MODRINTH_PROJECTS vers le fichier géré par MC Manager pour que vos changements s'appliquent au prochain redémarrage."
+      },
+      "other": {
+        "title": "MODRINTH_PROJECTS pointe vers un autre fichier de liste",
+        "description": "MC Manager ne gère que son propre fichier. Faites pointer la variable dessus pour que vos changements s'appliquent au prochain redémarrage."
+      },
+      "none": {
+        "title": "MODRINTH_PROJECTS n'est pas défini sur le conteneur",
+        "description": "Ajoutez cette ligne à l'environnement du conteneur Minecraft pour que la liste ci-dessous soit appliquée au prochain redémarrage."
+      }
+    },
+    "composeLine": "Ligne à ajouter à l'environnement du conteneur",
+    "copy": "Copier",
+    "copied": "Copié",
+    "import": "Importer {{count}} mod(s)",
+    "imported": "Liste des mods importée",
+    "restartRequired": "Redémarrage requis : le serveur ne charge les mods qu'au démarrage.",
+    "modrinth": {
+      "title": "Mods Modrinth",
+      "empty": "Aucun mod Modrinth pour l'instant.",
+      "installed": "Installé",
+      "absent": "Non installé",
+      "pending": "En attente du redémarrage",
+      "unmanaged": "Lignes conservées telles quelles",
+      "invalidLine": "Ligne non reconnue"
+    },
+    "add": {
+      "placeholder": "Slug du projet, ex. lithium ou lithium:0.14.0",
+      "button": "Ajouter",
+      "hint": "Le slug est la fin de l'URL du projet sur modrinth.com."
+    },
+    "added": "Mod ajouté",
+    "removed": "Mod retiré",
+    "remove": {
+      "button": "Retirer",
+      "title": "Retirer {{entry}} de la liste ?",
+      "description": "L'image supprimera son jar au prochain redémarrage. Vous pourrez le rajouter plus tard."
+    },
+    "enable": "Activer",
+    "disable": "Désactiver",
+    "manual": {
+      "title": "Jars manuels",
+      "description": "Fichiers déposés à la main dans le dossier des mods ; les désactivés sont renommés en .jar.disabled.",
+      "empty": "Aucun jar déposé à la main.",
+      "conflict": ".jar et .jar.disabled existent tous les deux : supprimez l'un des deux sur l'hôte."
+    },
+    "errors": {
+      "invalid_entry": "Entrée invalide : un slug Modrinth, éventuellement suivi de :version, précédé d'un loader ou suivi de ?.",
+      "duplicate": "Ce projet est déjà dans la liste.",
+      "unknown_project": "Aucun projet Modrinth avec ce slug.",
+      "wrong_type": "Ce projet Modrinth n'est pas un mod (modpack, pack de ressources ou shader).",
+      "loader_mismatch": "Ce projet n'a pas de version pour le loader du serveur.",
+      "modrinth_unavailable": "Modrinth est injoignable. Réessayez plus tard.",
+      "unsupported_server": "Les mods ne sont pas gérés pour ce type de serveur.",
+      "busy": "Une autre opération sur les données est en cours (sauvegarde, restauration ou configuration). Réessayez dans un instant.",
+      "conflict": "État incohérent sur le disque : vérifiez le dossier des mods sur l'hôte.",
+      "not_found": "Ce mod n'est plus dans la liste."
     }
   }
 }

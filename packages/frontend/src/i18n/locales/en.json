@@ -215,7 +215,8 @@
     "collapse": "Collapse",
     "players": "Players",
     "journal": "Journal",
-    "config": "Configuration"
+    "config": "Configuration",
+    "mods": "Mods"
   },
   "console": {
     "title": "Console",
@@ -337,7 +338,8 @@
       "user": "Users",
       "player": "Players",
       "whitelist": "Whitelist",
-      "journal": "Journal"
+      "journal": "Journal",
+      "mods": "Mods"
     }
   },
   "journal": {
@@ -528,6 +530,74 @@
       "resource-pack": "Resource pack URL",
       "max-tick-time": "Max tick time (ms)",
       "server-port": "Server port"
+    }
+  },
+  "mods": {
+    "title": "Mods",
+    "unsupported": {
+      "title": "Mods are not managed for this server",
+      "description": "The Minecraft container must run a modded or plugin server (TYPE=FABRIC, QUILT, FORGE, NEOFORGE, PAPER, ...). Vanilla servers have no mods folder."
+    },
+    "source": {
+      "inline": {
+        "title": "The mod list still lives in your compose file",
+        "description": "Import it once, then point MODRINTH_PROJECTS to the file managed by MC Manager so that your changes apply at the next restart."
+      },
+      "other": {
+        "title": "MODRINTH_PROJECTS points to another listing file",
+        "description": "MC Manager only manages its own file. Point the variable to it so that your changes apply at the next restart."
+      },
+      "none": {
+        "title": "MODRINTH_PROJECTS is not set on the container",
+        "description": "Add this line to the environment of the Minecraft container so that the list below is applied at the next restart."
+      }
+    },
+    "composeLine": "Line to add to the container environment",
+    "copy": "Copy",
+    "copied": "Copied",
+    "import": "Import {{count}} mod(s)",
+    "imported": "Mod list imported",
+    "restartRequired": "Restart required: the server loads mods at startup only.",
+    "modrinth": {
+      "title": "Modrinth mods",
+      "empty": "No Modrinth mod listed yet.",
+      "installed": "Installed",
+      "absent": "Not installed",
+      "pending": "Pending restart",
+      "unmanaged": "Lines kept as-is",
+      "invalidLine": "Unrecognized line"
+    },
+    "add": {
+      "placeholder": "Project slug, e.g. lithium or lithium:0.14.0",
+      "button": "Add",
+      "hint": "The slug is the last part of the project URL on modrinth.com."
+    },
+    "added": "Mod added",
+    "removed": "Mod removed",
+    "remove": {
+      "button": "Remove",
+      "title": "Remove {{entry}} from the list?",
+      "description": "The image deletes its jar at the next restart. You can add it again later."
+    },
+    "enable": "Enable",
+    "disable": "Disable",
+    "manual": {
+      "title": "Manual jars",
+      "description": "Files dropped by hand in the mods folder; disabled ones are renamed .jar.disabled.",
+      "empty": "No jar dropped by hand.",
+      "conflict": "Both .jar and .jar.disabled exist: remove one on the host."
+    },
+    "errors": {
+      "invalid_entry": "Invalid entry: use a Modrinth slug, optionally with :version, a loader prefix or a trailing ?.",
+      "duplicate": "This project is already listed.",
+      "unknown_project": "No Modrinth project with this slug.",
+      "wrong_type": "This Modrinth project is not a mod (modpack, resource pack or shader).",
+      "loader_mismatch": "This project has no version for the server loader.",
+      "modrinth_unavailable": "Modrinth could not be reached. Try again later.",
+      "unsupported_server": "Mods are not managed for this server type.",
+      "busy": "Another data operation is running (backup, restore or configuration). Try again in a moment.",
+      "conflict": "Conflicting state on disk: check the mods folder on the host.",
+      "not_found": "This mod is no longer listed."
     }
   }
 }
