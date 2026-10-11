@@ -21,7 +21,7 @@ const base: ModsView = {
     { entry: 'spark', slug: 'spark', enabled: false, installed: false, title: null, description: null, iconUrl: null, projectId: null },
   ],
   unmanagedLines: [{ raw: 'bad entry', invalid: true }],
-  manual: [{ file: 'custom.jar', enabled: true, size: 2048, mtime: '2026-10-11T10:00:00Z', conflict: false, meta: null }],
+  manual: [{ file: 'custom.jar', enabled: true, size: 2048, mtime: '2026-10-11T10:00:00Z', conflict: false, meta: { id: 'custom', name: 'Custom Mod', version: '1.0' } }],
 };
 
 function setup(role: 'admin' | 'viewer' = 'admin', view: ModsView = base) {
@@ -131,6 +131,50 @@ describe('Mods page', () => {
     expect(await screen.findByText('Fabric API')).toBeInTheDocument();
   });
 
+  it('uploads a jar with progress, then shows the new view', async () => {
+    setup();
+    await screen.findByText('Custom Mod');
+    const file = new File([new Uint8Array([0x50, 0x4b, 3, 4])], 'new-mod.jar', { type: 'application/java-archive' });
+    vi.mocked(modsApi.upload).mockImplementation(async (_f, opts) => { opts?.onProgress?.(0.5); return { ...base, restartRequired: true, manual: [...base.manual, { file: 'new-mod.jar', enabled: true, size: 4, mtime: '2026-10-11T11:00:00Z', conflict: false, meta: null }] }; });
+    const input = screen.getByLabelText(/Drop a .jar file/) as HTMLInputElement;
+    fireEvent.change(input, { target: { files: [file] } });
+    await waitFor(() => expect(modsApi.upload).toHaveBeenCalledWith(file, expect.objectContaining({ replace: false })));
+    expect(await screen.findByText('new-mod.jar')).toBeInTheDocument();
+    await waitFor(() => expect(toast.success).toHaveBeenCalledWith('Mod uploaded'));
+    expect(await screen.findByText(/Restart required/)).toBeInTheDocument();
+  });
+
+  it('offers to replace an existing file and retries with replace', async () => {
+    setup();
+    await screen.findByText('Custom Mod');
+    const file = new File(['x'], 'custom.jar');
+    vi.mocked(modsApi.upload).mockRejectedValueOnce({ response: { data: { error: 'x', code: 'exists' } } }).mockResolvedValueOnce(base);
+    fireEvent.change(screen.getByLabelText(/Drop a .jar file/), { target: { files: [file] } });
+    expect(await screen.findByText('Replace custom.jar?')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Confirm' }));
+    await waitFor(() => expect(modsApi.upload).toHaveBeenLastCalledWith(file, expect.objectContaining({ replace: true })));
+  });
+
+  it('shows a translated upload error with details', async () => {
+    setup();
+    await screen.findByText('Custom Mod');
+    vi.mocked(modsApi.upload).mockRejectedValueOnce({ response: { data: { error: 'x', code: 'wrong_loader', details: 'paper' } } });
+    fireEvent.change(screen.getByLabelText(/Drop a .jar file/), { target: { files: [new File(['x'], 'p.jar')] } });
+    await waitFor(() => expect(toast.error).toHaveBeenCalledWith('This jar is not a mod for the server loader (detected: paper).'));
+  });
+
+  it('deletes a manual jar after confirmation and shows name and version', async () => {
+    setup();
+    expect(await screen.findByText('Custom Mod')).toBeInTheDocument();
+    expect(screen.getByText('1.0')).toBeInTheDocument();
+    vi.mocked(modsApi.deleteFile).mockResolvedValue({ ...base, manual: [] });
+    fireEvent.click(screen.getByRole('button', { name: 'Delete' }));
+    expect(await screen.findByText('Delete custom.jar from the server?')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Confirm' }));
+    await waitFor(() => expect(modsApi.deleteFile).toHaveBeenCalledWith('custom.jar'));
+    await waitFor(() => expect(screen.queryByText('Custom Mod')).not.toBeInTheDocument());
+  });
+
   it('is read-only for viewers', async () => {
     setup('viewer');
     await screen.findByText('Fabric API');
@@ -138,6 +182,8 @@ describe('Mods page', () => {
     expect(screen.queryByRole('button', { name: 'Add' })).not.toBeInTheDocument();
     expect(screen.queryByPlaceholderText(/Search Modrinth/)).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Remove' })).not.toBeInTheDocument();
+    expect(screen.queryByLabelText(/Drop a .jar file/)).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Delete' })).not.toBeInTheDocument();
   });
 
   it('explains unsupported servers and keeps the list read-only', async () => {

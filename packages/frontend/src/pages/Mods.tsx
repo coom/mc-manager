@@ -7,9 +7,11 @@ import { modsApi } from '@/api/mods.api';
 import { useAuthStore } from '@/stores/auth.store';
 import { PageLoader } from '@/components/shared/LoadingSpinner';
 import { RestartBanner } from '@/components/shared/RestartBanner';
+import { ConfirmDialog } from '@/components/shared/ConfirmDialog';
 import { SourceBanner } from '@/components/mods/SourceBanner';
 import { ModrinthList } from '@/components/mods/ModrinthList';
 import { ManualList } from '@/components/mods/ManualList';
+import { useModUpload } from '@/components/mods/use-mod-upload';
 import { describeModsError, type ApiError } from '@/components/mods/mods-errors';
 
 export default function Mods() {
@@ -24,8 +26,10 @@ export default function Mods() {
   const toggle = useMutation({ mutationFn: ({ entry, enabled }: { entry: string; enabled: boolean }) => modsApi.toggle(entry, enabled), onSuccess: replace, onError });
   const remove = useMutation({ mutationFn: (entry: string) => modsApi.remove(entry), onSuccess: (v) => { replace(v); toast.success(t('mods.removed')); }, onError });
   const toggleFile = useMutation({ mutationFn: ({ file, enabled }: { file: string; enabled: boolean }) => modsApi.toggleFile(file, enabled), onSuccess: replace, onError });
+  const deleteFile = useMutation({ mutationFn: (file: string) => modsApi.deleteFile(file), onSuccess: replace, onError });
+  const upload = useModUpload(replace);
   if (isLoading || !data) return <PageLoader />;
-  const pending = importMut.isPending || add.isPending || toggle.isPending || remove.isPending || toggleFile.isPending;
+  const pending = importMut.isPending || add.isPending || toggle.isPending || remove.isPending || toggleFile.isPending || deleteFile.isPending || upload.current !== null;
   const canAct = isAdmin && data.server !== null;
   // Conteneur introuvable ou type non supporté : message dédié, listes en lecture seule, pas de bandeau compose ni de redémarrage.
   const issue = data.server === null ? (data.serverIssue ?? 'unsupported') : null;
@@ -50,7 +54,15 @@ export default function Mods() {
         onAdd={(entry, reset) => add.mutate(entry, { onSuccess: reset })}
         onToggle={(entry, enabled) => toggle.mutate({ entry, enabled })}
         onRemove={(entry) => remove.mutate(entry)} />
-      {data.server !== null && <ManualList mods={data.manual} canAct={canAct} pending={pending} onToggle={(file, enabled) => toggleFile.mutate({ file, enabled })} />}
+      {data.server !== null && (
+        <ManualList mods={data.manual} canAct={canAct} pending={pending}
+          onToggle={(file, enabled) => toggleFile.mutate({ file, enabled })}
+          onDelete={(file) => deleteFile.mutate(file)}
+          upload={{ current: upload.current, onFiles: (files) => files.forEach((f) => upload.start(f)), onCancel: upload.cancel }} />
+      )}
+      <ConfirmDialog open={upload.pendingReplace !== null} onOpenChange={(o) => { if (!o) upload.dismissReplace(); }}
+        title={t('mods.upload.replaceTitle', { file: upload.pendingReplace?.name ?? '' })} description={t('mods.upload.replaceDescription')}
+        destructive onConfirm={upload.confirmReplace} />
     </div>
   );
 }
