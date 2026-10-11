@@ -18,6 +18,7 @@ Web interface to monitor and manage a Minecraft Java server running in Docker wi
 - Players: online and known players, player pages with vanilla statistics (play time, deaths, kills, distance...), kick / ban / IP ban / op / deop actions, whitelist, operators and bans managed from the interface
 - Connection journal (admin): Minecraft connections with IP, country and duration, refused connections, successful or failed logins to MC Manager; configurable retention (90 days by default)
 - Configuration: `server.properties` editor (form for the common keys and raw file); keys enforced by the itzg container variables are shown locked; restart offered after saving
+- Mods: Modrinth mods of a modded server (Fabric, Quilt, Forge, NeoForge) or plugins (Paper and derivatives) listed, enabled, disabled, added or removed from the interface, plus jars dropped by hand; restart offered when the list differs from what the server loaded (see [Mods](#mods))
 - Dark and light themes, English and French
 
 ## Screenshots
@@ -134,6 +135,23 @@ The Configuration page edits `server.properties`, either through a form of the c
 - The RCON keys (`enable-rcon`, `rcon.port`, `rcon.password`) are always locked and the RCON password is never shown.
 - Changes only take effect after a restart.
 
+## Mods
+
+The Mods page lists the mods (or plugins) of a modded server and lets an admin enable, disable, add or remove them. Nothing is loaded at runtime: every change applies at the next restart, and the page says so.
+
+- **Modrinth mods** are the entries of `MODRINTH_PROJECTS`. MC Manager owns a listing file in the data volume, `/data/mc-manager/modrinth-projects.txt`, in the native itzg format (one entry per line, `#` comments). Point the variable to it in the Minecraft stack:
+
+  ```yaml
+  environment:
+    TYPE: FABRIC
+    MODRINTH_PROJECTS: "@/data/mc-manager/modrinth-projects.txt"
+  ```
+
+  If the variable still holds an inline list, the page offers to import it once. Disabling a mod comments its line; the image removes its jar at the next start and downloads it again when re-enabled. Adding a mod takes a Modrinth slug (optionally `slug:version`, a `fabric:`/`paper:`/`datapack:` prefix or a trailing `?` for optional), verified against the Modrinth API before it is written.
+- **Manual jars** dropped by hand in `mods/` (or `plugins/`) that the image does not manage are toggled by renaming them to `.jar.disabled`. Nothing is ever deleted.
+- Supported server types: `FABRIC`, `QUILT`, `FORGE`, `NEOFORGE` (folder `mods/`) and `PAPER`, `SPIGOT`, `BUKKIT`, `PURPUR`, `FOLIA` (folder `plugins/`). On a vanilla server the page is read-only.
+- All writes are admin-only, audited, and serialized with backups, restores and `server.properties` edits.
+
 ## Roles
 
 | Role | Rights |
@@ -166,13 +184,15 @@ i18n: write a fragment in `packages/frontend/scripts/i18n-fragments/*.json`, the
 
 ## Privacy
 
-The dashboard, the Players page and the player sheets show player avatars loaded from the third-party service [mc-heads.net](https://mc-heads.net): the browser of every user sends the names of the online players to that service. The interface fonts (Outfit, JetBrains Mono) are also loaded from Google Fonts (`fonts.googleapis.com`), which exposes the visitor IP address to Google. There is no other external call.
+The dashboard, the Players page and the player sheets show player avatars loaded from the third-party service [mc-heads.net](https://mc-heads.net): the browser of every user sends the names of the online players to that service. The interface fonts (Outfit, JetBrains Mono) are also loaded from Google Fonts (`fonts.googleapis.com`), which exposes the visitor IP address to Google.
+
+The Mods page is the only other source of external calls: when an admin adds a mod, and once per unknown entry of the listing file, the backend queries `api.modrinth.com` to verify the project and cache its title and icon; the browser then loads mod icons from `cdn.modrinth.com`. Nothing is sent to Modrinth beyond the project slug.
 
 IP geolocation uses the `geoip-lite` database embedded in the image (the one shipped with geoip-lite 2.0.2, with no automatic update): no external call, country only. IP addresses are visible to admins only, and the journal is purged according to the configured retention.
 
 ## Roadmap
 
-Lots 2a (players, journals) and 2b (restore, `server.properties` editor) are delivered.
+Lots 2a (players, journals), 2b (restore, `server.properties` editor) and 3 (mods) are delivered.
 
 Out of scope: editing the backup schedule, editing the container environment, managing several servers.
 

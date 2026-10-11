@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeAll, afterAll, vi } from 'vitest';
+import { describe, it, expect, afterAll, vi } from 'vitest';
 import { mkdtemp, mkdir, writeFile, readFile, readdir } from 'fs/promises';
 import { tmpdir } from 'os';
 import path from 'path';
@@ -11,8 +11,8 @@ import { ModsService } from './mods-service.js';
 import { MANIFEST_FILE } from './manifest.js';
 import { AppError } from '../middleware/error-handler.js';
 
-let prisma: PrismaClient;
-beforeAll(() => { prisma = testPrisma(); });
+// Au niveau du module comme les autres tests du dépôt : le db push de la base temporaire dépasse parfois le timeout d'un hook sous charge.
+const prisma: PrismaClient = testPrisma();
 afterAll(async () => { await prisma.$disconnect(); });
 
 const LISTING = 'mc-manager/modrinth-projects.txt';

@@ -12,7 +12,7 @@ MC Manager : interface web de suivi et de gestion d'un serveur Minecraft Java so
 | `packages/frontend` (`@mc/frontend`) | SPA React 18 / Vite / Tailwind / shadcn, TanStack Query, zustand, i18next (fr, en) |
 | `packages/common` (`@mc/common`) | Types et constantes partagés (messages WebSocket, DTO, rôles), pas de schémas zod |
 
-La spec est dans `docs/superpowers/specs/2026-10-10-mc-manager-lot1-design.md`. Les lots 1, 2a et 2b sont implémentés.
+Les specs sont dans `docs/superpowers/specs/` (lot 1 : `2026-10-10-mc-manager-lot1-design.md`). Les lots 1, 2a, 2b et 3 (mods) sont implémentés.
 
 ## Commandes
 
@@ -83,7 +83,8 @@ Les services sont exposés via `req.app.locals.{prisma, docker, rcon, logs, metr
   - Échec avant la première suppression → `aborted: …` et relance du serveur si on l'avait arrêté et `startAfter` ; après → `partial restore: …`, pas de relance.
   - Marqueur `<dataDir>/.mc-manager-restore.json` (`archive`, `safetyBackup`, `startedAt`, `step`) écrit avant la première suppression, supprimé après une extraction réussie. `restore.start()` (dans `index.ts`, avant `server.listen`) le lit au démarrage : `RestoreStatus.interrupted`, avertissement persistant sur la page Sauvegardes, `DELETE /api/backups/restore/interrupted` (admin, audité) pour le retirer.
 - **server.properties** : `server-properties/properties-service.ts` lit (mot de passe RCON masqué), fusionne (`updateServerProperties`) ou remplace (mode brut validé) et écrit de façon atomique ; les clés gouvernées par `Config.Env` du conteneur (`server-properties/itzg-env.ts`) et les clés RCON sont refusées en 409. Routes `GET/PUT /api/server/properties` (admin, audit `server.properties`).
-- **Messages WebSocket ajoutés** : `player.session` (join/leave, jamais d'IP) et `player.lists.changed`.
+- **Messages WebSocket ajoutés** : `player.session` (join/leave, jamais d'IP), `player.lists.changed` et `mods.changed`.
+- **Mods (lot 3)** : `mods/mods-service.ts` agrège le fichier de liste itzg `<dataDir>/mc-manager/modrinth-projects.txt` (`listing-file.ts` : ligne désactivée = `# <entrée>`, lignes non reconnues conservées telles quelles et jamais réécrites), le manifeste `.modrinth-manifest.json` écrit par l'image (`manifest.ts` : `files`, `projects`), le dossier `mods/` ou `plugins/` selon `TYPE` (`server-type.ts`, vanilla ou inconnu = page en lecture seule) et le cache `ModrinthProject`. `restartRequired` = entrées actives ≠ `projects` du manifeste (comparés par slug) ou renommage manuel depuis `StartedAt` (horodatage en mémoire, comme `PropertiesService`). Ajout validé par `api.modrinth.com` (`modrinth-client.ts`, interface `ModrinthLike`, `FakeModrinth` en test) hors verrou, puis écriture sous `DataLock('mods')`. Les jars manuels (absents de `files`) sont renommés `.jar` ⇄ `.jar.disabled`, jamais supprimés. Routes `/api/mods` (lecture pour tous, écritures admin auditées `mods.*`). `AppError` porte un `code` stable (`ModsErrorCode`) que le frontend traduit.
 
 ## Architecture frontend
 
@@ -92,6 +93,7 @@ Les services sont exposés via `req.app.locals.{prisma, docker, rcon, logs, metr
 - Pas de `refetchInterval` sur les données poussées par WebSocket ; seul `GET /api/metrics` (courbe de fréquentation) est rafraîchi toutes les 60 s.
 - i18n : `fr.json` et `en.json` ; ne pas éditer les locales à la main pour une nouvelle fonctionnalité, écrire un fragment dans `scripts/i18n-fragments/` puis lancer `merge-i18n.mjs`.
 - Complétion de la console (`components/console/completion.ts`) : tout est local, RCON n'offre pas de complétion. `GRAMMAR` décrit les positions des commandes vanilla (type `player`/`item`/`block`/`entity`/`effect`/`enchantment`/`coord`/`none`, liste de littéraux, ou embranchement sur un littéral) ; les identifiants viennent de `registry.json` (généré, committé, ~50 Ko), les joueurs en ligne du store (`info.players.names`). Une position non décrite propose les joueurs. `CommandInput` : Tab / Shift+Tab cyclent, Échap masque, toute frappe recalcule.
+- Page `/mods` (`pages/Mods.tsx`, composants `components/mods/`) : query `mods` invalidée sur `mods.changed` et à chaque reconnexion ; les erreurs sont traduites par `code` (`mods-errors.ts`). `RestartBanner` est partagé (`components/shared/`) entre Configuration et Mods.
 - nginx (`Dockerfile.frontend`) proxifie `/api` et `/ws` vers `backend:3001` ; `/api/backups/download/` a un bloc dédié `^~` (pas de buffering, timeout de lecture 1 h) pour les téléchargements volumineux. Ne jamais élargir ce préfixe à `/api/backups/` : nginx répondrait à `GET /api/backups` par un 301 vers son port interne 8080 (`absolute_redirect off` limite les dégâts, mais la liste resterait redirigée).
 
 ## Invariants de sécurité (ne pas casser)
@@ -100,7 +102,8 @@ Les services sont exposés via `req.app.locals.{prisma, docker, rcon, logs, metr
 - JWT avec revendication `typ` (`access`, `mfa`, ...) vérifiée ; rôle rechargé en base à chaque requête dans `authMiddleware`.
 - RBAC : `rbac('admin')` (403) sur start/stop/restart, commandes RCON, backup manuel, téléchargement et suppression de backups, gestion des utilisateurs. `viewer` est en lecture seule.
 - Noms de backup : nom de fichier simple (pas de séparateur ni `..`) ET présent dans la liste réelle du dossier, sinon 404. Aucune traversée de chemin.
-- Le volume de données est monté en lecture-écriture depuis le lot 2b ; les seules écritures sont la restauration et `server.properties`, admin, auditées, sous `DataLock`, avec un filtre d'archive strict. Le mot de passe RCON n'est jamais renvoyé, modifiable ni dupliqué dans l'environnement.
+- Le volume de données est monté en lecture-écriture depuis le lot 2b ; les seules écritures sont la restauration, `server.properties` et les mods (fichier `mc-manager/modrinth-projects.txt` et renommages `.jar` ⇄ `.jar.disabled` à l'intérieur de `mods/` ou `plugins/`, jamais de suppression), admin, auditées, sous `DataLock`, avec un filtre d'archive strict. Le mot de passe RCON n'est jamais renvoyé, modifiable ni dupliqué dans l'environnement.
+- Appels sortants du backend : `api.modrinth.com` uniquement (ajout de mod, résolution des métadonnées au plus une fois par slug et par heure) ; le navigateur charge les icônes depuis `cdn.modrinth.com`. Documenté dans la section Privacy du README.
 - Le socket Docker donne un accès root à l'hôte : la WebApp ne doit être exposée que derrière l'authentification (voir README).
 - Le dashboard charge des avatars depuis `mc-heads.net` et les polices depuis Google Fonts : à garder documenté dans la section confidentialité du README.
 - Lot 2a : les IP des joueurs et des connexions web ne sortent que par les routes `rbac('admin')` (`/api/journal/*`, fiche admin) ; `player.session` n'en porte jamais. Noms (`^[A-Za-z0-9_]{3,16}$`), IP (`net.isIP`) et raisons (une ligne, 100 caractères) sont validés dans `player-admin.ts` avant tout envoi RCON. Le lot 2a lui-même n'écrit rien dans `/data` (les écritures sont celles du lot 2b).

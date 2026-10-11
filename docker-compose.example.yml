@@ -11,6 +11,9 @@ services:
     environment:
       EULA: "TRUE"
       TYPE: "PAPER"
+      # Modded server managed from the Mods page (see README, "Mods"):
+      # TYPE: "FABRIC"
+      # MODRINTH_PROJECTS: "@/data/mc-manager/modrinth-projects.txt"
       MEMORY: "4G"
       ENABLE_RCON: "true"
       RCON_PASSWORD: "change-me"
