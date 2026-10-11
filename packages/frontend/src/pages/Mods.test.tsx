@@ -155,6 +155,31 @@ describe('Mods page', () => {
     await waitFor(() => expect(modsApi.upload).toHaveBeenLastCalledWith(file, expect.objectContaining({ replace: true })));
   });
 
+  it('refuses a file above 100 MB before sending it (nginx would answer a bare 413)', async () => {
+    setup();
+    await screen.findByText('Custom Mod');
+    const file = new File(['x'], 'huge.jar');
+    Object.defineProperty(file, 'size', { value: 100 * 1024 * 1024 + 1 });
+    fireEvent.change(screen.getByLabelText(/Drop a .jar file/), { target: { files: [file] } });
+    await waitFor(() => expect(toast.error).toHaveBeenCalledWith('Jar files are limited to 100 MB.'));
+    expect(modsApi.upload).not.toHaveBeenCalled();
+  });
+
+  it('asks to replace each existing file in turn when several are dropped', async () => {
+    setup();
+    await screen.findByText('Custom Mod');
+    const a = new File(['a'], 'a.jar');
+    const b = new File(['b'], 'b.jar');
+    vi.mocked(modsApi.upload).mockRejectedValueOnce({ response: { data: { error: 'x', code: 'exists' } } }).mockRejectedValueOnce({ response: { data: { error: 'x', code: 'exists' } } }).mockResolvedValue(base);
+    fireEvent.change(screen.getByLabelText(/Drop a .jar file/), { target: { files: [a, b] } });
+    expect(await screen.findByText('Replace a.jar?')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Confirm' }));
+    await waitFor(() => expect(modsApi.upload).toHaveBeenCalledWith(a, expect.objectContaining({ replace: true })));
+    expect(await screen.findByText('Replace b.jar?')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Confirm' }));
+    await waitFor(() => expect(modsApi.upload).toHaveBeenCalledWith(b, expect.objectContaining({ replace: true })));
+  });
+
   it('shows a translated upload error with details', async () => {
     setup();
     await screen.findByText('Custom Mod');

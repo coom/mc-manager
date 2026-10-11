@@ -66,7 +66,12 @@ export class ModsService {
   /** Au démarrage : supprime les .part laissés par un upload interrompu. */
   async start(): Promise<void> {
     let names: string[];
-    try { names = await readdir(this.tmpDir); } catch (err) { if ((err as NodeJS.ErrnoException).code === 'ENOENT') return; throw err; }
+    try { names = await readdir(this.tmpDir); }
+    catch (err) {
+      // Dossier absent : rien à faire. Autre erreur (droits) : on ne bloque pas le démarrage du backend pour ça.
+      if ((err as NodeJS.ErrnoException).code !== 'ENOENT') logger.warn({ err, dir: this.tmpDir }, 'cannot read upload temp folder');
+      return;
+    }
     for (const n of names) if (n.endsWith('.part')) await rm(path.join(this.tmpDir, n), { force: true }).catch((err) => logger.warn({ err, n }, 'cannot remove orphan upload'));
   }
 
@@ -379,9 +384,10 @@ export class ModsService {
         const dir = path.join(this.deps.dataDir, server.dir);
         try {
           await mkdir(dir, { recursive: true });
-          // rename écrase la destination (c'est le remplacement) ; la forme .disabled est retirée pour ne pas laisser de doublon.
-          if (opts.replace) await rm(path.join(dir, `${name}.disabled`), { force: true });
+          // rename écrase la destination (c'est le remplacement). La forme .disabled n'est retirée qu'après :
+          // si le rename échoue, l'ancien jar désactivé est toujours là.
           await rename(tmp, path.join(dir, name));
+          if (opts.replace) await rm(path.join(dir, `${name}.disabled`), { force: true });
         } catch (err) { throw mapWriteError(err, path.join(dir, name), dir); }
         this.metaCache.delete(path.join(dir, name));
         this.lastFileWriteAt = new Date();

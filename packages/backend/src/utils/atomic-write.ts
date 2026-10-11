@@ -23,6 +23,7 @@ export function mapWriteError(err: unknown, file: string, dir: string): unknown 
   const code = (err as NodeJS.ErrnoException).code;
   if (code === 'EROFS') return new AppError(500, `Cannot write ${file}: the data volume is mounted read-only. Remove :ro from the data volume in docker-compose.yml.`);
   if (code === 'ENOSPC') return new AppError(500, `Cannot write ${file}: no space left on the data volume.`);
+  if (code === 'EXDEV') return new AppError(500, `Cannot move ${file}: the target folder and mc-manager/tmp are not on the same volume. Mount the whole data volume on /mc/data rather than separate sub-folders.`);
   if (code === 'EACCES' || code === 'EPERM') {
     logger.warn({ err, file }, 'cannot write in data directory');
     return new AppError(500, `Cannot write ${file}: the data directory is not writable by the backend (UID 1000). Run chown -R 1000:1000 ${dir} on the host.`);

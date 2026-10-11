@@ -1,8 +1,8 @@
 import { describe, it, expect, afterAll, vi } from 'vitest';
-import { mkdtemp, mkdir, writeFile, readFile, readdir, stat, utimes } from 'fs/promises';
+import { mkdtemp, mkdir, writeFile, readFile, readdir, rename, stat, utimes } from 'fs/promises';
 
 // stat est espionné pour simuler un jar supprimé entre readdir et stat (l'image retélécharge au démarrage).
-vi.mock('fs/promises', async (importOriginal) => { const m = await importOriginal<typeof import('fs/promises')>(); return { ...m, stat: vi.fn(m.stat) }; });
+vi.mock('fs/promises', async (importOriginal) => { const m = await importOriginal<typeof import('fs/promises')>(); return { ...m, stat: vi.fn(m.stat), rename: vi.fn(m.rename), readdir: vi.fn(m.readdir) }; });
 import { tmpdir } from 'os';
 import path from 'path';
 import type { WsMessage } from '@mc/common';
@@ -337,6 +337,22 @@ describe('ModsService.upload / deleteFile', () => {
     expect(await codeOf(svc.deleteFile('lithium.jar'))).toEqual([404, 'not_found']);
     expect(await codeOf(svc.deleteFile('../x.jar'))).toEqual([404, 'not_found']);
     expect((await svc.view()).restartRequired).toBe(true);
+  });
+  it('keeps the disabled jar when the final rename fails during a replace (rename first, then rm)', async () => {
+    const { svc, modsDir, dataDir } = await setup({ listing: '' });
+    await up(svc, await fabricJar('xaeros', 'X', '1'));
+    await svc.setFileEnabled('xaeros.jar', false);
+    vi.mocked(rename).mockRejectedValueOnce(Object.assign(new Error('cross-device'), { code: 'EXDEV' }));
+    const r = await up(svc, await fabricJar('xaeros', 'X', '2'), 'xaeros.jar', true).then(() => null, (e: AppError) => e);
+    expect(r?.statusCode).toBe(500);
+    expect(r?.message).toMatch(/same volume|même volume/i);
+    expect(await modsDir()).toEqual(['xaeros.jar.disabled']);
+    expect(await parts(dataDir)).toEqual([]);
+  });
+  it('start() logs and continues when the temp folder cannot be read', async () => {
+    const { svc } = await setup({ listing: '' });
+    vi.mocked(readdir).mockRejectedValueOnce(Object.assign(new Error('denied'), { code: 'EACCES' }));
+    await expect(svc.start()).resolves.toBeUndefined();
   });
   it('start() purges orphan .part files and nothing else', async () => {
     const { svc, dataDir } = await setup({ listing: '' });
