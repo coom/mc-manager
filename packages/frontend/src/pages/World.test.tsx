@@ -78,7 +78,7 @@ describe('World cards', () => {
     fireEvent.click(await screen.findByRole('button', { name: 'Rain' }));
     await waitFor(() => expect(worldApi.setWeather).toHaveBeenCalledWith('rain'));
     fireEvent.change(screen.getByLabelText('Tick rate'), { target: { value: '40' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Apply', exact: true }));
+    fireEvent.click(screen.getByRole('button', { name: /^Apply$/ }));
     await waitFor(() => expect(worldApi.setTick).toHaveBeenCalledWith({ rate: 40 }));
   });
   it('sprint converts seconds to ticks', async () => {
