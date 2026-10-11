@@ -141,3 +141,12 @@ model WebLogin {
   @@index([createdAt])
   @@index([username, createdAt])
 }
+
+/// Métadonnées Modrinth mises en cache pour l'affichage de la page Mods (jamais nécessaires au fonctionnement).
+model ModrinthProject {
+  slug      String   @id
+  projectId String
+  title     String
+  iconUrl   String?
+  fetchedAt DateTime
+}
