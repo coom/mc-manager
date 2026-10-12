@@ -188,7 +188,7 @@ function LanguageCard() {
       </CardHeader>
       <CardContent className="space-y-2">
         <Select value={current} onValueChange={choose}>
-          <SelectTrigger className="h-8 text-xs w-56"><SelectValue /></SelectTrigger>
+          <SelectTrigger className="h-8 text-xs w-full sm:w-56"><SelectValue /></SelectTrigger>
           <SelectContent>
             {LANGUAGES.map((l) => (
               <SelectItem key={l.code} value={l.code}><span className="mr-2 text-xs font-semibold uppercase">{l.code}</span>{l.label}</SelectItem>
@@ -267,7 +267,7 @@ function MfaCard() {
               : <>
                   <p className="text-xs text-muted-foreground">{t('settings.account.mfa.disablePrompt')}</p>
                   <div className="flex items-center gap-2">
-                    <Input type="password" value={disablePw} onChange={(e) => setDisablePw(e.target.value)} placeholder={t('settings.account.mfa.passwordPlaceholder')} className="h-8 text-xs w-48" />
+                    <Input type="password" value={disablePw} onChange={(e) => setDisablePw(e.target.value)} placeholder={t('settings.account.mfa.passwordPlaceholder')} className="h-8 min-w-0 flex-1 text-xs sm:w-48 sm:flex-none" />
                     <Button size="sm" variant="destructive" onClick={() => disable.mutate()} disabled={disable.isPending || !disablePw}>{t('settings.account.mfa.disable')}</Button>
                   </div>
                 </>}
@@ -356,7 +356,7 @@ function UsersTab() {
         <Button size="sm" onClick={() => setShowAdd(true)}><Plus className="h-4 w-4 mr-1" /> {t('settings.users.add')}</Button>
       </div>
 
-      <div className="rounded-md border border-border overflow-hidden">
+      <div className="rounded-md border border-border overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-border bg-muted/30">

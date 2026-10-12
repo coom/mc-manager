@@ -42,37 +42,37 @@ export default function Journal() {
         <Tabs value={tab} onValueChange={(v) => { setTab(v as Tab); reset(); }} className="ml-4"><TabsList>
           <TabsTrigger value="players">{t('journal.tabs.players')}</TabsTrigger><TabsTrigger value="failures">{t('journal.tabs.failures')}</TabsTrigger><TabsTrigger value="web">{t('journal.tabs.web')}</TabsTrigger>
         </TabsList></Tabs>
-        <div className="ml-auto flex flex-wrap gap-2">
-          <Input className="h-8 w-36" placeholder={t('journal.filterName')} value={q} onChange={(e) => { setQ(e.target.value); reset(); }} />
-          <Input className="h-8 w-36" type="date" aria-label={t('journal.from')} value={from} onChange={(e) => { setFrom(e.target.value); reset(); }} />
-          <Input className="h-8 w-36" type="date" aria-label={t('journal.to')} value={to} onChange={(e) => { setTo(e.target.value); reset(); }} />
+        <div className="ml-auto flex w-full flex-wrap gap-2 sm:w-auto">
+          <Input className="h-8 w-full sm:w-36" placeholder={t('journal.filterName')} value={q} onChange={(e) => { setQ(e.target.value); reset(); }} />
+          <Input className="h-8 min-w-0 flex-1 sm:w-36 sm:flex-none" type="date" aria-label={t('journal.from')} value={from} onChange={(e) => { setFrom(e.target.value); reset(); }} />
+          <Input className="h-8 min-w-0 flex-1 sm:w-36 sm:flex-none" type="date" aria-label={t('journal.to')} value={to} onChange={(e) => { setTo(e.target.value); reset(); }} />
         </div>
       </div>
       <Card><CardContent className="p-4">
         {tab === 'players' && (players.data?.items.length === 0 ? empty : (
-          <table className="w-full text-sm">
+          <div className="overflow-x-auto"><table className="w-full text-sm">
             <thead className="text-left text-xs text-muted-foreground"><tr><th className="py-2">{t('journal.when')}</th><th>{t('journal.name')}</th><th>{t('journal.ip')}</th><th>{t('journal.country')}</th><th>{t('journal.duration')}</th></tr></thead>
             <tbody>{(players.data?.items ?? []).map((s) => (
               <tr key={s.id} className="border-t"><td className="py-2">{fmt(s.joinedAt)}</td><td>{s.name}</td><td className="font-mono text-xs">{s.ip ?? <span className="text-muted-foreground">{t('journal.reconciled')}</span>}</td><td><CountryFlag country={s.country} hasIp={s.ip != null} /></td><td>{duration(s.joinedAt, s.leftAt)}</td></tr>
             ))}</tbody>
-          </table>
+          </table></div>
         ))}
         {tab === 'failures' && (failures.data?.items.length === 0 ? empty : (
-          <table className="w-full text-sm">
+          <div className="overflow-x-auto"><table className="w-full text-sm">
             <thead className="text-left text-xs text-muted-foreground"><tr><th className="py-2">{t('journal.when')}</th><th>{t('journal.name')}</th><th>{t('journal.ip')}</th><th>{t('journal.country')}</th><th>{t('journal.reason')}</th></tr></thead>
             <tbody>{(failures.data?.items ?? []).map((f) => (
               <tr key={f.id} className="border-t"><td className="py-2">{fmt(f.createdAt)}</td><td>{f.name}</td><td className="font-mono text-xs">{f.ip ?? '—'}</td><td><CountryFlag country={f.country} hasIp={f.ip != null} /></td><td><Badge variant="warning">{t(`journal.reasons.${f.reason}`)}</Badge> <span className="text-xs text-muted-foreground">{f.message}</span></td></tr>
             ))}</tbody>
-          </table>
+          </table></div>
         ))}
         {tab === 'web' && (web.data?.items.length === 0 ? empty : (
-          <table className="w-full text-sm">
+          <div className="overflow-x-auto"><table className="w-full text-sm">
             <thead className="text-left text-xs text-muted-foreground"><tr><th className="py-2">{t('journal.when')}</th><th>{t('journal.name')}</th><th>{t('journal.ip')}</th><th>{t('journal.country')}</th><th>{t('journal.result')}</th></tr></thead>
             <tbody>{(web.data?.items ?? []).map((w) => (
               <tr key={w.id} className="border-t"><td className="py-2">{fmt(w.createdAt)}</td><td>{w.username}</td><td className="font-mono text-xs">{w.ip}</td><td><CountryFlag country={w.country} hasIp /></td>
                 <td><Badge variant={w.success ? 'success' : 'destructive'}>{t(w.success ? 'journal.success' : 'journal.failure')}</Badge> {w.reason && <span className="text-xs text-muted-foreground">{t(`journal.reasons.${w.reason}`)}</span>}</td></tr>
             ))}</tbody>
-          </table>
+          </table></div>
         ))}
         <div className="mt-3 flex items-center justify-end gap-2 text-xs">
           <Button size="sm" variant="outline" disabled={page <= 1} onClick={() => setPage(page - 1)}>‹</Button>

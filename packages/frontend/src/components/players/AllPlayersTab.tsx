@@ -22,7 +22,7 @@ export function AllPlayersTab() {
     <div className="space-y-3">
       <Input className="h-8 max-w-xs" placeholder={t('players.search')} value={q} onChange={(e) => { setQ(e.target.value); setPage(1); }} />
       {data && data.items.length === 0 ? <EmptyState title={t('players.noneKnown')} /> : (
-        <table className="w-full text-sm">
+        <div className="overflow-x-auto"><table className="w-full text-sm">
           <thead className="text-left text-xs text-muted-foreground"><tr><th className="py-2">{t('players.name')}</th><th>{t('players.status')}</th><th>{t('players.lastSeen')}</th><th>{t('players.sessions')}</th>{isAdmin && <th className="w-12" />}</tr></thead>
           <tbody>{(data?.items ?? []).map((p) => (
             <tr key={p.uuid ?? p.name} className="border-t">
@@ -38,7 +38,7 @@ export function AllPlayersTab() {
               {isAdmin && <td className="text-right"><PlayerActionsMenu name={p.name} online={p.online} op={p.op} banned={p.banned} /></td>}
             </tr>
           ))}</tbody>
-        </table>
+        </table></div>
       )}
       <div className="flex items-center justify-end gap-2 text-xs">
         <Button size="sm" variant="outline" disabled={page <= 1} onClick={() => setPage(page - 1)}>‹</Button>

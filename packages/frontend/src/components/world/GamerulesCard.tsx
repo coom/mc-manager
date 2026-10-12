@@ -18,8 +18,8 @@ function IntRule({ def, value, pending, run }: { def: GameruleDef; value: number
   const key = `gamerule:${def.name}`;
   const label = t(`world.gamerules.names.${def.name}`);
   return (
-    <div className="flex items-center gap-2">
-      <Label htmlFor={`gr-${def.name}`} className="w-56 shrink-0 text-xs">{label}</Label>
+    <div className="flex flex-wrap items-center gap-2">
+      <Label htmlFor={`gr-${def.name}`} className="w-full text-xs sm:w-56 sm:shrink-0">{label}</Label>
       <Input id={`gr-${def.name}`} type="number" className="h-8 w-24" min={def.min} max={def.max} value={shown} onChange={(e) => setDraft(e.target.value)} />
       {value === null && <span className="text-xs text-muted-foreground">{t('world.unknown')}</span>}
       <Button size="sm" variant="outline" aria-label={`${t('world.gamerules.apply')} ${def.name}`} disabled={!ok || pending === key} onClick={() => run(key, async () => { const s = await worldApi.setGamerule(def.name, n); setDraft(null); return s; })}>{t('world.gamerules.apply')}</Button>

@@ -44,7 +44,7 @@ export default function PlayerSheet() {
           <h1 className="text-xl font-semibold">{data.name}</h1>
           {data.previousNames.length > 0 && <p className="text-xs text-muted-foreground">{t('players.sheet.previousNames')} : {data.previousNames.join(', ')}</p>}
         </div>
-        <div className="flex gap-1">
+        <div className="flex flex-wrap gap-1">
           {data.online && <Badge variant="success">{t('players.badges.online')}</Badge>}
           {data.op && <Badge>{t('players.badges.op')}</Badge>}
           {data.whitelisted && <Badge variant="secondary">{t('players.badges.whitelisted')}</Badge>}
@@ -82,7 +82,7 @@ export default function PlayerSheet() {
       <Card>
         <CardHeader><CardTitle className="text-sm">{t('players.sheet.recentSessions')}</CardTitle></CardHeader>
         <CardContent>
-          <table className="w-full text-sm">
+          <div className="overflow-x-auto"><table className="w-full text-sm">
             <thead className="text-left text-xs text-muted-foreground"><tr><th className="py-2">{t('players.sheet.joined')}</th><th>{t('players.sheet.duration')}</th>{isAdmin && <><th>IP</th><th>{t('players.country')}</th></>}</tr></thead>
             <tbody>{data.sessions.map((se) => (
               <tr key={se.id} className="border-t">
@@ -91,7 +91,7 @@ export default function PlayerSheet() {
                 {isAdmin && <><td className="font-mono text-xs">{se.ip ?? '—'}</td><td><CountryFlag country={se.country} hasIp={se.ip != null} /></td></>}
               </tr>
             ))}</tbody>
-          </table>
+          </table></div>
         </CardContent>
       </Card>
     </div>

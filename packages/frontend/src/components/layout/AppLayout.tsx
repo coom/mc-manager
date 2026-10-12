@@ -38,12 +38,12 @@ export function AppLayout() {
   }
 
   return (
-    <div className="flex h-screen overflow-hidden">
+    <div className="flex h-dvh overflow-hidden">
       <Sidebar />
       <div className="flex flex-1 flex-col overflow-hidden">
         <Header />
         <main className="flex-1 overflow-auto grid-bg">
-          <div className="p-5 fade-in">
+          <div className="p-3 sm:p-5 fade-in">
             <Outlet />
           </div>
         </main>

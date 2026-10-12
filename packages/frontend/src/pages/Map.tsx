@@ -26,7 +26,7 @@ export default function Map() {
   }
   return (
     <div className="flex h-[calc(100vh-7rem)] flex-col gap-3">
-      <div className="flex items-center gap-3">
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
         <h1 className="text-xl font-semibold">{t('map.title')}</h1>
         <Button asChild variant="outline" size="sm" className="ml-auto">
           <a href={data.url} target="_blank" rel="noopener noreferrer"><ExternalLink className="mr-1 h-3.5 w-3.5" />{t('map.openNewTab')}</a>

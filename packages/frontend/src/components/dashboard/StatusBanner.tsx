@@ -41,7 +41,7 @@ export function StatusBanner() {
       </div>
       {info.message && <p className="w-full text-xs text-red-500">{info.message}</p>}
       {isAdmin && (
-        <div className="ml-auto flex gap-2">
+        <div className="ml-auto flex flex-wrap gap-2">
           <Button size="sm" disabled={busy || info.status !== 'stopped'} onClick={() => act.mutate('start')}><Play className="mr-1 h-4 w-4" />{t('server.start')}</Button>
           <Button size="sm" variant="outline" disabled={busy || info.status === 'stopped' || info.status === 'unavailable'} onClick={() => setConfirm('restart')}><RotateCcw className="mr-1 h-4 w-4" />{t('server.restart')}</Button>
           <Button size="sm" variant="destructive" disabled={busy || info.status === 'stopped' || info.status === 'unavailable'} onClick={() => setConfirm('stop')}><Square className="mr-1 h-4 w-4" />{t('server.stop')}</Button>
