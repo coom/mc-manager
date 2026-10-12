@@ -42,7 +42,7 @@ export function CatalogueDialog({ open, onOpenChange, onAdd, pending }: Props) {
   const hits = data?.pages.flatMap((p) => p.hits) ?? [];
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="flex h-[85vh] max-w-3xl flex-col gap-3">
+      <DialogContent className="flex h-[85dvh] max-w-3xl flex-col gap-3">
         <DialogHeader>
           <DialogTitle>{t('mods.catalogue.title')}</DialogTitle>
           <DialogDescription>

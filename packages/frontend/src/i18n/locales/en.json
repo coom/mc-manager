@@ -226,7 +226,11 @@
     "config": "Configuration",
     "mods": "Mods",
     "world": "World",
-    "map": "Map"
+    "map": "Map",
+    "expand": "Expand",
+    "openMenu": "Open menu",
+    "closeMenu": "Close menu",
+    "mainMenu": "Main menu"
   },
   "console": {
     "title": "Console",

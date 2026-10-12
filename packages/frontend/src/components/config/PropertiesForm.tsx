@@ -36,14 +36,14 @@ export function PropertiesForm({ values, locked, draft, onChange }: Props) {
             {g.fields.map((f) => {
               const id = `prop-${f.key}`; const isLocked = f.key in locked; const label = t(`config.fields.${f.key}`);
               return (
-                <div key={f.key} className="flex items-center gap-3" title={isLocked ? lockTitle(f.key) : undefined}>
-                  <Label htmlFor={id} className="w-44 shrink-0 text-xs">{label}{isLocked && <Lock className="ml-1 inline h-3 w-3 text-muted-foreground" aria-hidden />}</Label>
+                <div key={f.key} className="flex flex-col items-start gap-1 sm:flex-row sm:items-center sm:gap-3" title={isLocked ? lockTitle(f.key) : undefined}>
+                  <Label htmlFor={id} className="shrink-0 text-xs sm:w-44">{label}{isLocked && <Lock className="ml-1 inline h-3 w-3 text-muted-foreground" aria-hidden />}</Label>
                   {f.kind === 'bool' && <Switch id={id} aria-label={label} checked={current(f.key) === 'true'} disabled={isLocked} onCheckedChange={(v) => onChange(f.key, v ? 'true' : 'false')} />}
                   {f.kind === 'number' && <Input id={id} type="number" className="h-8 w-32" min={f.min} max={f.max} value={current(f.key)} disabled={isLocked} onChange={(e) => onChange(f.key, e.target.value)} />}
                   {f.kind === 'text' && <Input id={id} className="h-8" value={current(f.key)} disabled={isLocked} onChange={(e) => onChange(f.key, e.target.value)} />}
                   {f.kind === 'choice' && (
                     <Select value={current(f.key) || undefined} disabled={isLocked} onValueChange={(v) => onChange(f.key, v)}>
-                      <SelectTrigger id={id} aria-label={label} className="h-8 w-56"><SelectValue /></SelectTrigger>
+                      <SelectTrigger id={id} aria-label={label} className="h-8 w-full sm:w-56"><SelectValue /></SelectTrigger>
                       <SelectContent>{f.options!.map((o) => <SelectItem key={o} value={o}>{o}</SelectItem>)}</SelectContent>
                     </Select>
                   )}

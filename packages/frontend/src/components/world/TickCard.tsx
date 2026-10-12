@@ -28,8 +28,8 @@ export function TickCard({ state, pending, run }: WorldCardProps) {
           <span className="font-mono text-2xl">{targetRate ?? t('world.unknown')}</span>
           {sprinting && <span className="text-xs text-amber-500">{t('world.tick.sprinting')}</span>}
         </div>
-        <div className="flex items-center gap-2">
-          <Label htmlFor="tick-rate" className="w-32 shrink-0 text-xs">{t('world.tick.rate')}</Label>
+        <div className="flex flex-wrap items-center gap-2">
+          <Label htmlFor="tick-rate" className="w-full text-xs sm:w-32 sm:shrink-0">{t('world.tick.rate')}</Label>
           <Input id="tick-rate" type="number" className="h-8 w-28" min={TICK_RATE.min} max={TICK_RATE.max} step="any" value={rate} disabled={!supported} onChange={(e) => setRate(e.target.value)} />
           <Button size="sm" disabled={!supported || !rateOk || pending === 'tick:rate'} onClick={() => run('tick:rate', () => worldApi.setTick({ rate: rateNum }))}>{t('world.tick.apply')}</Button>
           <Button size="sm" variant="outline" disabled={!supported || targetRate === TICK_RATE.default || pending === 'tick:rate'} onClick={() => run('tick:rate', () => worldApi.setTick({ rate: TICK_RATE.default }))}>{t('world.tick.normal')}</Button>
@@ -38,8 +38,8 @@ export function TickCard({ state, pending, run }: WorldCardProps) {
           <Switch id="tick-freeze" aria-label={t('world.tick.freeze')} checked={frozen} disabled={!supported || pending === 'tick:frozen'} onCheckedChange={(v) => run('tick:frozen', () => worldApi.setTick({ frozen: v }))} />
           <Label htmlFor="tick-freeze" className="text-xs">{t('world.tick.freeze')}</Label>
         </div>
-        <div className="flex items-center gap-2">
-          <Label htmlFor="tick-sprint" className="w-32 shrink-0 text-xs">{t('world.tick.sprintSeconds')}</Label>
+        <div className="flex flex-wrap items-center gap-2">
+          <Label htmlFor="tick-sprint" className="w-full text-xs sm:w-32 sm:shrink-0">{t('world.tick.sprintSeconds')}</Label>
           <Input id="tick-sprint" type="number" className="h-8 w-28" min={1} max={TICK_SPRINT_MAX / 20} value={seconds} disabled={!supported} onChange={(e) => setSeconds(e.target.value)} />
           <Button size="sm" disabled={!supported || !secOk || pending === 'tick:sprint'} onClick={() => run('tick:sprint', () => worldApi.setTick({ sprint: secNum * 20 }))}>{t('world.tick.run')}</Button>
         </div>

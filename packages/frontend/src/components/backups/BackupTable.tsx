@@ -7,7 +7,7 @@ import { formatBytes } from '@/lib/utils';
 export function BackupTable({ entries, isAdmin, busy, onRestore, onDelete, onDownload }: { entries: BackupEntry[]; isAdmin: boolean; busy: boolean; onRestore: (n: string) => void; onDelete: (n: string) => void; onDownload: (n: string) => void }) {
   const { t, i18n } = useTranslation();
   return (
-    <table className="w-full text-sm">
+    <div className="overflow-x-auto"><table className="w-full text-sm">
       <thead className="text-left text-xs text-muted-foreground"><tr><th className="py-2">{t('backups.name')}</th><th>{t('backups.date')}</th><th>{t('backups.size')}</th>{isAdmin && <th />}</tr></thead>
       <tbody>
         {entries.map((e) => (
@@ -23,6 +23,6 @@ export function BackupTable({ entries, isAdmin, busy, onRestore, onDelete, onDow
           </tr>
         ))}
       </tbody>
-    </table>
+    </table></div>
   );
 }

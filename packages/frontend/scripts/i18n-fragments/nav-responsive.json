@@ -1,0 +1,17 @@
+{
+ "namespace": "nav",
+ "keys": {
+  "en": {
+   "expand": "Expand",
+   "openMenu": "Open menu",
+   "closeMenu": "Close menu",
+   "mainMenu": "Main menu"
+  },
+  "fr": {
+   "expand": "Agrandir",
+   "openMenu": "Ouvrir le menu",
+   "closeMenu": "Fermer le menu",
+   "mainMenu": "Menu principal"
+  }
+ }
+}

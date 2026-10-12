@@ -21,7 +21,7 @@ export function OnlineTab() {
   const items = data?.items ?? [];
   if (data && items.length === 0) return <EmptyState title={t('players.noneOnline')} />;
   return (
-    <table className="w-full text-sm">
+    <div className="overflow-x-auto"><table className="w-full text-sm">
       <thead className="text-left text-xs text-muted-foreground"><tr><th className="py-2">{t('players.name')}</th><th>{t('players.since')}</th><th>{t('players.country')}</th>{isAdmin && <th className="w-12" />}</tr></thead>
       <tbody>{items.map((p) => (
         <tr key={p.name} className="border-t">
@@ -31,6 +31,6 @@ export function OnlineTab() {
           {isAdmin && <td className="text-right"><PlayerActionsMenu name={p.name} hasIp={p.hasIp} online op={!!lists?.ops.some((e) => matches(e, p))} banned={!!lists?.bannedPlayers.some((e) => matches(e, p))} /></td>}
         </tr>
       ))}</tbody>
-    </table>
+    </table></div>
   );
 }

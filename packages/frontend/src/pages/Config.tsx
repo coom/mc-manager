@@ -39,7 +39,7 @@ export default function Config() {
   };
   return (
     <div className="space-y-5">
-      <div className="flex items-center gap-3">
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
         <h1 className="text-xl font-semibold">{t('config.title')}</h1>
         {data.exists && <Button className="ml-auto" size="sm" disabled={!dirty || save.isPending} onClick={submit}>{save.isPending ? t('shared.processing') : t('config.save')}</Button>}
       </div>

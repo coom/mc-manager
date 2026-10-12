@@ -34,25 +34,25 @@ export function BansTab() {
       {data.bannedPlayers.length > 0 && (
         <section>
           <h2 className="mb-2 text-sm font-medium">{t('players.bans.playersTitle')}</h2>
-          <table className="w-full text-sm">
+          <div className="overflow-x-auto"><table className="w-full text-sm">
             <thead className="text-left text-xs text-muted-foreground"><tr><th className="py-2">{t('players.name')}</th><th>{t('players.bans.reason')}</th><th>{t('players.bans.created')}</th><th>{t('players.bans.source')}</th>{isAdmin && <th className="w-20" />}</tr></thead>
             <tbody>{data.bannedPlayers.map((b) => (
               <tr key={b.uuid || b.name} className="border-t"><td className="py-2">{b.name}</td><td>{b.reason}</td><td>{fmt(b.created)}</td><td className="text-muted-foreground">{b.source}</td>
                 {isAdmin && <td className="text-right"><Button size="sm" variant="outline" disabled={!ready} onClick={() => setTarget({ kind: 'player', name: b.name })}>{t('players.bans.lift')}</Button></td>}</tr>
             ))}</tbody>
-          </table>
+          </table></div>
         </section>
       )}
       {isAdmin && data.bannedIps.length > 0 && (
         <section>
           <h2 className="mb-2 text-sm font-medium">{t('players.bans.ipsTitle')}</h2>
-          <table className="w-full text-sm">
+          <div className="overflow-x-auto"><table className="w-full text-sm">
             <thead className="text-left text-xs text-muted-foreground"><tr><th className="py-2">IP</th><th>{t('players.bans.reason')}</th><th>{t('players.bans.created')}</th><th>{t('players.bans.source')}</th>{isAdmin && <th className="w-20" />}</tr></thead>
             <tbody>{data.bannedIps.map((b) => (
               <tr key={b.ip} className="border-t"><td className="py-2 font-mono text-xs">{b.ip}</td><td>{b.reason}</td><td>{fmt(b.created)}</td><td className="text-muted-foreground">{b.source}</td>
                 {isAdmin && <td className="text-right"><Button size="sm" variant="outline" disabled={!ready} onClick={() => setTarget({ kind: 'ip', ip: b.ip })}>{t('players.bans.lift')}</Button></td>}</tr>
             ))}</tbody>
-          </table>
+          </table></div>
         </section>
       )}
       <ConfirmDialog open={target !== null} onOpenChange={(o) => !o && setTarget(null)} loading={lift.isPending}
