@@ -15,6 +15,8 @@ import { PlayerAdmin } from './players/player-admin.js';
 import { MetricsCollector } from './metrics/collector.js';
 import { BackupService } from './backups/backup-service.js';
 import { RestoreService } from './backups/restore-service.js';
+import { BackupSettingsService } from './backups/backup-settings-service.js';
+import { DataLock } from './data/data-lock.js';
 import { PropertiesService } from './server-properties/properties-service.js';
 import { ModsService } from './mods/mods-service.js';
 import { WorldService } from './world/world-service.js';
@@ -98,7 +100,11 @@ async function main() {
   void purgeJournal();
   const purgeTimer = setInterval(() => void purgeJournal(), 86_400_000);
 
-  const backups = new BackupService(config.mc.backupsDir, docker);
+  // Verrou partagé : sauvegarde manuelle, restauration, server.properties, mods et réglages de mc-backup.
+  const dataLock = new DataLock();
+  const backupSettings = new BackupSettingsService(config.mc.backupsDir, docker, dataLock);
+  app.locals.backupSettings = backupSettings;
+  const backups = new BackupService(config.mc.backupsDir, docker, dataLock, () => backupSettings.pruneDaysForExec());
   app.locals.backups = backups;
   backups.on('progress', (line) => broadcast(wss, { type: 'backup.progress', line }));
   backups.on('done', (exitCode) => broadcast(wss, { type: 'backup.done', exitCode }));

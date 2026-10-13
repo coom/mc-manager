@@ -24,6 +24,18 @@ backupsRoutes.get('/', async (req: Request, res: Response, next: NextFunction) =
   try { res.json(await req.app.locals.backups.list()); } catch (err) { next(err); }
 });
 
+// Planification de mc-backup : lecture pour tous les rôles, comme la liste.
+backupsRoutes.get('/settings', async (req: Request, res: Response, next: NextFunction) => {
+  try { res.json(await req.app.locals.backupSettings.read()); } catch (err) { next(err); }
+});
+
+// Écrit le fichier lu par mc-backup puis le redémarre ; le service audite le résultat avant la réponse.
+backupsRoutes.put('/settings', requireRole('admin'), async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    res.json(await req.app.locals.backupSettings.apply(req.body, (detail: string) => audit(req, 'backup.settings', detail)));
+  } catch (err) { next(err); }
+});
+
 backupsRoutes.get('/restore/status', (req: Request, res: Response) => { res.json(req.app.locals.restore.status()); });
 
 // Restauration interrompue traitée à la main par l'admin : retire le marqueur.

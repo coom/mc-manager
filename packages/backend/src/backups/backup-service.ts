@@ -15,7 +15,13 @@ export function isSafeBackupName(name: string): boolean {
 
 export class BackupService extends EventEmitter {
   private running = false;
-  constructor(private dir: string, private docker: DockerService, private lock: DataLock = new DataLock()) { super(); }
+  constructor(
+    private dir: string,
+    private docker: DockerService,
+    private lock: DataLock = new DataLock(),
+    /** Rétention du fichier de réglages : `backup now` hérite de Config.Env, pas de l'environnement de la boucle. */
+    private pruneDays: () => Promise<number | null> = async () => null,
+  ) { super(); }
 
   get dataLock(): DataLock { return this.lock; }
 
@@ -76,7 +82,8 @@ export class BackupService extends EventEmitter {
     const release = opts.lockHeld ? () => undefined : this.lock.acquire('backup');
     this.running = true;
     try {
-      const { stream, wait } = await this.docker.execBackup(['backup', 'now']);
+      const days = await this.pruneDays().catch(() => null);
+      const { stream, wait } = await this.docker.execBackup(['backup', 'now'], days !== null ? [`PRUNE_BACKUPS_DAYS=${days}`] : undefined);
       const text = new PassThrough();
       this.docker.demux(stream, text);
       let partial = '';
