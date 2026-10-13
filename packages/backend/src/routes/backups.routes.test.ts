@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import express from 'express';
 import request from 'supertest';
-import { mkdtempSync, writeFileSync, rmSync } from 'fs';
+import { mkdtempSync, writeFileSync, rmSync, utimesSync, existsSync } from 'fs';
 import { tmpdir } from 'os';
 import path from 'path';
 import { PassThrough } from 'stream';
@@ -30,6 +30,7 @@ function appWith(role: 'admin' | 'viewer', fake = new FakeDocker()) {
   const docker = new DockerService(fake, 'mc', 'mc-backup');
   app.locals.backups = new BackupService(dir, docker);
   app.locals.backupSettings = new BackupSettingsService(dir, docker, app.locals.backups.dataLock);
+  app.locals.testDir = dir;
   app.use('/api/backups', backupsRoutes);
   app.use(errorHandler);
   return app;
@@ -163,6 +164,67 @@ describe('backups routes', () => {
     const r = await request(appWith('admin')).put('/api/backups/settings').send({ interval: '12h', pruneDays: 14 });
     expect(r.status).toBe(503);
     expect(r.body.code).toBe('container_missing');
+  });
+
+  const auditCalls = (app: express.Express, action: string) => (app.locals.prisma.auditLog.create as ReturnType<typeof vi.fn>).mock.calls
+    .filter(([a]) => a.data.action === action).map(([a]) => a.data.detail);
+  /** Archive datée de `days` jours dans le dossier de l'app de test. */
+  const archive = (app: express.Express, name: string, days: number) => {
+    const full = path.join(app.locals.testDir, name);
+    writeFileSync(full, 'x');
+    const t = new Date(Date.now() - days * 86_400_000);
+    utimesSync(full, t, t);
+  };
+
+  it('viewer cannot bulk delete nor apply the retention', async () => {
+    const app = appWith('viewer', managedBackup());
+    expect((await request(app).post('/api/backups/delete').send({ names: ['w.tgz'] })).status).toBe(403);
+    expect((await request(app).get('/api/backups/prune')).status).toBe(403);
+    expect((await request(app).post('/api/backups/prune').send({ names: ['w.tgz'] })).status).toBe(403);
+    expect(existsSync(path.join(app.locals.testDir, 'w.tgz'))).toBe(true);
+  });
+  it('admin bulk delete removes the archives and audits each one as backup.delete', async () => {
+    const app = appWith('admin');
+    archive(app, 'x.tgz', 1);
+    const r = await request(app).post('/api/backups/delete').send({ names: ['w.tgz', 'x.tgz'] });
+    expect(r.status).toBe(200);
+    expect(r.body).toEqual({ deleted: ['w.tgz', 'x.tgz'] });
+    expect(auditCalls(app, 'backup.delete')).toEqual(['w.tgz', 'x.tgz']);
+  });
+  it('bulk delete is all-or-nothing on an unknown name', async () => {
+    const app = appWith('admin');
+    expect((await request(app).post('/api/backups/delete').send({ names: ['w.tgz', 'nope.tgz'] })).status).toBe(404);
+    expect(existsSync(path.join(app.locals.testDir, 'w.tgz'))).toBe(true);
+  });
+  it.each([[{}], [{ names: [] }], [{ names: [1] }], [{ names: 'w.tgz' }], [{ names: Array.from({ length: 501 }, (_, i) => `a${i}.tgz`) }]])('bulk delete rejects invalid body #%# with 400 invalid_names', async (body) => {
+    const r = await request(appWith('admin')).post('/api/backups/delete').send(body);
+    expect(r.status).toBe(400);
+    expect(r.body.code).toBe('invalid_names');
+  });
+  it('prune preview lists the archives older than the retention, keeping the most recent one', async () => {
+    const app = appWith('admin', managedBackup());
+    archive(app, 'old-a.tgz', 10);
+    archive(app, 'old-b.tar.gz', 30);
+    const r = await request(app).get('/api/backups/prune');
+    expect(r.status).toBe(200);
+    expect(r.body.days).toBe(7);
+    expect(r.body.candidates.map((e: { name: string }) => e.name)).toEqual(['old-a.tgz', 'old-b.tar.gz']);
+  });
+  it('prune deletes only the confirmed names that are still candidates, audited as backup.prune', async () => {
+    const app = appWith('admin', managedBackup());
+    archive(app, 'old-a.tgz', 10);
+    archive(app, 'old-b.tgz', 30);
+    const r = await request(app).post('/api/backups/prune').send({ names: ['old-a.tgz', 'w.tgz', 'gone.tgz'] });
+    expect(r.status).toBe(200);
+    expect(r.body).toEqual({ deleted: ['old-a.tgz'] });
+    expect(existsSync(path.join(app.locals.testDir, 'old-b.tgz'))).toBe(true);
+    expect(existsSync(path.join(app.locals.testDir, 'w.tgz'))).toBe(true);
+    expect(auditCalls(app, 'backup.prune')).toEqual(['old-a.tgz (older than 7 days)']);
+  });
+  it('prune answers 409 retention_unknown without the backup container', async () => {
+    const r = await request(appWith('admin')).get('/api/backups/prune');
+    expect(r.status).toBe(409);
+    expect(r.body.code).toBe('retention_unknown');
   });
 
   it('run and delete answer 409 while the data lock is held by a restore', async () => {

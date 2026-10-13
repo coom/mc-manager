@@ -6,7 +6,7 @@ import { toast } from 'sonner';
 import { AlertTriangle, Check, Copy } from 'lucide-react';
 import {
   BACKUP_INTERVAL_MAX_MINUTES, BACKUP_INTERVAL_MIN_MINUTES, BACKUP_INTERVAL_UNITS, BACKUP_SETTINGS_COMPOSE_SNIPPET, PRUNE_DAYS_MAX, PRUNE_DAYS_MIN,
-  type BackupIntervalUnit, type BackupSettingValue, type BackupSettingsUpdate,
+  type BackupIntervalUnit, type BackupSettingValue, type BackupSettingsUpdate, type PrunePreview,
 } from '@mc/common';
 import { backupsApi } from '@/api/backups.api';
 import { Button } from '@/components/ui/button';
@@ -17,6 +17,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog';
 import type { ApiError } from '@/components/mods/mods-errors';
 import { describeBackupSettingsError } from './backup-settings-errors';
+import { describeBackupError } from './backup-errors';
+import { summarizeNames } from './names-summary';
 import { UNIT_MINUTES, splitInterval } from './interval';
 
 const QUERY_KEY = ['backups', 'settings'];
@@ -52,6 +54,19 @@ export function BackupScheduleCard({ isAdmin, busy }: { isAdmin: boolean; busy: 
     onSuccess: (s) => { qc.setQueryData(QUERY_KEY, s); setEditing(false); toast.success(t('backups.schedule.applied')); },
     onError: (e) => { toast.error(describeBackupSettingsError(e as ApiError, t)); void qc.invalidateQueries({ queryKey: QUERY_KEY }); },
     onSettled: () => setToApply(null),
+  });
+  // « Appliquer la rétention » : aperçu calculé par le serveur, puis suppression des seuls noms confirmés.
+  const [toPrune, setToPrune] = useState<PrunePreview | null>(null);
+  const preview = useMutation({
+    mutationFn: () => backupsApi.prunePreview(),
+    onSuccess: (p) => { if (p.candidates.length === 0) toast.info(t('backups.schedule.prune.nothing', { days: p.days })); else setToPrune(p); },
+    onError: (e) => toast.error(describeBackupError(e as ApiError, t)),
+  });
+  const prune = useMutation({
+    mutationFn: (names: string[]) => backupsApi.prune(names),
+    onSuccess: (r) => { toast.success(t('backups.schedule.prune.done', { count: r.deleted.length })); void qc.invalidateQueries({ queryKey: ['backups'] }); },
+    onError: (e) => toast.error(describeBackupError(e as ApiError, t)),
+    onSettled: () => setToPrune(null),
   });
 
   if (!data) return null;
@@ -109,7 +124,12 @@ export function BackupScheduleCard({ isAdmin, busy }: { isAdmin: boolean; busy: 
             </div>
           </div>
         )}
-        {canEdit && !editing && <Button size="sm" variant="outline" disabled={busy} onClick={startEdit}>{t('backups.schedule.edit')}</Button>}
+        {isAdmin && (
+          <div className="flex flex-wrap gap-2">
+            {canEdit && !editing && <Button size="sm" variant="outline" disabled={busy} onClick={startEdit}>{t('backups.schedule.edit')}</Button>}
+            <Button size="sm" variant="outline" disabled={busy || preview.isPending || prune.isPending} onClick={() => preview.mutate()}>{t('backups.schedule.prune.button')}</Button>
+          </div>
+        )}
         {canEdit && editing && (
           <div className="space-y-3 rounded-md border p-3">
             <div className="flex flex-wrap items-center gap-2">
@@ -134,6 +154,16 @@ export function BackupScheduleCard({ isAdmin, busy }: { isAdmin: boolean; busy: 
           </div>
         )}
       </CardContent>
+      <ConfirmDialog
+        open={toPrune !== null}
+        onOpenChange={(o) => { if (!o && !prune.isPending) setToPrune(null); }}
+        title={toPrune ? t('backups.schedule.prune.title', { count: toPrune.candidates.length, days: toPrune.days }) : ''}
+        description={toPrune ? t('backups.schedule.prune.description', { names: summarizeNames(toPrune.candidates.map((e) => e.name), t) }) : ''}
+        confirmLabel={t('backups.schedule.prune.confirm')}
+        destructive
+        loading={prune.isPending}
+        onConfirm={() => { if (toPrune && !prune.isPending) prune.mutate(toPrune.candidates.map((e) => e.name)); }}
+      />
       <ConfirmDialog
         open={toApply !== null}
         onOpenChange={(o) => { if (!o && !save.isPending) setToApply(null); }}

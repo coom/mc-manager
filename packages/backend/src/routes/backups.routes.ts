@@ -3,6 +3,17 @@ import path from 'path';
 import { requireRole } from '../middleware/rbac.js';
 import { audit } from '../audit/audit.js';
 import { AppError } from '../middleware/error-handler.js';
+import { BACKUP_DELETE_MAX } from '@mc/common';
+import { pruneCandidates, retentionDays } from '../backups/prune.js';
+
+/** Corps `{ names: string[] }` des suppressions multiples (1 à BACKUP_DELETE_MAX noms). */
+function namesOf(body: unknown): string[] {
+  const names = (body as { names?: unknown } | null)?.names;
+  if (!Array.isArray(names) || names.length === 0 || names.length > BACKUP_DELETE_MAX || names.some((n) => typeof n !== 'string')) {
+    throw new AppError(400, `names must be a list of 1 to ${BACKUP_DELETE_MAX} archive names`, undefined, 'invalid_names');
+  }
+  return names as string[];
+}
 
 export const backupsRoutes: Router = Router();
 
@@ -68,6 +79,37 @@ backupsRoutes.post('/:name/link', requireRole('admin'), async (req: Request, res
     await audit(req, 'backup.download', name);
     const token = req.app.locals.downloadTokens.issue(name, req.user!.id);
     res.json({ url: `/api/backups/download/${token}` });
+  } catch (err) { next(err); }
+});
+
+// Suppression multiple : tout ou rien sur la validation des noms, un audit backup.delete par fichier supprimé.
+backupsRoutes.post('/delete', requireRole('admin'), async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const names = namesOf(req.body);
+    const deleted = await req.app.locals.backups.removeMany(names, (name: string) => audit(req, 'backup.delete', name));
+    res.json({ deleted });
+  } catch (err) { next(err); }
+});
+
+// Rétention : archives plus anciennes que PRUNE_BACKUPS_DAYS effectif (horloge du serveur), la plus récente exclue.
+backupsRoutes.get('/prune', requireRole('admin'), async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const days = retentionDays(await req.app.locals.backupSettings.read());
+    const { entries } = await req.app.locals.backups.list();
+    res.json({ days, candidates: pruneCandidates(entries, days, Date.now()) });
+  } catch (err) { next(err); }
+});
+
+// N'applique que les noms confirmés qui sont encore candidats à cet instant : rien d'autre n'est supprimé.
+backupsRoutes.post('/prune', requireRole('admin'), async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const names = namesOf(req.body);
+    const days = retentionDays(await req.app.locals.backupSettings.read());
+    const { entries } = await req.app.locals.backups.list();
+    const still = new Set(pruneCandidates(entries, days, Date.now()).map((e) => e.name));
+    const targets = [...new Set(names)].filter((n) => still.has(n));
+    const deleted = targets.length === 0 ? [] : await req.app.locals.backups.removeMany(targets, (name: string) => audit(req, 'backup.prune', `${name} (older than ${days} days)`));
+    res.json({ deleted });
   } catch (err) { next(err); }
 });
 

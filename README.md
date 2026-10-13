@@ -125,7 +125,7 @@ Before anything is written, the backend checks that it can write into the data d
 
 If the server is already stopped, no safety backup can be taken: an explicit confirmation ("no safety backup") is required. If the operation fails before anything was removed (safety backup, stop, preflight), it is reported as `aborted:`, the data is untouched and the server is started again if it had been stopped and "start afterwards" was checked. If it fails part way (`partial restore:`), the interface reports the name of the safety backup so that you can restore it.
 
-**Interrupted restores.** While data is being replaced, the backend keeps a marker file `.mc-manager-restore.json` in the data directory (archive name, safety backup, start time, step); it is removed as soon as the extraction succeeds. If the backend stops or crashes in between, the marker remains: at the next start the backend logs an error and the Backups page shows a persistent warning with the archive and the safety backup. The data may be half restored: restore the safety backup ("Restore this one"), or, once you have handled it by hand, click "Dismiss" (admin, audited) to remove the marker. Only one operation at a time touches the data (manual backup, restore, `server.properties` edit): another request receives a 409.
+**Interrupted restores.** While data is being replaced, the backend keeps a marker file `.mc-manager-restore.json` in the data directory (archive name, safety backup, start time, step); it is removed as soon as the extraction succeeds. If the backend stops or crashes in between, the marker remains: at the next start the backend logs an error and the Backups page shows a persistent warning with the archive and the safety backup. The data may be half restored: restore the safety backup ("Restore this one"), or, once you have handled it by hand, click "Dismiss" (admin, audited) to remove the marker. Only one operation at a time touches the data (manual backup, restore, `server.properties` edit, mods, backup schedule, deletion of several backups): another request receives a 409.
 
 ## Backup schedule
 
@@ -159,6 +159,12 @@ Docker cannot change the environment of an existing container, so MC Manager wri
 - A `backup now` started by hand on the host (`docker exec mc-backup backup now`) inherits the container environment, not the file: it prunes with the `PRUNE_BACKUPS_DAYS` of the compose file, which can delete archives that the page retention would keep. Pass the page value explicitly (`docker exec -e PRUNE_BACKUPS_DAYS=30 mc-backup backup now`), or keep the compose value at least as large as the retention set from the page.
 - With `CRON_SCHEDULE`, the image ignores the interval: the page shows the cron schedule and does not offer the change.
 - Every change is admin-only and audited as `backup.settings`.
+
+### Deleting backups
+
+- **Several at once**: an admin ticks backups in the list ("Select all" / "Deselect all" links above it), then clicks "Delete selection". The confirmation lists the archives; every name is checked before anything is deleted (one unknown name and nothing is deleted), and each deletion is audited as `backup.delete`.
+- **Apply retention**: the button of the "Automatic backups" card deletes right away the backups older than the retention shown on the page, instead of waiting for the next `mc-backup` run. The server computes the list with its own clock and the confirmation shows it; only the confirmed archives that still qualify are deleted, each audited as `backup.prune`. **The most recent backup is always kept**, even when it is older than the retention. The button refuses when the retention is unknown (no `mc-backup` container) or disabled (`PRUNE_BACKUPS_DAYS=0`).
+- Both are refused (409) while a manual backup or a restore is running.
 
 ## Server configuration
 

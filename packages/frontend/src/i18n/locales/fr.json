@@ -391,7 +391,34 @@
         "container_missing": "Conteneur mc-backup introuvable.",
         "restart_failed": "Réglages enregistrés, mais mc-backup n'a pas redémarré : ils s'appliqueront à son prochain démarrage.",
         "write_failed": "Le fichier de réglages n'a pas pu être écrit dans le volume des backups : vérifiez qu'il est accessible en écriture à MC Manager (UID 1000) et qu'aucun fichier .mc-manager ne gêne."
+      },
+      "prune": {
+        "button": "Appliquer la rétention",
+        "nothing": "Aucune sauvegarde de plus de {{days}} jours (la plus récente est toujours conservée).",
+        "title_one": "Supprimer {{count}} sauvegarde de plus de {{days}} jours ?",
+        "title_other": "Supprimer {{count}} sauvegardes de plus de {{days}} jours ?",
+        "description": "Suppression définitive : {{names}}. La plus récente est toujours conservée.",
+        "confirm": "Supprimer",
+        "done_one": "{{count}} sauvegarde supprimée",
+        "done_other": "{{count}} sauvegardes supprimées"
       }
+    },
+    "select": "Sélectionner {{name}}",
+    "more": "{{names}} et {{count}} autres",
+    "selection": {
+      "all": "Tout sélectionner",
+      "none": "Tout désélectionner",
+      "delete": "Supprimer la sélection ({{count}})",
+      "confirmTitle_one": "Supprimer {{count}} sauvegarde ?",
+      "confirmTitle_other": "Supprimer {{count}} sauvegardes ?",
+      "confirmDescription": "Suppression définitive : {{names}}.",
+      "deleted_one": "{{count}} sauvegarde supprimée",
+      "deleted_other": "{{count}} sauvegardes supprimées"
+    },
+    "errors": {
+      "invalid_names": "Sélection invalide.",
+      "retention_unknown": "Rétention inconnue : conteneur mc-backup introuvable.",
+      "retention_disabled": "La rétention est désactivée pour mc-backup (PRUNE_BACKUPS_DAYS vaut 0 ou n'est pas valide)."
     }
   },
   "audit": {

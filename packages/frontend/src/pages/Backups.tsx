@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
-import { AlertCircle, Archive } from 'lucide-react';
+import { AlertCircle, Archive, Trash2 } from 'lucide-react';
 import type { BackupEntry, RestoreRequest } from '@mc/common';
 import { backupsApi } from '@/api/backups.api';
 import { useAuthStore } from '@/stores/auth.store';
@@ -15,6 +15,9 @@ import { BackupTable } from '@/components/backups/BackupTable';
 import { BackupRunPanel } from '@/components/backups/BackupRunPanel';
 import { RestoreDialog } from '@/components/backups/RestoreDialog';
 import { BackupScheduleCard } from '@/components/backups/BackupScheduleCard';
+import { describeBackupError } from '@/components/backups/backup-errors';
+import { summarizeNames } from '@/components/backups/names-summary';
+import type { ApiError } from '@/components/mods/mods-errors';
 import { formatBytes } from '@/lib/utils';
 
 export default function Backups() {
@@ -30,6 +33,8 @@ export default function Backups() {
   const status = useServerStore((s) => s.info?.status);
   const [toDelete, setToDelete] = useState<string | null>(null);
   const [toRestore, setToRestore] = useState<BackupEntry | null>(null);
+  const [selected, setSelected] = useState<ReadonlySet<string>>(new Set());
+  const [confirmBulk, setConfirmBulk] = useState(false);
   const errMsg = (e: unknown) => (e as { response?: { data?: { error?: string } } }).response?.data?.error ?? t('shared.error');
 
   const run = useMutation({ mutationFn: () => backupsApi.run(), onMutate: () => { backupStartedAt.current = Date.now(); startBackupOutput(); }, onError: (e) => {
@@ -38,6 +43,16 @@ export default function Backups() {
     toast.error(errMsg(e));
   } });
   const del = useMutation({ mutationFn: backupsApi.remove, onSuccess: () => { toast.success(t('backups.deleted')); void qc.invalidateQueries({ queryKey: ['backups'] }); }, onError: (e) => toast.error(errMsg(e)) });
+  const bulk = useMutation({
+    mutationFn: (names: string[]) => backupsApi.removeMany(names),
+    onSuccess: (r) => { toast.success(t('backups.selection.deleted', { count: r.deleted.length })); setSelected(new Set()); void qc.invalidateQueries({ queryKey: ['backups'] }); },
+    onError: (e) => { toast.error(describeBackupError(e as ApiError, t)); void qc.invalidateQueries({ queryKey: ['backups'] }); },
+    onSettled: () => setConfirmBulk(false),
+  });
+  // Sélection restreinte aux archives encore listées (une archive nettoyée par mc-backup n'est ni comptée ni envoyée),
+  // dans l'ordre de la liste (plus récente d'abord) pour la confirmation et la requête.
+  const selectedNames = (data?.entries ?? []).filter((e) => selected.has(e.name)).map((e) => e.name);
+  const toggle = (name: string, checked: boolean) => setSelected((s) => { const next = new Set(s); if (checked) next.add(name); else next.delete(name); return next; });
   const restore = useMutation({
     mutationFn: ({ name, req }: { name: string; req: RestoreRequest }) => backupsApi.restore(name, req),
     onMutate: () => { restoreStartedAt.current = Date.now(); startRestoreOutput(); },
@@ -95,9 +110,23 @@ export default function Backups() {
         <BackupRunPanel mode="restore" lines={restoreOutput} running={restoring} result={restoreResult} onRestoreSafety={isAdmin && !busy ? (n) => setToRestore(data?.entries.find((x) => x.name === n) ?? { name: n, size: 0, modifiedAt: new Date().toISOString() }) : undefined} />
       ) : <BackupRunPanel lines={backupOutput} running={backupRunning || data?.running === true} />}
       <Card><CardContent className="p-4">
+        {isAdmin && data && data.entries.length > 0 && (
+          <div className="mb-3 flex flex-wrap items-center gap-x-4 gap-y-2">
+            <Button variant="link" size="sm" className="h-auto px-0" onClick={() => setSelected(new Set(data.entries.map((e) => e.name)))}>{t('backups.selection.all')}</Button>
+            <Button variant="link" size="sm" className="h-auto px-0" disabled={selectedNames.length === 0} onClick={() => setSelected(new Set())}>{t('backups.selection.none')}</Button>
+            <Button variant="destructive" size="sm" className="ml-auto" disabled={selectedNames.length === 0 || busy || bulk.isPending} onClick={() => setConfirmBulk(true)}>
+              <Trash2 className="mr-1 h-4 w-4" />{t('backups.selection.delete', { count: selectedNames.length })}
+            </Button>
+          </div>
+        )}
         {data && data.entries.length === 0 ? <EmptyState title={t('backups.empty')} /> :
-          <BackupTable entries={data?.entries ?? []} isAdmin={isAdmin} busy={busy} onRestore={(n) => { const e = data?.entries.find((x) => x.name === n); if (e) setToRestore(e); }} onDownload={(n) => void backupsApi.download(n).catch((e) => toast.error(errMsg(e)))} onDelete={setToDelete} />}
+          <BackupTable entries={data?.entries ?? []} isAdmin={isAdmin} busy={busy} onRestore={(n) => { const e = data?.entries.find((x) => x.name === n); if (e) setToRestore(e); }} onDownload={(n) => void backupsApi.download(n).catch((e) => toast.error(errMsg(e)))} onDelete={setToDelete}
+            selected={selected} onToggle={toggle} />}
       </CardContent></Card>
+      <ConfirmDialog open={confirmBulk} onOpenChange={(o) => { if (!o && !bulk.isPending) setConfirmBulk(false); }}
+        title={t('backups.selection.confirmTitle', { count: selectedNames.length })}
+        description={t('backups.selection.confirmDescription', { names: summarizeNames(selectedNames, t) })}
+        destructive loading={bulk.isPending} onConfirm={() => { if (!bulk.isPending && selectedNames.length > 0) bulk.mutate(selectedNames); }} />
       <ConfirmDialog open={toDelete !== null} onOpenChange={(o) => !o && setToDelete(null)} title={t('backups.confirmDelete.title')} description={t('backups.confirmDelete.description', { name: toDelete })} destructive loading={del.isPending} onConfirm={() => { if (toDelete) del.mutate(toDelete); setToDelete(null); }} />
       <RestoreDialog entry={toRestore} open={toRestore !== null} onOpenChange={(o) => !o && setToRestore(null)} loading={restore.isPending} serverStopped={serverStopped}
         onConfirm={(req) => { if (toRestore) restore.mutate({ name: toRestore.name, req }); }} />
