@@ -85,6 +85,9 @@ describe('documentation', () => {
     expect(root('docker-compose.example.yml')).toContain(BACKUP_SETTINGS_COMPOSE_SNIPPET);
     expect(root('README.md')).toContain(BACKUP_SETTINGS_COMPOSE_SNIPPET);
   });
+  it('the README warns that a backup started by hand prunes with the compose retention', () => {
+    expect(root('README.md')).toContain('docker exec -e PRUNE_BACKUPS_DAYS=');
+  });
 });
 
 describe('settingsWriteError', () => {

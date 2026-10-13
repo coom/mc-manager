@@ -194,3 +194,11 @@ Frontend : `BackupScheduleCard` (admin géré : formulaire, validation, confirma
 - `flock -n` pendant une vraie sauvegarde (code 1 attendu) et hors sauvegarde (code 0).
 - La sauvegarde lancée environ 2 minutes après l'application, puis l'intervalle respecté.
 - Une sauvegarde manuelle qui nettoie avec la rétention du fichier.
+
+## 10. Écarts d'implémentation et revue
+
+- `mutationFn` de la carte enveloppe l'appel (`(body) => backupsApi.updateSettings(body)`) : TanStack Query v5 passe un second argument (contexte).
+- `docker compose config` réaffiche les `$` en `$$` (sa sortie doit rester un compose valide) : ce n'est pas un défaut de l'extrait ; vérifier en réel avec `docker inspect mc-backup --format '{{json .Config.Entrypoint}}'`.
+- Revue finale : échec d'écriture traduit en 500 `write_failed` (nouveau code) avec des messages propres au volume des backups (`.mc-manager` occupé par un fichier, `EROFS`, `EACCES`, `ENOSPC`) ; mc-backup arrêté = fichier écrit sans `flock` ni redémarrage, il reste arrêté et la confirmation le dit ; le README avertit qu'un `backup now` lancé à la main sur l'hôte nettoie avec la rétention du compose.
+- Précision sur §1 : le processus 1 de mc-backup est `entrypoint-demoter`, qui relaie `SIGTERM` ; `t: 10` reste une borne haute.
+- À ajouter aux vérifications réelles (§9) : interaction avec la pause automatique du serveur (`/data/.paused` : la boucle sauvegarde alors sans `flock`).

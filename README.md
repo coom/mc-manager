@@ -152,10 +152,11 @@ Docker cannot change the environment of an existing container, so MC Manager wri
         exec /usr/bin/backup loop
 ```
 
-- `$$` is the compose escape for `$`. The script never executes the file: it only exports the two variables, and only when they match a strict pattern. `BACKUP_INTERVAL` and `PRUNE_BACKUPS_DAYS` under `environment:` stay as fallbacks until a value is saved from the page.
+- `$$` is the compose escape for `$`. The script never executes the file: it only exports the two variables, and only when they match a strict pattern. `BACKUP_INTERVAL` and `PRUNE_BACKUPS_DAYS` under `environment:` stay as fallbacks until a value is saved from the page, and still apply to a backup started by hand (see below).
 - The backups volume must be mounted on `/backups` in `mc-backup` (the image default). Until the entrypoint is installed, the page shows the values read from the container, read-only, with the snippet to copy.
-- Applying a change restarts `mc-backup` (MC Manager never creates nor removes containers). Its cycle starts over: the next backup runs after `INITIAL_DELAY` (2 minutes by default), then at the new interval. The change is refused while a backup or a restore is running.
+- Applying a change restarts `mc-backup` (MC Manager never creates nor removes containers). Its cycle starts over: the next backup runs after `INITIAL_DELAY` (2 minutes by default), then at the new interval. The change is refused while a backup or a restore is running. If `mc-backup` is stopped, MC Manager only writes the file and leaves it stopped: the settings apply at its next start.
 - Manual backups ("Backup now") prune with the retention of the file too.
+- A `backup now` started by hand on the host (`docker exec mc-backup backup now`) inherits the container environment, not the file: it prunes with the `PRUNE_BACKUPS_DAYS` of the compose file, which can delete archives that the page retention would keep. Pass the page value explicitly (`docker exec -e PRUNE_BACKUPS_DAYS=30 mc-backup backup now`), or keep the compose value at least as large as the retention set from the page.
 - With `CRON_SCHEDULE`, the image ignores the interval: the page shows the cron schedule and does not offer the change.
 - Every change is admin-only and audited as `backup.settings`.
 
