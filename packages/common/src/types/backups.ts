@@ -61,7 +61,7 @@ export interface BackupSettings {
   backupOnStartup: boolean;
 }
 export interface BackupSettingsUpdate { interval: string; pruneDays: number }
-export type BackupSettingsErrorCode = 'invalid' | 'not_managed' | 'busy' | 'container_missing' | 'restart_failed';
+export type BackupSettingsErrorCode = 'invalid' | 'not_managed' | 'busy' | 'container_missing' | 'restart_failed' | 'write_failed';
 
 const UNIT_TO_MINUTES: Record<string, number> = { s: 1 / 60, m: 1, h: 60, d: 1440 };
 /** `30m`, `6h`, `7d`, `90s` ou nombre nu en secondes (comme `sleep`) → minutes ; null si non reconnu. */

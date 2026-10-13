@@ -156,7 +156,7 @@ describe('BackupSettingsService', () => {
     });
     it('releases the lock and does not restart when the file cannot be written', async () => {
       writeFileSync(path.join(dir, '.mc-manager'), 'not a folder');
-      await expect(svc.apply({ interval: '12h', pruneDays: 14 }, auditFn)).rejects.toBeTruthy();
+      await expect(svc.apply({ interval: '12h', pruneDays: 14 }, auditFn)).rejects.toMatchObject({ statusCode: 500, code: 'write_failed', message: expect.stringMatching(/a file named \.mc-manager/) });
       expect(bk.calls).toEqual([]);
       expect(audits).toEqual([]);
       expect(lock.busy).toBeNull();

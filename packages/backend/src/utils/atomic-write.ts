@@ -3,8 +3,11 @@ import path from 'path';
 import { AppError } from '../middleware/error-handler.js';
 import { logger } from './logger.js';
 
-/** Écrit `content` dans `file` via un fichier temporaire puis rename ; crée le dossier parent. */
-export async function atomicWriteFile(file: string, content: string): Promise<void> {
+/**
+ * Écrit `content` dans `file` via un fichier temporaire puis rename ; crée le dossier parent.
+ * `mapError` traduit les erreurs système (par défaut, messages du volume de données).
+ */
+export async function atomicWriteFile(file: string, content: string, mapError: (err: unknown, file: string, dir: string) => unknown = mapWriteError): Promise<void> {
   const dir = path.dirname(file);
   const tmp = path.join(dir, `.${path.basename(file)}.${process.pid}.tmp`);
   try {
@@ -14,7 +17,7 @@ export async function atomicWriteFile(file: string, content: string): Promise<vo
     await rename(tmp, file);
   } catch (err) {
     await rm(tmp, { force: true }).catch(() => undefined);
-    throw mapWriteError(err, file, dir);
+    throw mapError(err, file, dir);
   }
 }
 

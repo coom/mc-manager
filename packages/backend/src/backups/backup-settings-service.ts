@@ -7,7 +7,7 @@ import { AppError } from '../middleware/error-handler.js';
 import { atomicWriteFile } from '../utils/atomic-write.js';
 import { logger } from '../utils/logger.js';
 import { envMap } from '../mods/server-type.js';
-import { SETTINGS_RELATIVE, effectiveSettings, isManaged, parseSettingsFile, serializeSettings, validateUpdate, type SettingsFileValues } from './backup-settings.js';
+import { SETTINGS_RELATIVE, effectiveSettings, isManaged, parseSettingsFile, serializeSettings, settingsWriteError, validateUpdate, type SettingsFileValues } from './backup-settings.js';
 
 type AuditFn = (detail: string) => Promise<void>;
 
@@ -64,7 +64,7 @@ export class BackupSettingsService {
     const release = this.lock.acquire('backup-settings');
     try {
       await this.assertNoLoopBackup(vars);
-      await atomicWriteFile(this.file, serializeSettings(update));
+      await atomicWriteFile(this.file, serializeSettings(update), (err) => settingsWriteError(err, this.file, this.dir));
       const detail = `interval=${update.interval} pruneDays=${update.pruneDays}`;
       try {
         await this.docker.restartBackup();

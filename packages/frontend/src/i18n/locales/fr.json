@@ -388,7 +388,8 @@
         "not_managed": "mc-backup ne lit pas le fichier de réglages : ajoutez d'abord le point d'entrée à son service compose.",
         "busy": "Une sauvegarde ou une restauration est en cours, réessayez quand elle sera terminée.",
         "container_missing": "Conteneur mc-backup introuvable.",
-        "restart_failed": "Réglages enregistrés, mais mc-backup n'a pas redémarré : ils s'appliqueront à son prochain démarrage."
+        "restart_failed": "Réglages enregistrés, mais mc-backup n'a pas redémarré : ils s'appliqueront à son prochain démarrage.",
+        "write_failed": "Le fichier de réglages n'a pas pu être écrit dans le volume des backups : vérifiez qu'il est accessible en écriture à MC Manager (UID 1000) et qu'aucun fichier .mc-manager ne gêne."
       }
     }
   },

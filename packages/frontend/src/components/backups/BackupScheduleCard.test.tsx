@@ -99,6 +99,16 @@ describe('BackupScheduleCard', () => {
     await waitFor(() => expect(toast.error).toHaveBeenCalledWith('A backup or a restore is running, try again when it is done.'));
   });
 
+  it('translates a write failure', async () => {
+    vi.mocked(backupsApi.updateSettings).mockRejectedValue({ response: { status: 500, data: { error: 'Cannot write x', code: 'write_failed' } } });
+    setup(base);
+    fireEvent.click(await screen.findByRole('button', { name: 'Edit' }));
+    fireEvent.change(screen.getByLabelText('Interval'), { target: { value: '12' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Apply' }));
+    fireEvent.click(within(await screen.findByRole('dialog')).getByRole('button', { name: 'Apply' }));
+    await waitFor(() => expect(toast.error).toHaveBeenCalledWith('The settings file could not be written in the backups volume: check that it is writable by MC Manager (UID 1000) and that nothing named .mc-manager is in the way.'));
+  });
+
   it('admin sees the compose snippet when mc-backup does not read the file; a viewer does not', async () => {
     setup({ ...base, managed: false });
     expect(await screen.findByText('Settings read from the compose file')).toBeInTheDocument();

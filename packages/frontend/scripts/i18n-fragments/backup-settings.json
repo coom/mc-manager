@@ -1,16 +1,33 @@
-{ "namespace": "backups", "keys": {
-  "en": { "schedule": {
+{
+ "namespace": "backups",
+ "keys": {
+  "en": {
+   "schedule": {
     "title": "Automatic backups",
     "interval": "Interval",
     "retention": "Retention",
     "unit": "Unit",
-    "units": { "m": "minutes", "h": "hours", "d": "days" },
+    "units": {
+     "m": "minutes",
+     "h": "hours",
+     "d": "days"
+    },
     "daysUnit": "days",
-    "every": { "m_one": "every minute", "m_other": "every {{count}} minutes", "h_one": "every hour", "h_other": "every {{count}} hours", "d_one": "every day", "d_other": "every {{count}} days" },
+    "every": {
+     "m_one": "every minute",
+     "m_other": "every {{count}} minutes",
+     "h_one": "every hour",
+     "h_other": "every {{count}} hours",
+     "d_one": "every day",
+     "d_other": "every {{count}} days"
+    },
     "everyRaw": "{{value}} (raw value)",
     "days_one": "{{count}} day",
     "days_other": "{{count}} days",
-    "source": { "compose": "compose", "default": "image default" },
+    "source": {
+     "compose": "compose",
+     "default": "image default"
+    },
     "cron": "set by CRON_SCHEDULE ({{schedule}})",
     "noContainer": "The mc-backup container was not found.",
     "stopped": "mc-backup is stopped: no automatic backup until it starts again.",
@@ -22,36 +39,53 @@
     "intervalRange": "Between {{min}} minutes and {{max}} days.",
     "daysRange": "Between {{min}} and {{max}} days.",
     "notManaged": {
-      "title": "Settings read from the compose file",
-      "description": "To change them here, add this entrypoint to the mc-backup service of your Minecraft stack, then recreate it (docker compose up -d). The values under environment: stay as fallbacks.",
-      "snippet": "Entrypoint to add",
-      "copy": "Copy"
+     "title": "Settings read from the compose file",
+     "description": "To change them here, add this entrypoint to the mc-backup service of your Minecraft stack, then recreate it (docker compose up -d). The values under environment: stay as fallbacks.",
+     "snippet": "Entrypoint to add",
+     "copy": "Copy"
     },
     "confirm": {
-      "title": "Apply the backup schedule?",
-      "description": "mc-backup restarts to apply these settings. Next backup in about {{delay}}, then {{every}}; archives are kept {{days}}.",
-      "descriptionNoStartup": "mc-backup restarts to apply these settings. First backup after {{delay}} plus the interval, then {{every}}; archives are kept {{days}}."
+     "title": "Apply the backup schedule?",
+     "description": "mc-backup restarts to apply these settings. Next backup in about {{delay}}, then {{every}}; archives are kept {{days}}.",
+     "descriptionNoStartup": "mc-backup restarts to apply these settings. First backup after {{delay}} plus the interval, then {{every}}; archives are kept {{days}}."
     },
     "errors": {
-      "invalid": "Invalid values.",
-      "not_managed": "mc-backup does not read the settings file: add the entrypoint to its compose service first.",
-      "busy": "A backup or a restore is running, try again when it is done.",
-      "container_missing": "The mc-backup container was not found.",
-      "restart_failed": "Settings saved, but mc-backup did not restart: they will apply at its next start."
+     "invalid": "Invalid values.",
+     "not_managed": "mc-backup does not read the settings file: add the entrypoint to its compose service first.",
+     "busy": "A backup or a restore is running, try again when it is done.",
+     "container_missing": "The mc-backup container was not found.",
+     "restart_failed": "Settings saved, but mc-backup did not restart: they will apply at its next start.",
+     "write_failed": "The settings file could not be written in the backups volume: check that it is writable by MC Manager (UID 1000) and that nothing named .mc-manager is in the way."
     }
-  } },
-  "fr": { "schedule": {
+   }
+  },
+  "fr": {
+   "schedule": {
     "title": "Sauvegardes automatiques",
     "interval": "Intervalle",
     "retention": "Rétention",
     "unit": "Unité",
-    "units": { "m": "minutes", "h": "heures", "d": "jours" },
+    "units": {
+     "m": "minutes",
+     "h": "heures",
+     "d": "jours"
+    },
     "daysUnit": "jours",
-    "every": { "m_one": "toutes les minutes", "m_other": "toutes les {{count}} minutes", "h_one": "toutes les heures", "h_other": "toutes les {{count}} heures", "d_one": "tous les jours", "d_other": "tous les {{count}} jours" },
+    "every": {
+     "m_one": "toutes les minutes",
+     "m_other": "toutes les {{count}} minutes",
+     "h_one": "toutes les heures",
+     "h_other": "toutes les {{count}} heures",
+     "d_one": "tous les jours",
+     "d_other": "tous les {{count}} jours"
+    },
     "everyRaw": "{{value}} (valeur brute)",
     "days_one": "{{count}} jour",
     "days_other": "{{count}} jours",
-    "source": { "compose": "compose", "default": "défaut de l'image" },
+    "source": {
+     "compose": "compose",
+     "default": "défaut de l'image"
+    },
     "cron": "défini par CRON_SCHEDULE ({{schedule}})",
     "noContainer": "Conteneur mc-backup introuvable.",
     "stopped": "mc-backup est arrêté : aucune sauvegarde automatique tant qu'il ne redémarre pas.",
@@ -63,22 +97,25 @@
     "intervalRange": "Entre {{min}} minutes et {{max}} jours.",
     "daysRange": "Entre {{min}} et {{max}} jours.",
     "notManaged": {
-      "title": "Réglages lus dans le compose",
-      "description": "Pour les modifier ici, ajoutez ce point d'entrée au service mc-backup de votre stack Minecraft, puis recréez-le (docker compose up -d). Les valeurs de environment: restent les valeurs de repli.",
-      "snippet": "Point d'entrée à ajouter",
-      "copy": "Copier"
+     "title": "Réglages lus dans le compose",
+     "description": "Pour les modifier ici, ajoutez ce point d'entrée au service mc-backup de votre stack Minecraft, puis recréez-le (docker compose up -d). Les valeurs de environment: restent les valeurs de repli.",
+     "snippet": "Point d'entrée à ajouter",
+     "copy": "Copier"
     },
     "confirm": {
-      "title": "Appliquer la planification ?",
-      "description": "mc-backup redémarre pour appliquer ces réglages. Prochaine sauvegarde dans {{delay}} environ, puis {{every}} ; les archives sont conservées {{days}}.",
-      "descriptionNoStartup": "mc-backup redémarre pour appliquer ces réglages. Première sauvegarde après {{delay}} plus l'intervalle, puis {{every}} ; les archives sont conservées {{days}}."
+     "title": "Appliquer la planification ?",
+     "description": "mc-backup redémarre pour appliquer ces réglages. Prochaine sauvegarde dans {{delay}} environ, puis {{every}} ; les archives sont conservées {{days}}.",
+     "descriptionNoStartup": "mc-backup redémarre pour appliquer ces réglages. Première sauvegarde après {{delay}} plus l'intervalle, puis {{every}} ; les archives sont conservées {{days}}."
     },
     "errors": {
-      "invalid": "Valeurs invalides.",
-      "not_managed": "mc-backup ne lit pas le fichier de réglages : ajoutez d'abord le point d'entrée à son service compose.",
-      "busy": "Une sauvegarde ou une restauration est en cours, réessayez quand elle sera terminée.",
-      "container_missing": "Conteneur mc-backup introuvable.",
-      "restart_failed": "Réglages enregistrés, mais mc-backup n'a pas redémarré : ils s'appliqueront à son prochain démarrage."
+     "invalid": "Valeurs invalides.",
+     "not_managed": "mc-backup ne lit pas le fichier de réglages : ajoutez d'abord le point d'entrée à son service compose.",
+     "busy": "Une sauvegarde ou une restauration est en cours, réessayez quand elle sera terminée.",
+     "container_missing": "Conteneur mc-backup introuvable.",
+     "restart_failed": "Réglages enregistrés, mais mc-backup n'a pas redémarré : ils s'appliqueront à son prochain démarrage.",
+     "write_failed": "Le fichier de réglages n'a pas pu être écrit dans le volume des backups : vérifiez qu'il est accessible en écriture à MC Manager (UID 1000) et qu'aucun fichier .mc-manager ne gêne."
     }
-  } }
-} }
+   }
+  }
+ }
+}

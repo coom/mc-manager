@@ -388,7 +388,8 @@
         "not_managed": "mc-backup does not read the settings file: add the entrypoint to its compose service first.",
         "busy": "A backup or a restore is running, try again when it is done.",
         "container_missing": "The mc-backup container was not found.",
-        "restart_failed": "Settings saved, but mc-backup did not restart: they will apply at its next start."
+        "restart_failed": "Settings saved, but mc-backup did not restart: they will apply at its next start.",
+        "write_failed": "The settings file could not be written in the backups volume: check that it is writable by MC Manager (UID 1000) and that nothing named .mc-manager is in the way."
       }
     }
   },

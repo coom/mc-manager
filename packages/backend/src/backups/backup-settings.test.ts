@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'fs';
 import { fileURLToPath } from 'url';
 import { BACKUP_INTERVAL_FILE_RE, BACKUP_SETTINGS_COMPOSE_SNIPPET, PRUNE_DAYS_FILE_RE, intervalToMinutes } from '@mc/common';
-import { SETTINGS_RELATIVE, effectiveSettings, isManaged, parseSettingsFile, serializeSettings, validateUpdate } from './backup-settings.js';
+import { SETTINGS_RELATIVE, effectiveSettings, isManaged, parseSettingsFile, serializeSettings, settingsWriteError, validateUpdate } from './backup-settings.js';
 
 const EP = ['/bin/bash', '-c', 'f=/backups/.mc-manager/backup-settings.conf\nexec /usr/bin/backup loop'];
 /** Erreur levée par fn (toThrow ne compare pas les propriétés statusCode/code). */
@@ -84,5 +84,26 @@ describe('documentation', () => {
   it('docker-compose.example.yml and the README carry the exact compose snippet', () => {
     expect(root('docker-compose.example.yml')).toContain(BACKUP_SETTINGS_COMPOSE_SNIPPET);
     expect(root('README.md')).toContain(BACKUP_SETTINGS_COMPOSE_SNIPPET);
+  });
+});
+
+describe('settingsWriteError', () => {
+  const err = (code: string) => Object.assign(new Error(`${code}: boom`), { code });
+  const FILE = '/mc/backups/.mc-manager/backup-settings.conf';
+  it.each<[string, RegExp]>([
+    ['EROFS', /backups volume is mounted read-only/],
+    ['ENOSPC', /no space left on the backups volume/],
+    ['EACCES', /backups directory .* not writable by the backend/],
+    ['EPERM', /backups directory .* not writable by the backend/],
+    ['EEXIST', /a file named \.mc-manager/],
+    ['ENOTDIR', /a file named \.mc-manager/],
+    ['EIO', /EIO: boom/],
+  ])('%s gives a 500 write_failed naming the backups volume', (code, re) => {
+    const e = settingsWriteError(err(code), FILE, '/mc/backups');
+    expect(e).toMatchObject({ statusCode: 500, code: 'write_failed' });
+    expect(e.message).toMatch(re);
+  });
+  it('never mentions the data volume', () => {
+    for (const code of ['EROFS', 'EACCES', 'ENOSPC']) expect(settingsWriteError(err(code), FILE, '/mc/backups').message).not.toMatch(/data (volume|directory)/);
   });
 });

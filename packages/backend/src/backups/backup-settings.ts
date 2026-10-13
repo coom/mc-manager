@@ -56,6 +56,23 @@ export function validateUpdate(body: unknown): BackupSettingsUpdate {
   return { interval, pruneDays };
 }
 
+/**
+ * Échec d'écriture du fichier de réglages, traduit pour le volume des backups (et non celui des données) ;
+ * `backupsDir` est le dossier des backups côté backend.
+ */
+export function settingsWriteError(err: unknown, file: string, backupsDir: string): AppError {
+  const fail = (message: string) => new AppError(500, `Cannot write ${file}: ${message}`, undefined, 'write_failed');
+  switch ((err as NodeJS.ErrnoException).code) {
+    case 'EROFS': return fail('the backups volume is mounted read-only in MC Manager. Remove :ro from the backups volume in docker-compose.yml.');
+    case 'ENOSPC': return fail('no space left on the backups volume.');
+    case 'EACCES':
+    case 'EPERM': return fail(`the backups directory ${backupsDir} is not writable by the backend (UID 1000). Fix its ownership on the host, see README "Volume ownership".`);
+    case 'EEXIST':
+    case 'ENOTDIR': return fail(`a file named .mc-manager is in the way in ${backupsDir}. Remove or rename it.`);
+    default: return fail((err as Error).message);
+  }
+}
+
 const nonEmpty = (v: string | undefined): string | undefined => (v ? v : undefined);
 
 /** Valeurs effectives : fichier (déjà filtré par parseSettingsFile) → environnement du conteneur → défauts de l'image. */
