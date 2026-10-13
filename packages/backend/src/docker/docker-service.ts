@@ -6,6 +6,8 @@ import type { ContainerInspect, ContainerLike, DockerLike, DockerStatsSample } f
 import { AppError } from '../middleware/error-handler.js';
 import { logger } from '../utils/logger.js';
 
+export interface BackupContainerInfo { env: string[]; entrypoint: string[] | string | null; cmd: string[] | string | null; startedAt: string | null; running: boolean }
+
 export function statusFromInspect(i: ContainerInspect | null): ServerStatus {
   if (!i) return 'unavailable';
   if (!i.State.Running) return 'stopped';
@@ -59,12 +61,22 @@ export class DockerService extends EventEmitter {
     return { status: statusFromInspect(i), startedAt: i.State.Running ? i.State.StartedAt : null, tty: i.Config.Tty, id: i.Id, image: i.Config.Image, env: i.Config.Env ?? [] };
   }
 
-  /** Variables d'environnement du conteneur mc-backup (vide s'il est introuvable). */
-  async backupEnv(): Promise<string[]> {
+  /** Inspection du conteneur mc-backup (planification, point d'entrée) ; null s'il est introuvable. */
+  async inspectBackup(): Promise<BackupContainerInfo | null> {
     const c = await this.docker.findByName(this.backupName);
-    if (!c) return [];
+    if (!c) return null;
     const i = await c.inspect();
-    return i.Config.Env ?? [];
+    return { env: i.Config.Env ?? [], entrypoint: i.Config.Entrypoint ?? null, cmd: i.Config.Cmd ?? null, startedAt: i.State.StartedAt || null, running: i.State.Running };
+  }
+
+  /** Variables d'environnement du conteneur mc-backup (vide s'il est introuvable). */
+  async backupEnv(): Promise<string[]> { return (await this.inspectBackup())?.env ?? []; }
+
+  /** Redémarre mc-backup : son point d'entrée relit alors le fichier de réglages. */
+  async restartBackup(): Promise<void> {
+    const c = await this.docker.findByName(this.backupName);
+    if (!c) throw new AppError(503, `Container "${this.backupName}" not found`, undefined, 'container_missing');
+    await c.restart({ t: 10 });
   }
 
   private setStatus(s: ServerStatus) {
@@ -209,10 +221,10 @@ export class DockerService extends EventEmitter {
 
   async hasBackupContainer(): Promise<boolean> { return (await this.docker.findByName(this.backupName)) !== null; }
 
-  async execBackup(cmd: string[]): Promise<{ stream: Readable; wait(): Promise<number> }> {
+  async execBackup(cmd: string[], env?: string[]): Promise<{ stream: Readable; wait(): Promise<number> }> {
     const c = await this.docker.findByName(this.backupName);
     if (!c) throw new AppError(503, `Container "${this.backupName}" not found`);
-    const exec = await c.exec({ Cmd: cmd, AttachStdout: true, AttachStderr: true });
+    const exec = await c.exec({ Cmd: cmd, ...(env ? { Env: env } : {}), AttachStdout: true, AttachStderr: true });
     const stream = await exec.start({});
     return {
       stream,

@@ -3,7 +3,7 @@ import type { Readable } from 'stream';
 export interface ContainerInspect {
   Id: string;
   Name: string;
-  Config: { Tty: boolean; Image: string; Labels?: Record<string, string>; Env?: string[] };
+  Config: { Tty: boolean; Image: string; Labels?: Record<string, string>; Env?: string[]; Entrypoint?: string[] | string | null; Cmd?: string[] | string | null };
   State: { Status: string; Running: boolean; StartedAt: string; Health?: { Status: 'starting' | 'healthy' | 'unhealthy' | 'none' } };
 }
 
@@ -22,7 +22,7 @@ export interface ContainerLike {
   restart(opts: { t: number }): Promise<void>;
   stats(opts: { stream: false }): Promise<DockerStatsSample>;
   logs(opts: { follow: true; stdout: true; stderr: true; tail: number; timestamps: boolean }): Promise<Readable>;
-  exec(opts: { Cmd: string[]; AttachStdout: true; AttachStderr: true }): Promise<{ start(opts: object): Promise<Readable>; inspect(): Promise<{ ExitCode: number | null; Running: boolean }> }>;
+  exec(opts: { Cmd: string[]; Env?: string[]; AttachStdout: true; AttachStderr: true }): Promise<{ start(opts: object): Promise<Readable>; inspect(): Promise<{ ExitCode: number | null; Running: boolean }> }>;
 }
 
 export interface DockerLike {

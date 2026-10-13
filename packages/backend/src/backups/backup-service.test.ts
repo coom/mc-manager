@@ -65,6 +65,23 @@ describe('BackupService', () => {
     expect(await p).toBe(2);
   });
 
+  it('runNow passes the retention of the settings file to backup now', async () => {
+    const withDays = new BackupService(dir, new DockerService(docker, 'mc', 'mc-backup'), new DataLock(), async () => 14);
+    const p = withDays.runNow();
+    await wait(5);
+    backupContainer.execStream.end();
+    await p;
+    expect(backupContainer.execEnvs).toEqual([['PRUNE_BACKUPS_DAYS=14']]);
+  });
+
+  it('runNow passes no environment when no retention is managed', async () => {
+    const p = svc.runNow();
+    await wait(5);
+    backupContainer.execStream.end();
+    await p;
+    expect(backupContainer.execEnvs).toEqual([undefined]);
+  });
+
   it('remove deletes the file', async () => {
     await svc.remove('world-20261009-100000.tgz');
     expect(existsSync(path.join(dir, 'world-20261009-100000.tgz'))).toBe(false);

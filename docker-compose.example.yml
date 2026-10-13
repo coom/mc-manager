@@ -26,8 +26,24 @@ services:
     user: "1000:1000"
     restart: unless-stopped
     depends_on: { mc: { condition: service_healthy } }
+    # Reads the interval and retention set from the Backups page (see README, "Backup schedule").
+    entrypoint:
+      - /bin/bash
+      - -c
+      - |
+        f=/backups/.mc-manager/backup-settings.conf
+        if [ -r "$$f" ]; then
+          while IFS='=' read -r k v; do
+            case "$$k" in
+              BACKUP_INTERVAL) [[ "$$v" =~ ^[1-9][0-9]*[mhd]$$ ]] && export BACKUP_INTERVAL="$$v" ;;
+              PRUNE_BACKUPS_DAYS) [[ "$$v" =~ ^[1-9][0-9]*$$ ]] && export PRUNE_BACKUPS_DAYS="$$v" ;;
+            esac
+          done < "$$f"
+        fi
+        exec /usr/bin/backup loop
     environment:
       BACKUP_METHOD: tar
+      # Fallbacks until a schedule is set from the Backups page.
       BACKUP_INTERVAL: "2h"
       PRUNE_BACKUPS_DAYS: "7"
       RCON_HOST: mc

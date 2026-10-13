@@ -11,6 +11,7 @@ import { errorHandler, AppError } from '../middleware/error-handler.js';
 import { BackupService } from '../backups/backup-service.js';
 import { DockerService } from '../docker/docker-service.js';
 import { FakeDocker, FakeContainer, inspectFixture } from '../docker/fake-docker.js';
+import { BackupSettingsService } from '../backups/backup-settings-service.js';
 
 const dirs: string[] = [];
 afterEach(() => { for (const d of dirs.splice(0)) rmSync(d, { recursive: true, force: true }); });
@@ -26,7 +27,9 @@ function appWith(role: 'admin' | 'viewer', fake = new FakeDocker()) {
   app.use('/api/backups', backupDownloadRoutes);
   app.use((req, _res, next) => { req.user = { typ: 'access', id: 1, username: 'u', role }; next(); });
   app.locals.prisma = { auditLog: { create: vi.fn().mockResolvedValue({}) } };
-  app.locals.backups = new BackupService(dir, new DockerService(fake, 'mc', 'mc-backup'));
+  const docker = new DockerService(fake, 'mc', 'mc-backup');
+  app.locals.backups = new BackupService(dir, docker);
+  app.locals.backupSettings = new BackupSettingsService(dir, docker, app.locals.backups.dataLock);
   app.use('/api/backups', backupsRoutes);
   app.use(errorHandler);
   return app;
@@ -132,6 +135,36 @@ describe('backups routes', () => {
     expect(restore).toHaveBeenCalledWith('w.tgz', { startAfter: false, confirmNoSafetyBackup: false }, expect.any(Function));
     expect((await request(app).post('/api/backups/w.tgz/restore').send({ startAfter: 'yes' })).status).toBe(400);
   });
+  const managedBackup = () => {
+    const fake = new FakeDocker();
+    fake.containers.set('mc-backup', new FakeContainer(inspectFixture({ Env: ['BACKUP_INTERVAL=6h'], Entrypoint: ['/bin/bash', '-c', 'f=/backups/.mc-manager/backup-settings.conf'] })));
+    return fake;
+  };
+  it('viewer reads the backup settings but cannot change them', async () => {
+    const app = appWith('viewer', managedBackup());
+    const r = await request(app).get('/api/backups/settings');
+    expect(r.status).toBe(200);
+    expect(r.body).toMatchObject({ containerFound: true, managed: true, interval: { value: '6h', source: 'compose' } });
+    expect((await request(app).put('/api/backups/settings').send({ interval: '12h', pruneDays: 14 })).status).toBe(403);
+  });
+  it('admin gets 400 invalid on a bad body', async () => {
+    const r = await request(appWith('admin', managedBackup())).put('/api/backups/settings').send({ interval: '5m', pruneDays: 14 });
+    expect(r.status).toBe(400);
+    expect(r.body.code).toBe('invalid');
+  });
+  it('admin applies the settings and the change is audited as backup.settings', async () => {
+    const app = appWith('admin', managedBackup());
+    const r = await request(app).put('/api/backups/settings').send({ interval: '12h', pruneDays: 14 });
+    expect(r.status).toBe(200);
+    expect(r.body.interval).toEqual({ value: '12h', source: 'file' });
+    expect(app.locals.prisma.auditLog.create).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ action: 'backup.settings', detail: 'interval=12h pruneDays=14' }) }));
+  });
+  it('settings answer 503 container_missing without mc-backup', async () => {
+    const r = await request(appWith('admin')).put('/api/backups/settings').send({ interval: '12h', pruneDays: 14 });
+    expect(r.status).toBe(503);
+    expect(r.body.code).toBe('container_missing');
+  });
+
   it('run and delete answer 409 while the data lock is held by a restore', async () => {
     const app = appWith('admin');
     const release = (app.locals.backups as BackupService).dataLock.acquire('restore');

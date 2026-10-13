@@ -10,7 +10,11 @@ import { toast } from 'sonner';
 
 vi.mock('sonner', () => ({ toast: { error: vi.fn(), success: vi.fn() } }));
 vi.mock('@/api/backups.api', () => ({
-  backupsApi: { list: vi.fn(), run: vi.fn(), remove: vi.fn(), download: vi.fn(), restore: vi.fn(), restoreStatus: vi.fn(), dismissInterrupted: vi.fn() },
+  backupsApi: {
+    list: vi.fn(), run: vi.fn(), remove: vi.fn(), download: vi.fn(), restore: vi.fn(), restoreStatus: vi.fn(), dismissInterrupted: vi.fn(),
+    settings: vi.fn(async () => ({ containerFound: false, running: false, managed: false, cronSchedule: null, interval: null, pruneDays: null, pendingRestart: false, initialDelay: '2m', backupOnStartup: true })),
+    updateSettings: vi.fn(),
+  },
 }));
 
 function setup() {

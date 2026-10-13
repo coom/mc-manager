@@ -14,6 +14,7 @@ import { EmptyState } from '@/components/shared/EmptyState';
 import { BackupTable } from '@/components/backups/BackupTable';
 import { BackupRunPanel } from '@/components/backups/BackupRunPanel';
 import { RestoreDialog } from '@/components/backups/RestoreDialog';
+import { BackupScheduleCard } from '@/components/backups/BackupScheduleCard';
 import { formatBytes } from '@/lib/utils';
 
 export default function Backups() {
@@ -89,6 +90,7 @@ export default function Backups() {
           )}
         </div>
       )}
+      <BackupScheduleCard isAdmin={isAdmin} busy={busy} />
       {(restoring || restoreOutput.length > 0 || restoreResult) ? (
         <BackupRunPanel mode="restore" lines={restoreOutput} running={restoring} result={restoreResult} onRestoreSafety={isAdmin && !busy ? (n) => setToRestore(data?.entries.find((x) => x.name === n) ?? { name: n, size: 0, modifiedAt: new Date().toISOString() }) : undefined} />
       ) : <BackupRunPanel lines={backupOutput} running={backupRunning || data?.running === true} />}

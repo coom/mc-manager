@@ -18,8 +18,19 @@ export class FakeContainer extends EventEmitter implements ContainerLike {
   }
   async stats() { if (!this.statsSample) throw new Error('no stats'); return this.statsSample; }
   async logs() { return this.logsStream as unknown as Readable; }
-  async exec(opts: { Cmd: string[] }) {
+  /** Environnement passé à chaque exec, dans l'ordre (undefined si aucun). */
+  execEnvs: (string[] | undefined)[] = [];
+  /** Réponse immédiate par commande (flux déjà terminé) ; undefined = comportement par défaut (execStream, execExit). */
+  execReply?: (cmd: string[]) => { exit: number; output?: string } | undefined;
+  async exec(opts: { Cmd: string[]; Env?: string[] }) {
     this.calls.push(`exec:${opts.Cmd.join(' ')}`);
+    this.execEnvs.push(opts.Env);
+    const reply = this.execReply?.(opts.Cmd);
+    if (reply) {
+      const s = new PassThrough();
+      s.end(reply.output ?? '');
+      return { start: async () => s as unknown as Readable, inspect: async () => ({ ExitCode: reply.exit, Running: false }) };
+    }
     return { start: async () => this.execStream as unknown as Readable, inspect: async () => ({ ExitCode: this.execExit, Running: false }) };
   }
 }
@@ -35,10 +46,11 @@ export class FakeDocker implements DockerLike {
   }
 }
 
-export function inspectFixture(over: Partial<ContainerInspect['State']> & { Tty?: boolean; Env?: string[] } = {}): ContainerInspect {
-  const { Tty = false, Env = [], ...state } = over;
+export function inspectFixture(over: Partial<ContainerInspect['State']> & { Tty?: boolean; Env?: string[]; Entrypoint?: string[] | string | null; Cmd?: string[] | string | null } = {}): ContainerInspect {
+  const { Tty = false, Env = [], Entrypoint, Cmd, ...state } = over;
   return {
-    Id: 'abc', Name: '/mc', Config: { Tty, Image: 'itzg/minecraft-server:latest', Env },
+    Id: 'abc', Name: '/mc',
+    Config: { Tty, Image: 'itzg/minecraft-server:latest', Env, ...(Entrypoint !== undefined ? { Entrypoint } : {}), ...(Cmd !== undefined ? { Cmd } : {}) },
     State: { Status: 'running', Running: true, StartedAt: '2026-10-10T10:00:00Z', Health: { Status: 'healthy' }, ...state },
   };
 }
