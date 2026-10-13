@@ -195,6 +195,46 @@ describe('DockerService', () => {
     new DockerService(docker, 'mc', 'b').demux(src, out);
     expect(spy).toHaveBeenCalledWith(src, out, out);
   });
+
+  it('inspectBackup returns env, entrypoint, cmd, start time and running flag; null when missing', async () => {
+    const docker = new FakeDocker();
+    const svc = new DockerService(docker, 'mc', 'b');
+    expect(await svc.inspectBackup()).toBeNull();
+    docker.containers.set('b', new FakeContainer(inspectFixture({ Env: ['A=1'], Entrypoint: ['/bin/bash', '-c', 'x'], Cmd: null, StartedAt: '2026-10-13T10:00:00Z' })));
+    expect(await svc.inspectBackup()).toEqual({ env: ['A=1'], entrypoint: ['/bin/bash', '-c', 'x'], cmd: null, startedAt: '2026-10-13T10:00:00Z', running: true });
+    expect(await svc.backupEnv()).toEqual(['A=1']);
+  });
+
+  it('restartBackup restarts mc-backup with t=10, and is 503 container_missing when it does not exist', async () => {
+    const docker = new FakeDocker();
+    const svc = new DockerService(docker, 'mc', 'b');
+    await expect(svc.restartBackup()).rejects.toMatchObject({ statusCode: 503, code: 'container_missing' });
+    const b = new FakeContainer(inspectFixture());
+    docker.containers.set('b', b);
+    await svc.restartBackup();
+    expect(b.calls).toEqual(['restart:10']);
+  });
+
+  it('execBackup forwards the environment when given', async () => {
+    const docker = new FakeDocker();
+    const b = new FakeContainer(inspectFixture());
+    b.execReply = () => ({ exit: 0 });
+    docker.containers.set('b', b);
+    const svc = new DockerService(docker, 'mc', 'b');
+    await svc.execBackup(['backup', 'now'], ['PRUNE_BACKUPS_DAYS=14']);
+    await svc.execBackup(['backup', 'now']);
+    expect(b.execEnvs).toEqual([['PRUNE_BACKUPS_DAYS=14'], undefined]);
+  });
+
+  it('a FakeContainer execReply answers with an ended stream and its exit code', async () => {
+    const docker = new FakeDocker();
+    const b = new FakeContainer(inspectFixture());
+    b.execReply = (cmd) => (cmd[0] === 'flock' ? { exit: 1 } : undefined);
+    docker.containers.set('b', b);
+    const r = await new DockerService(docker, 'mc', 'b').execBackup(['flock', '-n', '/backups/.mc-backup-lock', 'true']);
+    r.stream.resume();
+    expect(await r.wait()).toBe(1);
+  });
 });
 
 describe('DockerService reconnection', () => {
