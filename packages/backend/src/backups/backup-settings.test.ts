@@ -1,4 +1,6 @@
 import { describe, it, expect } from 'vitest';
+import { readFileSync } from 'fs';
+import { fileURLToPath } from 'url';
 import { BACKUP_INTERVAL_FILE_RE, BACKUP_SETTINGS_COMPOSE_SNIPPET, PRUNE_DAYS_FILE_RE, intervalToMinutes } from '@mc/common';
 import { SETTINGS_RELATIVE, effectiveSettings, isManaged, parseSettingsFile, serializeSettings, validateUpdate } from './backup-settings.js';
 
@@ -75,4 +77,12 @@ describe('compose snippet', () => {
     expect(BACKUP_SETTINGS_COMPOSE_SNIPPET).not.toMatch(/\bsource\b|^\s*\.\s/m);
   });
   it('is detected as managed once installed', () => expect(isManaged(BACKUP_SETTINGS_COMPOSE_SNIPPET, null)).toBe(true));
+});
+
+describe('documentation', () => {
+  const root = (f: string) => readFileSync(fileURLToPath(new URL(`../../../../${f}`, import.meta.url)), 'utf8').replace(/\r\n/g, '\n');
+  it('docker-compose.example.yml and the README carry the exact compose snippet', () => {
+    expect(root('docker-compose.example.yml')).toContain(BACKUP_SETTINGS_COMPOSE_SNIPPET);
+    expect(root('README.md')).toContain(BACKUP_SETTINGS_COMPOSE_SNIPPET);
+  });
 });

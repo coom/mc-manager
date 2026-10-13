@@ -127,6 +127,38 @@ If the server is already stopped, no safety backup can be taken: an explicit con
 
 **Interrupted restores.** While data is being replaced, the backend keeps a marker file `.mc-manager-restore.json` in the data directory (archive name, safety backup, start time, step); it is removed as soon as the extraction succeeds. If the backend stops or crashes in between, the marker remains: at the next start the backend logs an error and the Backups page shows a persistent warning with the archive and the safety backup. The data may be half restored: restore the safety backup ("Restore this one"), or, once you have handled it by hand, click "Dismiss" (admin, audited) to remove the marker. Only one operation at a time touches the data (manual backup, restore, `server.properties` edit): another request receives a 409.
 
+## Backup schedule
+
+The Backups page shows how often `mc-backup` runs and how long archives are kept, and lets an admin change both (interval from 30 minutes to 7 days, retention from 1 to 365 days).
+
+Docker cannot change the environment of an existing container, so MC Manager writes the two values to a file in the backups volume, `.mc-manager/backup-settings.conf`, and restarts `mc-backup`. The image has no native way to read such a file: add this entrypoint once to the `mc-backup` service of your Minecraft stack, then recreate it with `docker compose up -d`:
+
+```yaml
+  mc-backup:
+    image: itzg/mc-backup:latest
+    entrypoint:
+      - /bin/bash
+      - -c
+      - |
+        f=/backups/.mc-manager/backup-settings.conf
+        if [ -r "$$f" ]; then
+          while IFS='=' read -r k v; do
+            case "$$k" in
+              BACKUP_INTERVAL) [[ "$$v" =~ ^[1-9][0-9]*[mhd]$$ ]] && export BACKUP_INTERVAL="$$v" ;;
+              PRUNE_BACKUPS_DAYS) [[ "$$v" =~ ^[1-9][0-9]*$$ ]] && export PRUNE_BACKUPS_DAYS="$$v" ;;
+            esac
+          done < "$$f"
+        fi
+        exec /usr/bin/backup loop
+```
+
+- `$$` is the compose escape for `$`. The script never executes the file: it only exports the two variables, and only when they match a strict pattern. `BACKUP_INTERVAL` and `PRUNE_BACKUPS_DAYS` under `environment:` stay as fallbacks until a value is saved from the page.
+- The backups volume must be mounted on `/backups` in `mc-backup` (the image default). Until the entrypoint is installed, the page shows the values read from the container, read-only, with the snippet to copy.
+- Applying a change restarts `mc-backup` (MC Manager never creates nor removes containers). Its cycle starts over: the next backup runs after `INITIAL_DELAY` (2 minutes by default), then at the new interval. The change is refused while a backup or a restore is running.
+- Manual backups ("Backup now") prune with the retention of the file too.
+- With `CRON_SCHEDULE`, the image ignores the interval: the page shows the cron schedule and does not offer the change.
+- Every change is admin-only and audited as `backup.settings`.
+
 ## Server configuration
 
 The Configuration page edits `server.properties`, either through a form of the common keys or as the raw file. Saving is atomic and the interface then offers to restart the server.
