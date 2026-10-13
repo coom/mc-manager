@@ -60,6 +60,33 @@ export class BackupService extends EventEmitter {
   async remove(name: string): Promise<void> {
     this.lock.assertFree();
     const full = await this.resolve(name);
+    await this.unlinkArchive(full);
+    this.emit('listChanged');
+  }
+
+  /**
+   * Supprime plusieurs archives sous le verrou : tous les noms sont vérifiés avant la première suppression
+   * (un seul inconnu = 404, rien supprimé). `onDeleted` est appelé après chaque fichier supprimé (audit).
+   */
+  async removeMany(names: string[], onDeleted?: (name: string) => Promise<void> | void): Promise<string[]> {
+    const release = this.lock.acquire('delete');
+    const deleted: string[] = [];
+    try {
+      const targets: [string, string][] = [];
+      for (const name of new Set(names)) targets.push([name, await this.resolve(name)]);
+      for (const [name, full] of targets) {
+        await this.unlinkArchive(full);
+        deleted.push(name);
+        await onDeleted?.(name);
+      }
+      return deleted;
+    } finally {
+      release();
+      if (deleted.length > 0) this.emit('listChanged');
+    }
+  }
+
+  private async unlinkArchive(full: string): Promise<void> {
     try {
       await unlink(full);
     } catch (err) {
@@ -70,7 +97,6 @@ export class BackupService extends EventEmitter {
       }
       throw err;
     }
-    this.emit('listChanged');
   }
 
   /**

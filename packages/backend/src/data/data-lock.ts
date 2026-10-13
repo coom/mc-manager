@@ -1,6 +1,6 @@
 import { AppError } from '../middleware/error-handler.js';
 
-export type DataOp = 'backup' | 'restore' | 'properties' | 'mods' | 'backup-settings';
+export type DataOp = 'backup' | 'restore' | 'properties' | 'mods' | 'backup-settings' | 'delete';
 
 /**
  * Verrou global des écritures dans /data, des sauvegardes et du redémarrage de mc-backup : une seule opération à la fois.

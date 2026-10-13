@@ -70,3 +70,10 @@ export function intervalToMinutes(value: string): number | null {
   if (!m) return null;
   return Number(m[1]) * UNIT_TO_MINUTES[m[2] || 's'];
 }
+
+/** Nombre maximal d'archives par suppression multiple ou application de la rétention. */
+export const BACKUP_DELETE_MAX = 500;
+/** Archives que « Appliquer la rétention » supprimerait (la plus récente est toujours conservée). */
+export interface PrunePreview { days: number; candidates: BackupEntry[] }
+export interface BackupDeleteResult { deleted: string[] }
+export type BackupDeleteErrorCode = 'invalid_names' | 'retention_unknown' | 'retention_disabled';

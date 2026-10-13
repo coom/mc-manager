@@ -82,6 +82,35 @@ describe('BackupService', () => {
     expect(backupContainer.execEnvs).toEqual([undefined]);
   });
 
+  it('removeMany deletes every archive, ignores duplicates, reports each one and emits listChanged once', async () => {
+    let changes = 0;
+    svc.on('listChanged', () => { changes++; });
+    const reported: string[] = [];
+    const deleted = await svc.removeMany(['world-20261009-100000.tgz', 'world-20261010-100000.tgz', 'world-20261009-100000.tgz'], (n) => { reported.push(n); });
+    expect(deleted).toEqual(['world-20261009-100000.tgz', 'world-20261010-100000.tgz']);
+    expect(reported).toEqual(deleted);
+    expect((await svc.list()).entries).toEqual([]);
+    expect(changes).toBe(1);
+  });
+
+  it('removeMany deletes nothing when one name is unknown or unsafe', async () => {
+    await expect(svc.removeMany(['world-20261009-100000.tgz', 'missing.tgz'])).rejects.toMatchObject({ statusCode: 404 });
+    await expect(svc.removeMany(['world-20261009-100000.tgz', '../x.tgz'])).rejects.toMatchObject({ statusCode: 404 });
+    expect((await svc.list()).entries).toHaveLength(2);
+  });
+
+  it('removeMany is 409 while another data operation holds the lock, and holds the lock itself', async () => {
+    const lock = new DataLock();
+    const locked = new BackupService(dir, new DockerService(docker, 'mc', 'mc-backup'), lock);
+    const release = lock.acquire('restore');
+    await expect(locked.removeMany(['world-20261009-100000.tgz'])).rejects.toMatchObject({ statusCode: 409 });
+    release();
+    let busyDuring: string | null = null;
+    await locked.removeMany(['world-20261009-100000.tgz'], () => { busyDuring = lock.busy; });
+    expect(busyDuring).toBe('delete');
+    expect(lock.busy).toBeNull();
+  });
+
   it('remove deletes the file', async () => {
     await svc.remove('world-20261009-100000.tgz');
     expect(existsSync(path.join(dir, 'world-20261009-100000.tgz'))).toBe(false);
