@@ -145,7 +145,7 @@ export function intervalToMinutes(value: string): number | null;
 - `data/data-lock.ts` : `DataOp` reçoit `'backup-settings'` ; commentaire élargi (le verrou couvre aussi le redémarrage de mc-backup).
 - `backups/backup-service.ts` : dépendance facultative `pruneDays: () => Promise<number | null>` ; `runNow()` passe `Env: ['PRUNE_BACKUPS_DAYS=N']` quand elle renvoie un nombre. Couvre la sauvegarde de sécurité de la restauration (`runNow({ lockHeld: true })`).
 - `routes/backups.routes.ts` : `GET /settings` (tous rôles, comme la liste) ; `PUT /settings` (`requireRole('admin')`, corps `BackupSettingsUpdate`, l'audit passe en rappel au service).
-- `index.ts` : création du service après `BackupService`, branché sur `pruneDays`, exposé en `app.locals.backupSettings` (déclaration de type de `app.locals` mise à jour).
+- `index.ts` : création du service avant `BackupService`, qui reçoit `() => settings.pruneDaysForExec()`, exposé en `app.locals.backupSettings` (`app.locals` n'est pas typé, rien d'autre à déclarer). Le `DataLock` est créé avant les deux services et partagé (`BackupService` le reçoit en paramètre).
 - Pas de message WebSocket.
 
 ## 5. Frontend
@@ -160,7 +160,7 @@ export function intervalToMinutes(value: string): number | null;
   - Admin, non géré : bandeau sur le modèle de `SourceBanner` (mods) avec explication, extrait `BACKUP_SETTINGS_COMPOSE_SNIPPET` dans un `<pre>` défilant et bouton copier. Les viewers ne voient que les valeurs.
   - Erreurs traduites par `code` (`components/backups/backup-settings-errors.ts`, sur le modèle de `mods-errors.ts`).
   - Responsive : `flex-wrap`, champs `w-full sm:w-*`.
-- i18n : fragment `scripts/i18n-fragments/backup-settings.json` (carte, formulaire, confirmation, erreurs, libellé de l'action d'audit `backup.settings`), puis `merge-i18n.mjs`.
+- i18n : fragment `scripts/i18n-fragments/backup-settings.json` (carte, formulaire, confirmation, erreurs ; la page Audit filtre par préfixe, `backup.settings` tombe dans « Sauvegardes » sans libellé dédié), puis `merge-i18n.mjs`.
 
 ## 6. Sécurité
 
