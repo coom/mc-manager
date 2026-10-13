@@ -1,6 +1,6 @@
 export type AuditAction =
   | 'server.start' | 'server.stop' | 'server.restart' | 'rcon.command'
-  | 'backup.run' | 'backup.delete' | 'backup.download'
+  | 'backup.run' | 'backup.delete' | 'backup.download' | 'backup.settings'
   | 'user.create' | 'user.update' | 'user.delete'
   | 'player.kick' | 'player.ban' | 'player.ban_ip' | 'player.pardon' | 'player.pardon_ip' | 'player.op' | 'player.deop'
   | 'whitelist.add' | 'whitelist.remove' | 'whitelist.toggle'
