@@ -131,6 +131,20 @@ describe('BackupScheduleCard', () => {
     await waitFor(() => expect(backupsApi.updateSettings).toHaveBeenCalledWith({ interval: '12h', pruneDays: 14 }));
   });
 
+  it('stopped mc-backup: the dialog says the settings apply at its next start, and the pending banner offers no retry', async () => {
+    setup({ ...base, running: false });
+    fireEvent.click(await screen.findByRole('button', { name: 'Edit' }));
+    fireEvent.change(screen.getByLabelText('Interval'), { target: { value: '12' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Apply' }));
+    expect(within(await screen.findByRole('dialog')).getByText(/mc-backup is stopped and stays stopped: these settings apply at its next start/)).toBeInTheDocument();
+  });
+
+  it('stopped mc-backup with pending settings: no retry button', async () => {
+    setup({ ...base, running: false, interval: { value: '12h', source: 'file' }, pruneDays: { value: '14', source: 'file' }, pendingRestart: true });
+    expect(await screen.findByText(/not applied yet/)).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Retry' })).not.toBeInTheDocument();
+  });
+
   it('missing container', async () => {
     setup({ ...base, containerFound: false, managed: false, interval: null, pruneDays: null });
     expect(await screen.findByText('The mc-backup container was not found.')).toBeInTheDocument();

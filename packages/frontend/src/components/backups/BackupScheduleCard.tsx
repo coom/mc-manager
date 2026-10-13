@@ -95,7 +95,7 @@ export function BackupScheduleCard({ isAdmin, busy }: { isAdmin: boolean; busy: 
           <div role="alert" className="flex flex-wrap items-center gap-2 rounded-md border border-amber-500/40 bg-amber-500/10 p-2 text-xs">
             <AlertTriangle className="h-4 w-4 shrink-0 text-amber-500" />
             <span className="flex-1">{t('backups.schedule.pending')}</span>
-            {canEdit && <Button size="sm" variant="outline" disabled={busy || save.isPending} onClick={() => save.mutate({ interval: interval.value, pruneDays: Number(pruneDays.value) })}>{t('backups.schedule.retry')}</Button>}
+            {canEdit && data.running && <Button size="sm" variant="outline" disabled={busy || save.isPending} onClick={() => save.mutate({ interval: interval.value, pruneDays: Number(pruneDays.value) })}>{t('backups.schedule.retry')}</Button>}
           </div>
         )}
         {isAdmin && !data.managed && (
@@ -138,7 +138,7 @@ export function BackupScheduleCard({ isAdmin, busy }: { isAdmin: boolean; busy: 
         open={toApply !== null}
         onOpenChange={(o) => { if (!o && !save.isPending) setToApply(null); }}
         title={t('backups.schedule.confirm.title')}
-        description={toApply ? t(data.backupOnStartup ? 'backups.schedule.confirm.description' : 'backups.schedule.confirm.descriptionNoStartup', {
+        description={toApply ? t(!data.running ? 'backups.schedule.confirm.descriptionStopped' : data.backupOnStartup ? 'backups.schedule.confirm.description' : 'backups.schedule.confirm.descriptionNoStartup', {
           delay: data.initialDelay, every: everyText(toApply.interval, t), days: daysText(String(toApply.pruneDays), t),
         }) : ''}
         confirmLabel={t('backups.schedule.apply')}

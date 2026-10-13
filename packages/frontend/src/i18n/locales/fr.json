@@ -381,7 +381,8 @@
       "confirm": {
         "title": "Appliquer la planification ?",
         "description": "mc-backup redémarre pour appliquer ces réglages. Prochaine sauvegarde dans {{delay}} environ, puis {{every}} ; les archives sont conservées {{days}}.",
-        "descriptionNoStartup": "mc-backup redémarre pour appliquer ces réglages. Première sauvegarde après {{delay}} plus l'intervalle, puis {{every}} ; les archives sont conservées {{days}}."
+        "descriptionNoStartup": "mc-backup redémarre pour appliquer ces réglages. Première sauvegarde après {{delay}} plus l'intervalle, puis {{every}} ; les archives sont conservées {{days}}.",
+        "descriptionStopped": "mc-backup est arrêté et le reste : ces réglages s'appliqueront à son prochain démarrage ({{every}} ; archives conservées {{days}})."
       },
       "errors": {
         "invalid": "Valeurs invalides.",

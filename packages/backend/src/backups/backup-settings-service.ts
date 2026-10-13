@@ -63,9 +63,14 @@ export class BackupSettingsService {
 
     const release = this.lock.acquire('backup-settings');
     try {
-      await this.assertNoLoopBackup(vars);
+      // mc-backup arrêté (peut-être exprès) : ni sauvegarde en cours ni redémarrage ; le fichier s'appliquera à son prochain démarrage.
+      if (c.running) await this.assertNoLoopBackup(vars);
       await atomicWriteFile(this.file, serializeSettings(update), (err) => settingsWriteError(err, this.file, this.dir));
       const detail = `interval=${update.interval} pruneDays=${update.pruneDays}`;
+      if (!c.running) {
+        await audit(`${detail} (applies at next start)`);
+        return await this.read();
+      }
       try {
         await this.docker.restartBackup();
       } catch (err) {

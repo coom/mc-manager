@@ -79,6 +79,17 @@ describe('BackupSettingsService', () => {
       expect(s).toMatchObject({ interval: { value: '12h', source: 'file' }, pruneDays: { value: '14', source: 'file' }, pendingRestart: false });
       expect(lock.busy).toBeNull();
     });
+    it('only writes the file when mc-backup is stopped: no lock check, no restart, applied at its next start', async () => {
+      setContainer({ Running: false });
+      writeFileSync(path.join(dir, '.mc-backup-lock'), '');
+      const s = await svc.apply({ interval: '12h', pruneDays: 14 }, auditFn);
+      expect(readFileSync(file(), 'utf8')).toBe('BACKUP_INTERVAL=12h\nPRUNE_BACKUPS_DAYS=14\n');
+      expect(bk.calls).toEqual([]);
+      expect(audits).toEqual(['interval=12h pruneDays=14 (applies at next start)']);
+      expect(s).toMatchObject({ running: false, pendingRestart: true, interval: { value: '12h', source: 'file' } });
+      expect(lock.busy).toBeNull();
+    });
+
     it('does nothing when the file already holds the same applied values', async () => {
       await svc.apply({ interval: '12h', pruneDays: 14 }, auditFn);
       await svc.apply({ interval: '12h', pruneDays: 14 }, auditFn);

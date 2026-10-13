@@ -381,7 +381,8 @@
       "confirm": {
         "title": "Apply the backup schedule?",
         "description": "mc-backup restarts to apply these settings. Next backup in about {{delay}}, then {{every}}; archives are kept {{days}}.",
-        "descriptionNoStartup": "mc-backup restarts to apply these settings. First backup after {{delay}} plus the interval, then {{every}}; archives are kept {{days}}."
+        "descriptionNoStartup": "mc-backup restarts to apply these settings. First backup after {{delay}} plus the interval, then {{every}}; archives are kept {{days}}.",
+        "descriptionStopped": "mc-backup is stopped and stays stopped: these settings apply at its next start ({{every}}; archives are kept {{days}})."
       },
       "errors": {
         "invalid": "Invalid values.",

@@ -47,7 +47,8 @@
     "confirm": {
      "title": "Apply the backup schedule?",
      "description": "mc-backup restarts to apply these settings. Next backup in about {{delay}}, then {{every}}; archives are kept {{days}}.",
-     "descriptionNoStartup": "mc-backup restarts to apply these settings. First backup after {{delay}} plus the interval, then {{every}}; archives are kept {{days}}."
+     "descriptionNoStartup": "mc-backup restarts to apply these settings. First backup after {{delay}} plus the interval, then {{every}}; archives are kept {{days}}.",
+     "descriptionStopped": "mc-backup is stopped and stays stopped: these settings apply at its next start ({{every}}; archives are kept {{days}})."
     },
     "errors": {
      "invalid": "Invalid values.",
@@ -105,7 +106,8 @@
     "confirm": {
      "title": "Appliquer la planification ?",
      "description": "mc-backup redémarre pour appliquer ces réglages. Prochaine sauvegarde dans {{delay}} environ, puis {{every}} ; les archives sont conservées {{days}}.",
-     "descriptionNoStartup": "mc-backup redémarre pour appliquer ces réglages. Première sauvegarde après {{delay}} plus l'intervalle, puis {{every}} ; les archives sont conservées {{days}}."
+     "descriptionNoStartup": "mc-backup redémarre pour appliquer ces réglages. Première sauvegarde après {{delay}} plus l'intervalle, puis {{every}} ; les archives sont conservées {{days}}.",
+     "descriptionStopped": "mc-backup est arrêté et le reste : ces réglages s'appliqueront à son prochain démarrage ({{every}} ; archives conservées {{days}})."
     },
     "errors": {
      "invalid": "Valeurs invalides.",
