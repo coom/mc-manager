@@ -1,0 +1,67 @@
+{
+ "namespace": "backups",
+ "keys": {
+  "en": {
+   "select": "Select {{name}}",
+   "more": "{{names}} and {{count}} more",
+   "selection": {
+    "all": "Select all",
+    "none": "Deselect all",
+    "delete": "Delete selection ({{count}})",
+    "confirmTitle_one": "Delete {{count}} backup?",
+    "confirmTitle_other": "Delete {{count}} backups?",
+    "confirmDescription": "Permanently deleted: {{names}}.",
+    "deleted_one": "{{count}} backup deleted",
+    "deleted_other": "{{count}} backups deleted"
+   },
+   "errors": {
+    "invalid_names": "Invalid selection.",
+    "retention_unknown": "Retention unknown: the mc-backup container was not found.",
+    "retention_disabled": "Retention is disabled for mc-backup (PRUNE_BACKUPS_DAYS is 0 or invalid)."
+   },
+   "schedule": {
+    "prune": {
+     "button": "Apply retention",
+     "nothing": "No backup older than {{days}} days (the most recent one is always kept).",
+     "title_one": "Delete {{count}} backup older than {{days}} days?",
+     "title_other": "Delete {{count}} backups older than {{days}} days?",
+     "description": "Permanently deleted: {{names}}. The most recent backup is always kept.",
+     "confirm": "Delete",
+     "done_one": "{{count}} backup deleted",
+     "done_other": "{{count}} backups deleted"
+    }
+   }
+  },
+  "fr": {
+   "select": "Sélectionner {{name}}",
+   "more": "{{names}} et {{count}} autres",
+   "selection": {
+    "all": "Tout sélectionner",
+    "none": "Tout désélectionner",
+    "delete": "Supprimer la sélection ({{count}})",
+    "confirmTitle_one": "Supprimer {{count}} sauvegarde ?",
+    "confirmTitle_other": "Supprimer {{count}} sauvegardes ?",
+    "confirmDescription": "Suppression définitive : {{names}}.",
+    "deleted_one": "{{count}} sauvegarde supprimée",
+    "deleted_other": "{{count}} sauvegardes supprimées"
+   },
+   "errors": {
+    "invalid_names": "Sélection invalide.",
+    "retention_unknown": "Rétention inconnue : conteneur mc-backup introuvable.",
+    "retention_disabled": "La rétention est désactivée pour mc-backup (PRUNE_BACKUPS_DAYS vaut 0 ou n'est pas valide)."
+   },
+   "schedule": {
+    "prune": {
+     "button": "Appliquer la rétention",
+     "nothing": "Aucune sauvegarde de plus de {{days}} jours (la plus récente est toujours conservée).",
+     "title_one": "Supprimer {{count}} sauvegarde de plus de {{days}} jours ?",
+     "title_other": "Supprimer {{count}} sauvegardes de plus de {{days}} jours ?",
+     "description": "Suppression définitive : {{names}}. La plus récente est toujours conservée.",
+     "confirm": "Supprimer",
+     "done_one": "{{count}} sauvegarde supprimée",
+     "done_other": "{{count}} sauvegardes supprimées"
+    }
+   }
+  }
+ }
+}

@@ -1,4 +1,4 @@
-import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, act, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import '@/i18n';
 import Backups from './Backups';
@@ -13,14 +13,16 @@ vi.mock('@/api/backups.api', () => ({
   backupsApi: {
     list: vi.fn(), run: vi.fn(), remove: vi.fn(), download: vi.fn(), restore: vi.fn(), restoreStatus: vi.fn(), dismissInterrupted: vi.fn(),
     settings: vi.fn(async () => ({ containerFound: false, running: false, managed: false, cronSchedule: null, interval: null, pruneDays: null, pendingRestart: false, initialDelay: '2m', backupOnStartup: true })),
-    updateSettings: vi.fn(),
+    updateSettings: vi.fn(), removeMany: vi.fn(), prunePreview: vi.fn(), prune: vi.fn(),
   },
 }));
 
-function setup() {
+function setupWithClient() {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   render(<QueryClientProvider client={qc}><Backups /></QueryClientProvider>);
+  return { qc };
 }
+function setup() { setupWithClient(); }
 
 describe('Backups page run failure', () => {
   beforeEach(() => {
@@ -165,5 +167,76 @@ describe('Backups page interrupted restore', () => {
     expect(await screen.findByText('A restore was interrupted')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Dismiss' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Restore this one' })).not.toBeInTheDocument();
+  });
+});
+
+describe('Backups page selection', () => {
+  const entries = [
+    { name: 'c.tgz', size: 10, modifiedAt: '2026-10-12T10:00:00Z' },
+    { name: 'b.tgz', size: 10, modifiedAt: '2026-10-11T10:00:00Z' },
+    { name: 'a.tgz', size: 10, modifiedAt: '2026-10-10T10:00:00Z' },
+  ];
+  const asRole = (role: 'admin' | 'viewer') => useAuthStore.setState({ accessToken: 't', refreshToken: 'r', user: { id: 1, username: 'u', displayName: 'U', role } });
+  beforeEach(() => {
+    useServerStore.getState().reset();
+    asRole('admin');
+    vi.mocked(backupsApi.list).mockResolvedValue({ entries, totalBytes: 30, running: false });
+    vi.mocked(backupsApi.restoreStatus).mockResolvedValue({ running: false, step: null, interrupted: null });
+    vi.mocked(backupsApi.removeMany).mockReset();
+  });
+
+  it('select all, deselect all and the delete button count', async () => {
+    setup();
+    const del = await screen.findByRole('button', { name: 'Delete selection (0)' });
+    expect(del).toBeDisabled();
+    fireEvent.click(screen.getByRole('button', { name: 'Select all' }));
+    expect(screen.getByRole('button', { name: 'Delete selection (3)' })).toBeEnabled();
+    expect(screen.getByRole('checkbox', { name: 'Select a.tgz' })).toBeChecked();
+    fireEvent.click(screen.getByRole('button', { name: 'Deselect all' }));
+    expect(screen.getByRole('button', { name: 'Delete selection (0)' })).toBeDisabled();
+    expect(screen.getByRole('checkbox', { name: 'Select a.tgz' })).not.toBeChecked();
+  });
+
+  it('deletes the checked backups after confirming, in list order', async () => {
+    vi.mocked(backupsApi.removeMany).mockResolvedValue({ deleted: ['c.tgz', 'a.tgz'] });
+    setup();
+    fireEvent.click(await screen.findByRole('checkbox', { name: 'Select a.tgz' }));
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Select c.tgz' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Delete selection (2)' }));
+    const dialog = await screen.findByRole('dialog');
+    expect(within(dialog).getByText('Delete 2 backups?')).toBeInTheDocument();
+    expect(within(dialog).getByText('Permanently deleted: c.tgz, a.tgz.')).toBeInTheDocument();
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Confirm' }));
+    await waitFor(() => expect(backupsApi.removeMany).toHaveBeenCalledWith(['c.tgz', 'a.tgz']));
+    await waitFor(() => expect(toast.success).toHaveBeenCalledWith('2 backups deleted'));
+    expect(await screen.findByRole('button', { name: 'Delete selection (0)' })).toBeDisabled();
+  });
+
+  it('translates a refused bulk delete', async () => {
+    vi.mocked(backupsApi.removeMany).mockRejectedValue({ response: { status: 400, data: { error: 'x', code: 'invalid_names' } } });
+    setup();
+    fireEvent.click(await screen.findByRole('checkbox', { name: 'Select b.tgz' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Delete selection (1)' }));
+    fireEvent.click(within(await screen.findByRole('dialog')).getByRole('button', { name: 'Confirm' }));
+    await waitFor(() => expect(toast.error).toHaveBeenCalledWith('Invalid selection.'));
+  });
+
+  it('an archive that left the list is neither counted nor sent', async () => {
+    vi.mocked(backupsApi.removeMany).mockResolvedValue({ deleted: ['c.tgz'] });
+    const { qc } = setupWithClient();
+    fireEvent.click(await screen.findByRole('button', { name: 'Select all' }));
+    vi.mocked(backupsApi.list).mockResolvedValue({ entries: [entries[0]], totalBytes: 10, running: false });
+    await act(async () => { await qc.invalidateQueries({ queryKey: ['backups'] }); });
+    fireEvent.click(await screen.findByRole('button', { name: 'Delete selection (1)' }));
+    fireEvent.click(within(await screen.findByRole('dialog')).getByRole('button', { name: 'Confirm' }));
+    await waitFor(() => expect(backupsApi.removeMany).toHaveBeenCalledWith(['c.tgz']));
+  });
+
+  it('viewer has no checkbox and no selection toolbar', async () => {
+    asRole('viewer');
+    setup();
+    expect(await screen.findByText('a.tgz')).toBeInTheDocument();
+    expect(screen.queryByRole('checkbox')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Select all' })).not.toBeInTheDocument();
   });
 });

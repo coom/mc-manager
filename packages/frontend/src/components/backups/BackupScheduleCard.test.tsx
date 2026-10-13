@@ -6,8 +6,8 @@ import { toast } from 'sonner';
 import { BackupScheduleCard } from './BackupScheduleCard';
 import { backupsApi } from '@/api/backups.api';
 
-vi.mock('sonner', () => ({ toast: { error: vi.fn(), success: vi.fn() } }));
-vi.mock('@/api/backups.api', () => ({ backupsApi: { settings: vi.fn(), updateSettings: vi.fn() } }));
+vi.mock('sonner', () => ({ toast: { error: vi.fn(), success: vi.fn(), info: vi.fn() } }));
+vi.mock('@/api/backups.api', () => ({ backupsApi: { settings: vi.fn(), updateSettings: vi.fn(), prunePreview: vi.fn(), prune: vi.fn() } }));
 
 const base: BackupSettings = {
   containerFound: true, running: true, managed: true, cronSchedule: null,
@@ -143,6 +143,56 @@ describe('BackupScheduleCard', () => {
     setup({ ...base, running: false, interval: { value: '12h', source: 'file' }, pruneDays: { value: '14', source: 'file' }, pendingRestart: true });
     expect(await screen.findByText(/not applied yet/)).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Retry' })).not.toBeInTheDocument();
+  });
+
+  describe('apply retention', () => {
+    const old = (name: string) => ({ name, size: 1, modifiedAt: '2026-09-01T10:00:00Z' });
+    beforeEach(() => { vi.mocked(backupsApi.prunePreview).mockReset(); vi.mocked(backupsApi.prune).mockReset(); vi.mocked(toast.info).mockReset(); vi.mocked(toast.success).mockReset(); });
+
+    it('says so when nothing is older than the retention', async () => {
+      vi.mocked(backupsApi.prunePreview).mockResolvedValue({ days: 7, candidates: [] });
+      setup(base);
+      fireEvent.click(await screen.findByRole('button', { name: 'Apply retention' }));
+      await waitFor(() => expect(toast.info).toHaveBeenCalledWith('No backup older than 7 days (the most recent one is always kept).'));
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    });
+
+    it('lists the candidates, then deletes exactly those after confirming', async () => {
+      vi.mocked(backupsApi.prunePreview).mockResolvedValue({ days: 7, candidates: [old('b.tgz'), old('a.tgz')] });
+      vi.mocked(backupsApi.prune).mockResolvedValue({ deleted: ['b.tgz', 'a.tgz'] });
+      setup(base);
+      fireEvent.click(await screen.findByRole('button', { name: 'Apply retention' }));
+      const dialog = await screen.findByRole('dialog');
+      expect(within(dialog).getByText('Delete 2 backups older than 7 days?')).toBeInTheDocument();
+      expect(within(dialog).getByText('Permanently deleted: b.tgz, a.tgz. The most recent backup is always kept.')).toBeInTheDocument();
+      fireEvent.click(within(dialog).getByRole('button', { name: 'Delete' }));
+      await waitFor(() => expect(backupsApi.prune).toHaveBeenCalledWith(['b.tgz', 'a.tgz']));
+      await waitFor(() => expect(toast.success).toHaveBeenCalledWith('2 backups deleted'));
+      await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+    });
+
+    it('translates a disabled retention', async () => {
+      vi.mocked(backupsApi.prunePreview).mockRejectedValue({ response: { status: 409, data: { error: 'x', code: 'retention_disabled' } } });
+      setup(base);
+      fireEvent.click(await screen.findByRole('button', { name: 'Apply retention' }));
+      await waitFor(() => expect(toast.error).toHaveBeenCalledWith('Retention is disabled for mc-backup (PRUNE_BACKUPS_DAYS is 0 or invalid).'));
+    });
+
+    it('is offered to admins even when mc-backup does not read the settings file', async () => {
+      setup({ ...base, managed: false });
+      expect(await screen.findByRole('button', { name: 'Apply retention' })).toBeEnabled();
+    });
+
+    it('is hidden for viewers', async () => {
+      setup(base, { isAdmin: false });
+      await screen.findByText('every 6 hours');
+      expect(screen.queryByRole('button', { name: 'Apply retention' })).not.toBeInTheDocument();
+    });
+
+    it('is disabled while a backup or restore runs', async () => {
+      setup(base, { busy: true });
+      expect(await screen.findByRole('button', { name: 'Apply retention' })).toBeDisabled();
+    });
   });
 
   it('missing container', async () => {
