@@ -1,0 +1,4 @@
+{ "namespace": "backups", "keys": {
+  "en": { "refresh": "Refresh" },
+  "fr": { "refresh": "Rafraîchir" }
+} }

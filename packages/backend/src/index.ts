@@ -16,6 +16,7 @@ import { MetricsCollector } from './metrics/collector.js';
 import { BackupService } from './backups/backup-service.js';
 import { RestoreService } from './backups/restore-service.js';
 import { BackupSettingsService } from './backups/backup-settings-service.js';
+import { watchBackups } from './backups/backups-watcher.js';
 import { DataLock } from './data/data-lock.js';
 import { PropertiesService } from './server-properties/properties-service.js';
 import { ModsService } from './mods/mods-service.js';
@@ -109,6 +110,8 @@ async function main() {
   backups.on('progress', (line) => broadcast(wss, { type: 'backup.progress', line }));
   backups.on('done', (exitCode) => broadcast(wss, { type: 'backup.done', exitCode }));
   backups.on('listChanged', () => broadcast(wss, { type: 'backup.list.changed' }));
+  // Archives créées ou nettoyées par la boucle de mc-backup elle-même : la liste est aussi poussée.
+  const stopWatchingBackups = watchBackups(config.mc.backupsDir, () => broadcast(wss, { type: 'backup.list.changed' }));
   const restore = new RestoreService({ dataDir: config.mc.dataDir, backups, docker });
   app.locals.restore = restore;
   // Marqueur laissé par une restauration interrompue (crash, arrêt) : signalé dans les logs et dans l'interface.
@@ -134,6 +137,7 @@ async function main() {
     server.close();
     metrics.stop();
     clearInterval(purgeTimer);
+    stopWatchingBackups();
     logs.stop();
     rcon.stop();
     docker.stop();

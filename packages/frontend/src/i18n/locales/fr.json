@@ -419,7 +419,8 @@
       "invalid_names": "Sélection invalide.",
       "retention_unknown": "Rétention inconnue : conteneur mc-backup introuvable.",
       "retention_disabled": "La rétention est désactivée pour mc-backup (PRUNE_BACKUPS_DAYS vaut 0 ou n'est pas valide)."
-    }
+    },
+    "refresh": "Rafraîchir"
   },
   "audit": {
     "title": "Journal d'audit",

@@ -419,7 +419,8 @@
       "invalid_names": "Invalid selection.",
       "retention_unknown": "Retention unknown: the mc-backup container was not found.",
       "retention_disabled": "Retention is disabled for mc-backup (PRUNE_BACKUPS_DAYS is 0 or invalid)."
-    }
+    },
+    "refresh": "Refresh"
   },
   "audit": {
     "title": "Audit log",

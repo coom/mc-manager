@@ -160,6 +160,10 @@ Docker cannot change the environment of an existing container, so MC Manager wri
 - With `CRON_SCHEDULE`, the image ignores the interval: the page shows the cron schedule and does not offer the change.
 - Every change is admin-only and audited as `backup.settings`.
 
+### Backup list
+
+The list on the Backups page updates by itself: the backend watches the top level of the backups folder and pushes a refresh (at most every 2 seconds) whenever an archive is created, grows or is removed, including by the own schedule of `mc-backup`; while a backup is being written, its size follows. A "Refresh" button reloads the list on demand, for example when the backups folder is a network share on which change notifications may not arrive (the backend then logs that the folder cannot be watched).
+
 ### Deleting backups
 
 - **Several at once**: an admin ticks backups in the list ("Select all" / "Deselect all" links above it), then clicks "Delete selection". The confirmation lists the archives; every name is checked before anything is deleted (one unknown name and nothing is deleted), and each deletion is audited as `backup.delete`.

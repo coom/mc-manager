@@ -240,3 +240,19 @@ describe('Backups page selection', () => {
     expect(screen.queryByRole('button', { name: 'Select all' })).not.toBeInTheDocument();
   });
 });
+
+describe('Backups page refresh', () => {
+  beforeEach(() => {
+    useServerStore.getState().reset();
+    useAuthStore.setState({ accessToken: 't', refreshToken: 'r', user: { id: 1, username: 'u', displayName: 'U', role: 'viewer' } });
+    vi.mocked(backupsApi.list).mockReset().mockResolvedValue({ entries: [], totalBytes: 0, running: false });
+    vi.mocked(backupsApi.restoreStatus).mockResolvedValue({ running: false, step: null, interrupted: null });
+  });
+
+  it('reloads the list, also for a viewer', async () => {
+    setup();
+    await waitFor(() => expect(backupsApi.list).toHaveBeenCalledTimes(1));
+    fireEvent.click(await screen.findByRole('button', { name: 'Refresh' }));
+    await waitFor(() => expect(backupsApi.list).toHaveBeenCalledTimes(2));
+  });
+});

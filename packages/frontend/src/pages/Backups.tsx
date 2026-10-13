@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useIsFetching, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
-import { AlertCircle, Archive, Trash2 } from 'lucide-react';
+import { AlertCircle, Archive, RefreshCw, Trash2 } from 'lucide-react';
 import type { BackupEntry, RestoreRequest } from '@mc/common';
 import { backupsApi } from '@/api/backups.api';
 import { useAuthStore } from '@/stores/auth.store';
@@ -24,6 +24,7 @@ export default function Backups() {
   const { t } = useTranslation();
   const isAdmin = useAuthStore((s) => s.isAdmin());
   const qc = useQueryClient();
+  const refreshing = useIsFetching({ queryKey: ['backups'] }) > 0;
   const { data, dataUpdatedAt: listUpdatedAt } = useQuery({ queryKey: ['backups'], queryFn: backupsApi.list });
   const { data: restoreStatus, dataUpdatedAt: restoreUpdatedAt } = useQuery({ queryKey: ['backups', 'restore-status'], queryFn: backupsApi.restoreStatus });
   // Instant de lancement côté client : une réponse antérieure ne doit pas effacer l'état « en cours ».
@@ -88,7 +89,13 @@ export default function Backups() {
       <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
         <h1 className="text-xl font-semibold">{t('backups.title')}</h1>
         {data && <span className="text-sm text-muted-foreground">{t('backups.total', { count: data.entries.length, size: formatBytes(data.totalBytes) })}</span>}
-        {isAdmin && <Button className="ml-auto" size="sm" disabled={busy || run.isPending} onClick={() => run.mutate()}><Archive className="mr-1 h-4 w-4" />{t('backups.runNow')}</Button>}
+        <div className="ml-auto flex flex-wrap gap-2">
+          {/* Relit la liste, l'état de restauration et la planification (la liste est aussi poussée par WebSocket). */}
+          <Button size="sm" variant="outline" disabled={refreshing} onClick={() => void qc.invalidateQueries({ queryKey: ['backups'] })}>
+            <RefreshCw className={`mr-1 h-4 w-4${refreshing ? ' animate-spin' : ''}`} />{t('backups.refresh')}
+          </Button>
+          {isAdmin && <Button size="sm" disabled={busy || run.isPending} onClick={() => run.mutate()}><Archive className="mr-1 h-4 w-4" />{t('backups.runNow')}</Button>}
+        </div>
       </div>
       {interrupted && (
         <div role="alert" className="space-y-2 rounded-md border border-amber-500/40 bg-amber-500/10 p-3 text-sm">
