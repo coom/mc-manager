@@ -335,6 +335,61 @@
       "title": "Une restauration a été interrompue",
       "description": "La restauration de {{archive}} ne s'est pas terminée (le backend s'est arrêté ou a planté pendant l'opération). Les données sont peut-être à moitié restaurées : restaurez la sauvegarde de sécurité, ou masquez cet avertissement une fois la situation traitée.",
       "dismiss": "Masquer"
+    },
+    "schedule": {
+      "title": "Sauvegardes automatiques",
+      "interval": "Intervalle",
+      "retention": "Rétention",
+      "unit": "Unité",
+      "units": {
+        "m": "minutes",
+        "h": "heures",
+        "d": "jours"
+      },
+      "daysUnit": "jours",
+      "every": {
+        "m_one": "toutes les minutes",
+        "m_other": "toutes les {{count}} minutes",
+        "h_one": "toutes les heures",
+        "h_other": "toutes les {{count}} heures",
+        "d_one": "tous les jours",
+        "d_other": "tous les {{count}} jours"
+      },
+      "everyRaw": "{{value}} (valeur brute)",
+      "days_one": "{{count}} jour",
+      "days_other": "{{count}} jours",
+      "source": {
+        "compose": "compose",
+        "default": "défaut de l'image"
+      },
+      "cron": "défini par CRON_SCHEDULE ({{schedule}})",
+      "noContainer": "Conteneur mc-backup introuvable.",
+      "stopped": "mc-backup est arrêté : aucune sauvegarde automatique tant qu'il ne redémarre pas.",
+      "pending": "Réglages enregistrés mais pas encore appliqués : mc-backup n'a pas redémarré depuis.",
+      "retry": "Réessayer",
+      "edit": "Modifier",
+      "apply": "Appliquer",
+      "applied": "Planification appliquée",
+      "intervalRange": "Entre {{min}} minutes et {{max}} jours.",
+      "daysRange": "Entre {{min}} et {{max}} jours.",
+      "notManaged": {
+        "title": "Réglages lus dans le compose",
+        "description": "Pour les modifier ici, ajoutez ce point d'entrée au service mc-backup de votre stack Minecraft, puis recréez-le (docker compose up -d). Les valeurs de environment: restent les valeurs de repli.",
+        "snippet": "Point d'entrée à ajouter",
+        "copy": "Copier"
+      },
+      "confirm": {
+        "title": "Appliquer la planification ?",
+        "description": "mc-backup redémarre pour appliquer ces réglages. Prochaine sauvegarde dans {{delay}} environ, puis {{every}} ; les archives sont conservées {{days}}.",
+        "descriptionNoStartup": "mc-backup redémarre pour appliquer ces réglages. Première sauvegarde après {{delay}} plus l'intervalle, puis {{every}} ; les archives sont conservées {{days}}."
+      },
+      "errors": {
+        "invalid": "Valeurs invalides.",
+        "not_managed": "mc-backup ne lit pas le fichier de réglages : ajoutez d'abord le point d'entrée à son service compose.",
+        "busy": "Une sauvegarde ou une restauration est en cours, réessayez quand elle sera terminée.",
+        "container_missing": "Conteneur mc-backup introuvable.",
+        "restart_failed": "Réglages enregistrés, mais mc-backup n'a pas redémarré : ils s'appliqueront à son prochain démarrage."
+      }
     }
   },
   "audit": {

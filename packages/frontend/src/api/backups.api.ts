@@ -1,7 +1,9 @@
 import api from './client';
-import type { BackupList, RestoreRequest, RestoreStatus } from '@mc/common';
+import type { BackupList, BackupSettings, BackupSettingsUpdate, RestoreRequest, RestoreStatus } from '@mc/common';
 export const backupsApi = {
   list: (): Promise<BackupList> => api.get('/backups').then((r) => r.data),
+  settings: (): Promise<BackupSettings> => api.get('/backups/settings').then((r) => r.data),
+  updateSettings: (body: BackupSettingsUpdate): Promise<BackupSettings> => api.put('/backups/settings', body).then((r) => r.data),
   run: () => api.post('/backups/run'),
   restore: (name: string, req: RestoreRequest) => api.post(`/backups/${encodeURIComponent(name)}/restore`, req),
   restoreStatus: (): Promise<RestoreStatus> => api.get('/backups/restore/status').then((r) => r.data),

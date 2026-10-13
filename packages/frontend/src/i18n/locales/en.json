@@ -335,6 +335,61 @@
       "title": "A restore was interrupted",
       "description": "The restore of {{archive}} did not finish (the backend stopped or crashed while it was running). The data may be half restored: restore the safety backup, or dismiss this warning once you have handled it.",
       "dismiss": "Dismiss"
+    },
+    "schedule": {
+      "title": "Automatic backups",
+      "interval": "Interval",
+      "retention": "Retention",
+      "unit": "Unit",
+      "units": {
+        "m": "minutes",
+        "h": "hours",
+        "d": "days"
+      },
+      "daysUnit": "days",
+      "every": {
+        "m_one": "every minute",
+        "m_other": "every {{count}} minutes",
+        "h_one": "every hour",
+        "h_other": "every {{count}} hours",
+        "d_one": "every day",
+        "d_other": "every {{count}} days"
+      },
+      "everyRaw": "{{value}} (raw value)",
+      "days_one": "{{count}} day",
+      "days_other": "{{count}} days",
+      "source": {
+        "compose": "compose",
+        "default": "image default"
+      },
+      "cron": "set by CRON_SCHEDULE ({{schedule}})",
+      "noContainer": "The mc-backup container was not found.",
+      "stopped": "mc-backup is stopped: no automatic backup until it starts again.",
+      "pending": "Settings saved but not applied yet: mc-backup has not restarted since.",
+      "retry": "Retry",
+      "edit": "Edit",
+      "apply": "Apply",
+      "applied": "Backup schedule applied",
+      "intervalRange": "Between {{min}} minutes and {{max}} days.",
+      "daysRange": "Between {{min}} and {{max}} days.",
+      "notManaged": {
+        "title": "Settings read from the compose file",
+        "description": "To change them here, add this entrypoint to the mc-backup service of your Minecraft stack, then recreate it (docker compose up -d). The values under environment: stay as fallbacks.",
+        "snippet": "Entrypoint to add",
+        "copy": "Copy"
+      },
+      "confirm": {
+        "title": "Apply the backup schedule?",
+        "description": "mc-backup restarts to apply these settings. Next backup in about {{delay}}, then {{every}}; archives are kept {{days}}.",
+        "descriptionNoStartup": "mc-backup restarts to apply these settings. First backup after {{delay}} plus the interval, then {{every}}; archives are kept {{days}}."
+      },
+      "errors": {
+        "invalid": "Invalid values.",
+        "not_managed": "mc-backup does not read the settings file: add the entrypoint to its compose service first.",
+        "busy": "A backup or a restore is running, try again when it is done.",
+        "container_missing": "The mc-backup container was not found.",
+        "restart_failed": "Settings saved, but mc-backup did not restart: they will apply at its next start."
+      }
     }
   },
   "audit": {
