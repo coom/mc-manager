@@ -1,9 +1,9 @@
 import { AppError } from '../middleware/error-handler.js';
 
-export type DataOp = 'backup' | 'restore' | 'properties' | 'mods';
+export type DataOp = 'backup' | 'restore' | 'properties' | 'mods' | 'backup-settings';
 
 /**
- * Verrou global des écritures dans /data et des sauvegardes : une seule opération à la fois.
+ * Verrou global des écritures dans /data, des sauvegardes et du redémarrage de mc-backup : une seule opération à la fois.
  * Jamais persistant : un processus qui redémarre repart libre.
  */
 export class DataLock {
