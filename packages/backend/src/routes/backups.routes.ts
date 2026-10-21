@@ -63,8 +63,8 @@ backupsRoutes.post('/:name/restore', requireRole('admin'), async (req: Request, 
   try {
     const name = String(req.params.name);
     const body = req.body ?? {};
-    for (const k of ['startAfter', 'confirmNoSafetyBackup'] as const) if (body[k] !== undefined && typeof body[k] !== 'boolean') throw new AppError(400, `${k} must be a boolean`);
-    const opts = { startAfter: body.startAfter ?? true, confirmNoSafetyBackup: body.confirmNoSafetyBackup ?? false };
+    for (const k of ['startAfter', 'safetyBackup'] as const) if (body[k] !== undefined && typeof body[k] !== 'boolean') throw new AppError(400, `${k} must be a boolean`);
+    const opts = { startAfter: body.startAfter ?? true, safetyBackup: body.safetyBackup ?? true };
     await req.app.locals.restore.restore(name, opts, (detail: string) => audit(req, 'backup.restore', detail));
     res.status(202).json({ accepted: true });
   } catch (err) { next(err); }

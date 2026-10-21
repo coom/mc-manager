@@ -317,11 +317,13 @@
     "restoreThis": "Restore this one",
     "confirmRestore": {
       "title": "Restore {{name}}?",
-      "description": "A safety backup is taken first, then the server is stopped, the archive content replaces the current data, and the server is started again. Players will be disconnected.",
+      "description": "The server is stopped, the archive content replaces the current data, and the server is started again. Players will be disconnected.",
       "startAfter": "Start the server afterwards",
-      "noSafety": "The server is stopped: no safety backup can be taken. The current data will be overwritten without a safety net.",
-      "confirmNoSafety": "I understand, restore without a safety backup",
-      "confirm": "Restore"
+      "noSafety": "Restore without a safety backup: the current data will be overwritten with no copy kept.",
+      "confirm": "Restore",
+      "safety": "Take a safety backup before restoring",
+      "safetyServerStopped": "Unavailable: the server is stopped.",
+      "safetyBackupStopped": "Unavailable: mc-backup is stopped or missing."
     },
     "steps": {
       "check": "check",

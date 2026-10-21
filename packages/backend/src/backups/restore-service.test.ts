@@ -63,7 +63,7 @@ describe('RestoreService', () => {
   it('runs the full happy path: safety backup, stop, replace, extract, start, done', async () => {
     stopSucceeds(); safetyBackupSucceeds();
     const r = service();
-    await r.restore('world-20261010-100000.tgz', { startAfter: true, confirmNoSafetyBackup: false }, auditFn);
+    await r.restore('world-20261010-100000.tgz', { startAfter: true, safetyBackup: true }, auditFn);
     expect(r.status()).toMatchObject({ running: true });
     await until(() => events.some((e) => 'done' in (e as object)));
     const done = (events.find((e) => 'done' in (e as object)) as { done: { ok: boolean; safetyBackup: string | null } }).done;
@@ -73,38 +73,68 @@ describe('RestoreService', () => {
     expect(mc.calls).toEqual(['stop:60', 'start']);
     const steps = events.filter((e) => 'progress' in (e as object)).map((e) => (e as { progress: { step: string } }).progress.step);
     expect([...new Set(steps)]).toEqual(['check', 'safety', 'stop', 'replace', 'extract', 'start']);
-    expect(audits).toEqual(['world-20261010-100000.tgz (startAfter=true, noSafety=false)', 'exit ok']);
+    expect(audits).toEqual(['world-20261010-100000.tgz (startAfter=true, safetyBackup=true)', 'exit ok']);
     expect(r.status()).toEqual({ running: false, step: null, interrupted: null });
     expect(existsSync(path.join(data, RESTORE_MARKER))).toBe(false);
     expect(lock.busy).toBeNull();
   });
 
+  it('skips the safety backup on request while the server runs', async () => {
+    stopSucceeds();
+    const execs: string[] = [];
+    mcBackup.exec = async (o: { Cmd: string[] }) => { execs.push(o.Cmd.join(' ')); throw new Error('no backup expected'); };
+    const r = service();
+    await r.restore('world-20261010-100000.tgz', { startAfter: true, safetyBackup: false }, auditFn);
+    await until(() => events.some((e) => 'done' in (e as object)));
+    const done = (events.find((e) => 'done' in (e as object)) as { done: { ok: boolean; safetyBackup: string | null } }).done;
+    expect(done).toMatchObject({ ok: true, safetyBackup: null });
+    expect(execs).toEqual([]);
+    expect(mc.calls).toEqual(['stop:60', 'start']);
+    const steps = events.filter((e) => 'progress' in (e as object)).map((e) => (e as { progress: { step: string } }).progress.step);
+    expect(steps).not.toContain('safety');
+    expect(audits).toEqual(['world-20261010-100000.tgz (startAfter=true, safetyBackup=false)', 'exit ok']);
+    expect(readFileSync(path.join(data, 'world', 'level.dat'), 'utf8')).toBe('BACKUP');
+  });
+
+  it('refuses a safety backup before 202 when mc-backup is stopped, and restores without one when unchecked', async () => {
+    stopSucceeds();
+    mcBackup.state = inspectFixture({ Status: 'exited', Running: false });
+    const r = service();
+    await expect(r.restore('world-20261010-100000.tgz', { startAfter: true, safetyBackup: true }, auditFn)).rejects.toMatchObject({ statusCode: 409, message: expect.stringMatching(/backup container is stopped/) });
+    expect(audits).toEqual([]);
+    expect(lock.busy).toBeNull();
+    expect(readFileSync(path.join(data, 'world', 'level.dat'), 'utf8')).toBe('CURRENT');
+    await r.restore('world-20261010-100000.tgz', { startAfter: true, safetyBackup: false }, auditFn);
+    await until(() => events.some((e) => 'done' in (e as object)));
+    expect(readFileSync(path.join(data, 'world', 'level.dat'), 'utf8')).toBe('BACKUP');
+  });
+
   it('does not start the server when startAfter is false', async () => {
     stopSucceeds(); safetyBackupSucceeds();
     const r = service();
-    await r.restore('world-20261010-100000.tgz', { startAfter: false, confirmNoSafetyBackup: false }, auditFn);
+    await r.restore('world-20261010-100000.tgz', { startAfter: false, safetyBackup: true }, auditFn);
     await until(() => events.some((e) => 'done' in (e as object)));
     expect(mc.calls).toEqual(['stop:60']);
   });
 
   it('refuses before 202 when the archive is unknown, not gzip, or the lock is held', async () => {
     const r = service();
-    await expect(r.restore('nope.tgz', { startAfter: true, confirmNoSafetyBackup: false }, auditFn)).rejects.toMatchObject({ statusCode: 404 });
+    await expect(r.restore('nope.tgz', { startAfter: true, safetyBackup: true }, auditFn)).rejects.toMatchObject({ statusCode: 404 });
     writeFileSync(path.join(backups, 'plain.tgz'), 'plain');
-    await expect(r.restore('plain.tgz', { startAfter: true, confirmNoSafetyBackup: false }, auditFn)).rejects.toMatchObject({ statusCode: 400 });
+    await expect(r.restore('plain.tgz', { startAfter: true, safetyBackup: true }, auditFn)).rejects.toMatchObject({ statusCode: 400 });
     const release = lock.acquire('backup');
-    await expect(r.restore('world-20261010-100000.tgz', { startAfter: true, confirmNoSafetyBackup: false }, auditFn)).rejects.toMatchObject({ statusCode: 409 });
+    await expect(r.restore('world-20261010-100000.tgz', { startAfter: true, safetyBackup: true }, auditFn)).rejects.toMatchObject({ statusCode: 409 });
     release();
     expect(audits).toEqual([]);
     expect(readFileSync(path.join(data, 'world', 'level.dat'), 'utf8')).toBe('CURRENT');
   });
 
-  it('with the server stopped, requires confirmNoSafetyBackup and then skips the safety step', async () => {
+  it('with the server stopped, refuses a safety backup and restores without one when unchecked', async () => {
     mc.state = inspectFixture({ Status: 'exited', Running: false });
     await svc.refresh();
     const r = service();
-    await expect(r.restore('world-20261010-100000.tgz', { startAfter: false, confirmNoSafetyBackup: false }, auditFn)).rejects.toMatchObject({ statusCode: 409 });
-    await r.restore('world-20261010-100000.tgz', { startAfter: false, confirmNoSafetyBackup: true }, auditFn);
+    await expect(r.restore('world-20261010-100000.tgz', { startAfter: false, safetyBackup: true }, auditFn)).rejects.toMatchObject({ statusCode: 409 });
+    await r.restore('world-20261010-100000.tgz', { startAfter: false, safetyBackup: false }, auditFn);
     await until(() => events.some((e) => 'done' in (e as object)));
     const done = (events.find((e) => 'done' in (e as object)) as { done: { ok: boolean; safetyBackup: string | null } }).done;
     expect(done).toMatchObject({ ok: true, safetyBackup: null });
@@ -116,7 +146,7 @@ describe('RestoreService', () => {
     stopSucceeds();
     mcBackup.exec = async () => { const s = new PassThrough(); s.end('boom\n'); return { start: async () => s as never, inspect: async () => ({ ExitCode: 2, Running: false }) }; };
     const r = service();
-    await r.restore('world-20261010-100000.tgz', { startAfter: true, confirmNoSafetyBackup: false }, auditFn);
+    await r.restore('world-20261010-100000.tgz', { startAfter: true, safetyBackup: true }, auditFn);
     await until(() => events.some((e) => 'done' in (e as object)));
     const done = (events.find((e) => 'done' in (e as object)) as { done: { ok: boolean; message: string } }).done;
     expect(done.ok).toBe(false);
@@ -124,7 +154,7 @@ describe('RestoreService', () => {
     expect(mc.calls).toEqual([]);
     expect(readFileSync(path.join(data, 'world', 'level.dat'), 'utf8')).toBe('CURRENT');
     expect(done.message).toMatch(/^aborted: /);
-    expect(audits).toEqual(['world-20261010-100000.tgz (startAfter=true, noSafety=false)', expect.stringMatching(/^failed: /)]);
+    expect(audits).toEqual(['world-20261010-100000.tgz (startAfter=true, safetyBackup=true)', expect.stringMatching(/^failed: /)]);
     expect(lock.busy).toBeNull();
   });
 
@@ -132,7 +162,7 @@ describe('RestoreService', () => {
     safetyBackupSucceeds();
     mc.stop = async (o: { t: number }) => { mc.calls.push(`stop:${o.t}`); /* le conteneur ne s'arrête jamais */ };
     const r = service({ stopTimeoutMs: 100 });
-    await r.restore('world-20261010-100000.tgz', { startAfter: true, confirmNoSafetyBackup: false }, auditFn);
+    await r.restore('world-20261010-100000.tgz', { startAfter: true, safetyBackup: true }, auditFn);
     await until(() => events.some((e) => 'done' in (e as object)));
     const done = (events.find((e) => 'done' in (e as object)) as { done: { ok: boolean; message: string } }).done;
     expect(done.ok).toBe(false);
@@ -148,7 +178,7 @@ describe('RestoreService', () => {
     // L'archive devient illisible après le check : on la tronque juste avant l'extraction.
     const r = service();
     r.on('progress', (e: { step: string }) => { if (e.step === 'replace') writeFileSync(archive, Buffer.from([0x1f, 0x8b, 0x08, 0x00])); });
-    await r.restore('world-20261010-100000.tgz', { startAfter: true, confirmNoSafetyBackup: false }, auditFn);
+    await r.restore('world-20261010-100000.tgz', { startAfter: true, safetyBackup: true }, auditFn);
     await until(() => events.some((e) => 'done' in (e as object)));
     const done = (events.find((e) => 'done' in (e as object)) as { done: { ok: boolean; message: string; safetyBackup: string | null } }).done;
     expect(done.ok).toBe(false);
@@ -164,7 +194,7 @@ describe('RestoreService', () => {
   it('still reports success when the audit callback rejects every time', async () => {
     stopSucceeds(); safetyBackupSucceeds();
     const r = service();
-    await r.restore('world-20261010-100000.tgz', { startAfter: true, confirmNoSafetyBackup: false }, async () => { throw new Error('audit down'); });
+    await r.restore('world-20261010-100000.tgz', { startAfter: true, safetyBackup: true }, async () => { throw new Error('audit down'); });
     await until(() => events.some((e) => 'done' in (e as object)));
     const done = (events.find((e) => 'done' in (e as object)) as { done: { ok: boolean } }).done;
     expect(done.ok).toBe(true);
@@ -175,7 +205,7 @@ describe('RestoreService', () => {
     stopSucceeds(); safetyBackupSucceeds();
     const r = service();
     r.on('done', () => { throw new Error('listener boom'); });
-    await r.restore('world-20261010-100000.tgz', { startAfter: true, confirmNoSafetyBackup: false }, auditFn);
+    await r.restore('world-20261010-100000.tgz', { startAfter: true, safetyBackup: true }, auditFn);
     await until(() => events.some((e) => 'done' in (e as object)));
     await wait(50);
     expect(events.filter((e) => 'done' in (e as object))).toHaveLength(1);
@@ -185,8 +215,10 @@ describe('RestoreService', () => {
 
   it('leaves no stuck step when the lock is taken between the check and the acquire', async () => {
     const r = service();
-    backupSvc.ensureContainer = async () => { lock.acquire('backup'); };
-    await expect(r.restore('world-20261010-100000.tgz', { startAfter: true, confirmNoSafetyBackup: false }, auditFn)).rejects.toMatchObject({ statusCode: 409 });
+    // Le verrou est pris pendant la vérification de mc-backup, après le assertFree initial.
+    const inspect = svc.inspectBackup.bind(svc);
+    svc.inspectBackup = async () => { lock.acquire('backup'); return inspect(); };
+    await expect(r.restore('world-20261010-100000.tgz', { startAfter: true, safetyBackup: true }, auditFn)).rejects.toMatchObject({ statusCode: 409 });
     expect(r.status()).toEqual({ running: false, step: null, interrupted: null });
     expect(events).toEqual([]);
     expect(audits).toEqual([]);
@@ -195,7 +227,7 @@ describe('RestoreService', () => {
   it('releases the lock and resets the step when a check progress listener throws', async () => {
     const r = service();
     r.on('progress', () => { throw new Error('listener boom'); });
-    await expect(r.restore('world-20261010-100000.tgz', { startAfter: true, confirmNoSafetyBackup: false }, auditFn)).rejects.toThrow('listener boom');
+    await expect(r.restore('world-20261010-100000.tgz', { startAfter: true, safetyBackup: true }, auditFn)).rejects.toThrow('listener boom');
     expect(lock.busy).toBeNull();
     expect(r.status().running).toBe(false);
   });
@@ -204,7 +236,7 @@ describe('RestoreService', () => {
     safetyBackupSucceeds();
     mc.stop = async () => { throw new Error('docker refused'); };
     const r = service({ stopTimeoutMs: 5000 });
-    await r.restore('world-20261010-100000.tgz', { startAfter: true, confirmNoSafetyBackup: false }, auditFn);
+    await r.restore('world-20261010-100000.tgz', { startAfter: true, safetyBackup: true }, auditFn);
     await until(() => events.some((e) => 'done' in (e as object)));
     const done = (events.find((e) => 'done' in (e as object)) as { done: { ok: boolean; message: string } }).done;
     expect(done.ok).toBe(false);
@@ -217,7 +249,7 @@ describe('RestoreService', () => {
     safetyBackupSucceeds();
     mc.stop = async () => { throw new Error('docker refused'); };
     const r = service();
-    await r.restore('world-20261010-100000.tgz', { startAfter: false, confirmNoSafetyBackup: false }, auditFn);
+    await r.restore('world-20261010-100000.tgz', { startAfter: false, safetyBackup: true }, auditFn);
     await until(() => events.some((e) => 'done' in (e as object)));
     expect(mc.calls).toEqual([]);
   });
@@ -226,7 +258,7 @@ describe('RestoreService', () => {
     stopSucceeds(); safetyBackupSucceeds();
     const r = service();
     r.on('progress', (e: { step: string }) => { if (e.step === 'safety' && existsSync(archive)) unlinkSync(archive); });
-    await r.restore('world-20261010-100000.tgz', { startAfter: true, confirmNoSafetyBackup: false }, auditFn);
+    await r.restore('world-20261010-100000.tgz', { startAfter: true, safetyBackup: true }, auditFn);
     await until(() => events.some((e) => 'done' in (e as object)));
     const done = (events.find((e) => 'done' in (e as object)) as { done: { ok: boolean; message: string } }).done;
     expect(existsSync(archive)).toBe(false);
@@ -239,7 +271,7 @@ describe('RestoreService', () => {
     // Le marqueur ne peut pas être écrit (un dossier porte son nom) : échec juste avant la première suppression.
     mkdirSync(path.join(data, RESTORE_MARKER));
     const r = service();
-    await r.restore('world-20261010-100000.tgz', { startAfter: true, confirmNoSafetyBackup: false }, auditFn);
+    await r.restore('world-20261010-100000.tgz', { startAfter: true, safetyBackup: true }, auditFn);
     await until(() => events.some((e) => 'done' in (e as object)));
     const done = (events.find((e) => 'done' in (e as object)) as { done: { ok: boolean; message: string; safetyBackup: string | null } }).done;
     expect(done.ok).toBe(false);
@@ -260,7 +292,7 @@ describe('RestoreService', () => {
         seen[e.step] = existsSync(m) ? (JSON.parse(readFileSync(m, 'utf8')) as { step: string }).step : null;
       }
     });
-    await r.restore('world-20261010-100000.tgz', { startAfter: false, confirmNoSafetyBackup: false }, auditFn);
+    await r.restore('world-20261010-100000.tgz', { startAfter: false, safetyBackup: true }, auditFn);
     await until(() => events.some((e) => 'done' in (e as object)));
     expect(seen).toEqual({ replace: 'replace', extract: 'extract' });
     expect(existsSync(path.join(data, RESTORE_MARKER))).toBe(false);
@@ -280,7 +312,7 @@ describe('RestoreService', () => {
     const r2 = service();
     await r2.start();
     expect(r2.status().interrupted).toEqual({ archive: 'unknown', safetyBackup: null, startedAt: '' });
-    await r2.restore('world-20261010-100000.tgz', { startAfter: false, confirmNoSafetyBackup: false }, auditFn);
+    await r2.restore('world-20261010-100000.tgz', { startAfter: false, safetyBackup: true }, auditFn);
     await until(() => events.some((e) => 'done' in (e as object)));
     expect(r2.status().interrupted).toBeNull();
     expect(existsSync(m)).toBe(false);
@@ -299,7 +331,7 @@ describe('RestoreService', () => {
     writeFileSync(path.join(data, 'world', 'keep.dat'), 'KEEP');
     mcBackup.state = inspectFixture({ Env: ['EXCLUDES=*.dat,other'] });
     const r = service();
-    await r.restore('world-20261010-100000.tgz', { startAfter: false, confirmNoSafetyBackup: false }, auditFn);
+    await r.restore('world-20261010-100000.tgz', { startAfter: false, safetyBackup: true }, auditFn);
     await until(() => events.some((e) => 'done' in (e as object)));
     // *.dat est exclu (level.dat gardé puis écrasé par l'extraction, keep.dat conservé) ; logs ne l'est plus.
     expect(readFileSync(path.join(data, 'world', 'keep.dat'), 'utf8')).toBe('KEEP');
@@ -309,7 +341,7 @@ describe('RestoreService', () => {
 
   it('refuses with 507 before anything when the data volume lacks free space', async () => {
     const r = service({ statfs: async () => ({ bavail: 1, bsize: 1 }) });
-    await expect(r.restore('world-20261010-100000.tgz', { startAfter: true, confirmNoSafetyBackup: false }, auditFn))
+    await expect(r.restore('world-20261010-100000.tgz', { startAfter: true, safetyBackup: true }, auditFn))
       .rejects.toMatchObject({ statusCode: 507, message: expect.stringMatching(/^Not enough free space on the data volume: need .+, have 1 B$/) });
     expect(lock.busy).toBeNull();
     expect(audits).toEqual([]);
@@ -319,7 +351,7 @@ describe('RestoreService', () => {
   it('skips the free space check when statfs fails', async () => {
     stopSucceeds(); safetyBackupSucceeds();
     const r = service({ statfs: async () => { throw new Error('ENOSYS'); } });
-    await r.restore('world-20261010-100000.tgz', { startAfter: false, confirmNoSafetyBackup: false }, auditFn);
+    await r.restore('world-20261010-100000.tgz', { startAfter: false, safetyBackup: true }, auditFn);
     await until(() => events.some((e) => 'done' in (e as object)));
     expect((events.find((e) => 'done' in (e as object)) as { done: { ok: boolean } }).done.ok).toBe(true);
   });
@@ -328,7 +360,7 @@ describe('RestoreService', () => {
     chmodSync(data, 0o500);
     try {
       const r = service();
-      const err = await r.restore('world-20261010-100000.tgz', { startAfter: true, confirmNoSafetyBackup: false }, auditFn).catch((e) => e);
+      const err = await r.restore('world-20261010-100000.tgz', { startAfter: true, safetyBackup: true }, auditFn).catch((e) => e);
       expect(err.statusCode).toBe(500);
       expect(err.message).toBe(`Cannot write ${data}: the data directory is not writable by the backend (UID 1000). Run chown -R 1000:1000 ${data} on the host.`);
     } finally { chmodSync(data, 0o700); }
@@ -339,7 +371,7 @@ describe('RestoreService', () => {
   it('holds the data lock for the whole run so a manual backup gets 409 meanwhile', async () => {
     stopSucceeds(); safetyBackupSucceeds();
     const r = service();
-    await r.restore('world-20261010-100000.tgz', { startAfter: true, confirmNoSafetyBackup: false }, auditFn);
+    await r.restore('world-20261010-100000.tgz', { startAfter: true, safetyBackup: true }, auditFn);
     await expect(backupSvc.runNow()).rejects.toMatchObject({ statusCode: 409 });
     await until(() => events.some((e) => 'done' in (e as object)));
     expect(lock.busy).toBeNull();

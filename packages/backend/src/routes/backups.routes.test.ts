@@ -106,13 +106,13 @@ describe('backups routes', () => {
   it('admin restore: defaults, 202, and the audit callback is wired to backup.restore', async () => {
     const app = appWith('admin');
     // Le service audite le nom suivi des options (voir restore-service.test.ts).
-    const restore = vi.fn(async (_n: string, _o: unknown, auditFn: (d: string) => Promise<void>) => { await auditFn('w.tgz (startAfter=true, noSafety=false)'); });
+    const restore = vi.fn(async (_n: string, _o: unknown, auditFn: (d: string) => Promise<void>) => { await auditFn('w.tgz (startAfter=true, safetyBackup=true)'); });
     app.locals.restore = { status: () => ({ running: true, step: 'check' }), restore };
     const res = await request(app).post('/api/backups/w.tgz/restore').send({});
     expect(res.status).toBe(202);
     expect(res.body).toEqual({ accepted: true });
-    expect(restore).toHaveBeenCalledWith('w.tgz', { startAfter: true, confirmNoSafetyBackup: false }, expect.any(Function));
-    expect(app.locals.prisma.auditLog.create).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ action: 'backup.restore', detail: 'w.tgz (startAfter=true, noSafety=false)' }) }));
+    expect(restore).toHaveBeenCalledWith('w.tgz', { startAfter: true, safetyBackup: true }, expect.any(Function));
+    expect(app.locals.prisma.auditLog.create).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ action: 'backup.restore', detail: 'w.tgz (startAfter=true, safetyBackup=true)' }) }));
   });
   it('admin clears the interrupted-restore marker (audited), viewer gets 403', async () => {
     const viewer = appWith('viewer');
@@ -129,12 +129,13 @@ describe('backups routes', () => {
   });
   it('admin restore forwards the options and surfaces the service error status', async () => {
     const app = appWith('admin');
-    const restore = vi.fn().mockRejectedValue(new AppError(409, 'Server is stopped: no safety backup possible, confirm to proceed'));
+    const restore = vi.fn().mockRejectedValue(new AppError(409, 'Server is stopped: a safety backup is not possible, restore without one'));
     app.locals.restore = { status: () => ({ running: false, step: null }), restore };
-    const res = await request(app).post('/api/backups/w.tgz/restore').send({ startAfter: false, confirmNoSafetyBackup: false });
+    const res = await request(app).post('/api/backups/w.tgz/restore').send({ startAfter: false, safetyBackup: false });
     expect(res.status).toBe(409);
-    expect(restore).toHaveBeenCalledWith('w.tgz', { startAfter: false, confirmNoSafetyBackup: false }, expect.any(Function));
+    expect(restore).toHaveBeenCalledWith('w.tgz', { startAfter: false, safetyBackup: false }, expect.any(Function));
     expect((await request(app).post('/api/backups/w.tgz/restore').send({ startAfter: 'yes' })).status).toBe(400);
+    expect((await request(app).post('/api/backups/w.tgz/restore').send({ safetyBackup: 'no' })).status).toBe(400);
   });
   const managedBackup = () => {
     const fake = new FakeDocker();

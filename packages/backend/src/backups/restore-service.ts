@@ -10,7 +10,7 @@ import { logger } from '../utils/logger.js';
 
 type StatfsFn = (p: string) => Promise<{ bavail: number | bigint; bsize: number | bigint }>;
 export interface RestoreDeps { dataDir: string; backups: BackupService; docker: DockerService; stopTimeoutMs?: number; statfs?: StatfsFn }
-export interface RestoreOptions { startAfter: boolean; confirmNoSafetyBackup: boolean }
+export interface RestoreOptions { startAfter: boolean; safetyBackup: boolean }
 type AuditFn = (detail: string) => Promise<void>;
 
 interface DoneEvent { ok: boolean; message: string; safetyBackup: string | null }
@@ -83,9 +83,14 @@ export class RestoreService extends EventEmitter {
     const file = await backups.resolve(name);
     backups.dataLock.assertFree();
     if (!(await docker.hasServerContainer())) throw new AppError(503, 'Minecraft container not found');
-    const canSafety = docker.getStatus() === 'ready' || docker.getStatus() === 'unhealthy';
-    if (canSafety) await backups.ensureContainer();
-    else if (!opts.confirmNoSafetyBackup) throw new AppError(409, 'Server is stopped: no safety backup possible, confirm to proceed');
+    // Sauvegarde de sécurité facultative ; demandée, elle exige le serveur (RCON save-off) et mc-backup (exec) en marche.
+    if (opts.safetyBackup) {
+      const running = docker.getStatus() === 'ready' || docker.getStatus() === 'unhealthy';
+      if (!running) throw new AppError(409, 'Server is stopped: a safety backup is not possible, restore without one');
+      const bk = await docker.inspectBackup();
+      if (!bk) throw new AppError(503, 'Backup container not found');
+      if (!bk.running) throw new AppError(409, 'The backup container is stopped: start it, or restore without a safety backup');
+    }
     const handle = await openArchive(file).catch((err: NodeJS.ErrnoException) => {
       if (err.code === 'ENOENT') throw new AppError(404, 'Backup not found');
       throw err;
@@ -104,7 +109,7 @@ export class RestoreService extends EventEmitter {
       throw err;
     }
     const unlock = release;
-    void this.run(name, handle, info, excludes, opts, canSafety, audit)
+    void this.run(name, handle, info, excludes, opts, audit)
       .then((outcome) => {
         // Un seul `done`, émis après remise à zéro de l'étape et libération du verrou.
         this.step = null;
@@ -154,13 +159,13 @@ export class RestoreService extends EventEmitter {
     await writeFile(this.marker, JSON.stringify(m) + '\n', 'utf8');
   }
 
-  private async run(name: string, handle: ArchiveHandle, info: ArchiveInfo, excludes: string[], opts: RestoreOptions, canSafety: boolean, audit: AuditFn): Promise<DoneEvent> {
+  private async run(name: string, handle: ArchiveHandle, info: ArchiveInfo, excludes: string[], opts: RestoreOptions, audit: AuditFn): Promise<DoneEvent> {
     let safetyBackup: string | null = null;
     let touched = false;
     let stopRequested = false;
     try {
-      await this.safeAudit(audit, `${name} (startAfter=${opts.startAfter}, noSafety=${opts.confirmNoSafetyBackup})`);
-      if (canSafety) safetyBackup = await this.safetyBackup();
+      await this.safeAudit(audit, `${name} (startAfter=${opts.startAfter}, safetyBackup=${opts.safetyBackup})`);
+      if (opts.safetyBackup) safetyBackup = await this.safetyBackup();
       stopRequested = this.deps.docker.getStatus() !== 'stopped';
       await this.stopServer();
       const marker = { archive: name, safetyBackup, startedAt: new Date().toISOString() };
