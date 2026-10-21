@@ -317,11 +317,13 @@
     "restoreThis": "Restaurer celle-ci",
     "confirmRestore": {
       "title": "Restaurer {{name}} ?",
-      "description": "Une sauvegarde de sécurité est faite d'abord, puis le serveur est arrêté, le contenu de l'archive remplace les données actuelles, et le serveur redémarre. Les joueurs seront déconnectés.",
+      "description": "Le serveur est arrêté, le contenu de l'archive remplace les données actuelles, puis le serveur redémarre. Les joueurs seront déconnectés.",
       "startAfter": "Redémarrer le serveur ensuite",
-      "noSafety": "Le serveur est arrêté : aucune sauvegarde de sécurité n'est possible. Les données actuelles seront écrasées sans filet.",
-      "confirmNoSafety": "J'ai compris, restaurer sans sauvegarde de sécurité",
-      "confirm": "Restaurer"
+      "noSafety": "Restauration sans sauvegarde de sécurité : les données actuelles seront écrasées sans copie préalable.",
+      "confirm": "Restaurer",
+      "safety": "Faire une sauvegarde de sécurité avant de restaurer",
+      "safetyServerStopped": "Indisponible : le serveur est arrêté.",
+      "safetyBackupStopped": "Indisponible : mc-backup est arrêté ou introuvable."
     },
     "steps": {
       "check": "vérification",

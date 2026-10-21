@@ -26,6 +26,8 @@ export default function Backups() {
   const qc = useQueryClient();
   const refreshing = useIsFetching({ queryKey: ['backups'] }) > 0;
   const { data, dataUpdatedAt: listUpdatedAt } = useQuery({ queryKey: ['backups'], queryFn: backupsApi.list });
+  // Même query que la carte de planification : état de mc-backup pour la sauvegarde de sécurité d'une restauration.
+  const { data: settings } = useQuery({ queryKey: ['backups', 'settings'], queryFn: backupsApi.settings });
   const { data: restoreStatus, dataUpdatedAt: restoreUpdatedAt } = useQuery({ queryKey: ['backups', 'restore-status'], queryFn: backupsApi.restoreStatus });
   // Instant de lancement côté client : une réponse antérieure ne doit pas effacer l'état « en cours ».
   const backupStartedAt = useRef(0);
@@ -136,6 +138,7 @@ export default function Backups() {
         destructive loading={bulk.isPending} onConfirm={() => { if (!bulk.isPending && selectedNames.length > 0) bulk.mutate(selectedNames); }} />
       <ConfirmDialog open={toDelete !== null} onOpenChange={(o) => !o && setToDelete(null)} title={t('backups.confirmDelete.title')} description={t('backups.confirmDelete.description', { name: toDelete })} destructive loading={del.isPending} onConfirm={() => { if (toDelete) del.mutate(toDelete); setToDelete(null); }} />
       <RestoreDialog entry={toRestore} open={toRestore !== null} onOpenChange={(o) => !o && setToRestore(null)} loading={restore.isPending} serverStopped={serverStopped}
+        backupStopped={settings !== undefined && (!settings.containerFound || !settings.running)}
         onConfirm={(req) => { if (toRestore) restore.mutate({ name: toRestore.name, req }); }} />
     </div>
   );

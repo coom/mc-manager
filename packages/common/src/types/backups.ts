@@ -4,7 +4,8 @@ export type RestoreStep = 'check' | 'safety' | 'stop' | 'replace' | 'extract' | 
 /** Restauration interrompue (marqueur `.mc-manager-restore.json` trouvé dans les données). */
 export interface InterruptedRestore { archive: string; safetyBackup: string | null; startedAt: string }
 export interface RestoreStatus { running: boolean; step: RestoreStep | null; interrupted: InterruptedRestore | null }
-export interface RestoreRequest { startAfter?: boolean; confirmNoSafetyBackup?: boolean }
+/** `safetyBackup` (vrai par défaut) : sauvegarde de sécurité avant de remplacer les données ; exige serveur et mc-backup en marche. */
+export interface RestoreRequest { startAfter?: boolean; safetyBackup?: boolean }
 export interface RestoreResult { ok: boolean; message: string; safetyBackup: string | null }
 
 /** Bornes de l'intervalle entre deux sauvegardes réglable depuis l'interface, en minutes (30 min à 7 jours). */

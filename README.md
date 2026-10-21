@@ -113,7 +113,7 @@ The backend mounts `/var/run/docker.sock`. **Access to the Docker socket is equi
 An admin restores a backup from the Backups page. The operation runs in six steps, with live progress:
 
 1. check: the archive is validated entry by entry before anything is written;
-2. safety: a new backup is taken first, so that the current state can be recovered;
+2. safety (optional, ticked by default): a new backup is taken first, so that the current state can be recovered;
 3. stop: the server is stopped (the operation waits until it is actually stopped);
 4. replace: the data to be replaced is removed;
 5. extract: the archive is extracted into the data directory;
@@ -123,7 +123,7 @@ Only gzip archives (`.tgz`, `.tar.gz`) are accepted. The top-level entries of th
 
 Before anything is written, the backend checks that it can write into the data directory and that the volume has at least as much free space as the uncompressed archive (refusal with an explicit message otherwise). The archive is opened once at the check step, so the pruning that `mc-backup` performs after the safety backup cannot remove it mid-restore.
 
-If the server is already stopped, no safety backup can be taken: an explicit confirmation ("no safety backup") is required. If the operation fails before anything was removed (safety backup, stop, preflight), it is reported as `aborted:`, the data is untouched and the server is started again if it had been stopped and "start afterwards" was checked. If it fails part way (`partial restore:`), the interface reports the name of the safety backup so that you can restore it.
+The safety backup is a checkbox of the restore window, ticked by default. Untick it to restore without keeping a copy of the current data (for a migration or a test world, for example): a warning says so. It is unavailable, and the restore goes without it, when the server or `mc-backup` is stopped, since `mc-backup` needs both to take a backup. If the operation fails before anything was removed (safety backup, stop, preflight), it is reported as `aborted:`, the data is untouched and the server is started again if it had been stopped and "start afterwards" was checked. If it fails part way (`partial restore:`), the interface reports the name of the safety backup so that you can restore it.
 
 **Interrupted restores.** While data is being replaced, the backend keeps a marker file `.mc-manager-restore.json` in the data directory (archive name, safety backup, start time, step); it is removed as soon as the extraction succeeds. If the backend stops or crashes in between, the marker remains: at the next start the backend logs an error and the Backups page shows a persistent warning with the archive and the safety backup. The data may be half restored: restore the safety backup ("Restore this one"), or, once you have handled it by hand, click "Dismiss" (admin, audited) to remove the marker. Only one operation at a time touches the data (manual backup, restore, `server.properties` edit, mods, backup schedule, deletion of several backups): another request receives a 409.
 

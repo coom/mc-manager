@@ -68,27 +68,60 @@ describe('Backups page restore', () => {
     vi.mocked(backupsApi.restore).mockResolvedValue({} as never);
   });
 
-  it('admin restores with the default options after confirming', async () => {
+  const settings = (running: boolean) => ({ containerFound: true, running, managed: true, cronSchedule: null, interval: { value: '6h', source: 'compose' as const }, pruneDays: { value: '7', source: 'compose' as const }, pendingRestart: false, initialDelay: '2m', backupOnStartup: true });
+
+  it('admin restores with a safety backup by default', async () => {
     useServerStore.setState({ info: { status: 'ready', containerName: 'mc' } as never });
+    vi.mocked(backupsApi.settings).mockResolvedValue(settings(true));
     setup();
+    await waitFor(() => expect(backupsApi.settings).toHaveBeenCalled());
     fireEvent.click(await screen.findByLabelText('restore'));
     expect(await screen.findByText('Restore w.tgz?')).toBeInTheDocument();
-    expect(screen.queryByText(/without a safety net/)).not.toBeInTheDocument();
+    expect(screen.getByRole('checkbox', { name: 'Take a safety backup before restoring' })).toBeChecked();
+    expect(screen.queryByText(/without a safety backup/)).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Restore' }));
-    await waitFor(() => expect(backupsApi.restore).toHaveBeenCalledWith('w.tgz', { startAfter: true, confirmNoSafetyBackup: false }));
+    await waitFor(() => expect(backupsApi.restore).toHaveBeenCalledWith('w.tgz', { startAfter: true, safetyBackup: true }));
     expect(useServerStore.getState().restoreRunning).toBe(true);
   });
 
-  it('with the server stopped, requires the explicit no-safety confirmation', async () => {
+  it('admin can skip the safety backup, with a warning', async () => {
+    useServerStore.setState({ info: { status: 'ready', containerName: 'mc' } as never });
+    vi.mocked(backupsApi.settings).mockResolvedValue(settings(true));
+    setup();
+    await waitFor(() => expect(backupsApi.settings).toHaveBeenCalled());
+    fireEvent.click(await screen.findByLabelText('restore'));
+    fireEvent.click(await screen.findByRole('checkbox', { name: 'Take a safety backup before restoring' }));
+    expect(screen.getByText(/without a safety backup/)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Restore' }));
+    await waitFor(() => expect(backupsApi.restore).toHaveBeenCalledWith('w.tgz', { startAfter: true, safetyBackup: false }));
+  });
+
+  it('with the server stopped, the safety backup is unavailable and the restore goes without it', async () => {
     useServerStore.setState({ info: { status: 'stopped', containerName: 'mc' } as never });
+    vi.mocked(backupsApi.settings).mockResolvedValue(settings(true));
     setup();
     fireEvent.click(await screen.findByLabelText('restore'));
-    expect(await screen.findByText(/without a safety net/)).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Restore' })).toBeDisabled();
-    fireEvent.click(screen.getByLabelText(/I understand/));
+    const box = await screen.findByRole('checkbox', { name: 'Take a safety backup before restoring' });
+    expect(box).toBeDisabled();
+    expect(box).not.toBeChecked();
+    expect(screen.getByText('Unavailable: the server is stopped.')).toBeInTheDocument();
+    expect(screen.getByText(/without a safety backup/)).toBeInTheDocument();
     fireEvent.click(screen.getByLabelText('Start the server afterwards'));
     fireEvent.click(screen.getByRole('button', { name: 'Restore' }));
-    await waitFor(() => expect(backupsApi.restore).toHaveBeenCalledWith('w.tgz', { startAfter: false, confirmNoSafetyBackup: true }));
+    await waitFor(() => expect(backupsApi.restore).toHaveBeenCalledWith('w.tgz', { startAfter: false, safetyBackup: false }));
+  });
+
+  it('with mc-backup stopped, the safety backup is unavailable', async () => {
+    useServerStore.setState({ info: { status: 'ready', containerName: 'mc' } as never });
+    vi.mocked(backupsApi.settings).mockResolvedValue(settings(false));
+    setup();
+    await waitFor(() => expect(backupsApi.settings).toHaveBeenCalled());
+    await screen.findByText(/mc-backup is stopped: no automatic backup/);
+    fireEvent.click(await screen.findByLabelText('restore'));
+    expect(await screen.findByRole('checkbox', { name: 'Take a safety backup before restoring' })).toBeDisabled();
+    expect(screen.getByText('Unavailable: mc-backup is stopped or missing.')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Restore' }));
+    await waitFor(() => expect(backupsApi.restore).toHaveBeenCalledWith('w.tgz', { startAfter: true, safetyBackup: false }));
   });
 
   it('viewer has no restore button', async () => {
